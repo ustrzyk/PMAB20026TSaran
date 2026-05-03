@@ -1,31 +1,29 @@
 import React from 'react';
-import {View, Text, StyleSheet} from 'react-native';
+import {View, Text, StyleSheet, ScrollView} from 'react-native';
+import Greeting from './src/components/Greeting';
 
 function App(): React.JSX.Element {
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Cześć Tomek Saran</Text>
-      <Text style={styles.subtitle}>with TypeScript</Text>
-    </View>
+    <ScrollView style={styles.container}>
+      <Greeting name="Anna" age={25} />
+      <Greeting name="Piotr" isVip={true} />
+      <Greeting name="Kasia" age={30} isVip={true} />
+      <Greeting name="Jan" />
+      <Greeting name="Marek" age={40} isVip={true} />
+      <Greeting name="Ewa" age={22} />
+      <Greeting name="Tomek" age={28} />
+      <Greeting name="Zofia" isVip={true} />
+      <Greeting name="Kamil" age={35} />
+      <Greeting name="Agnieszka" age={27} isVip={true} />
+      <Greeting name="Bartek" />
+      <Greeting name="Olga" age={45} isVip={false} />
+    </ScrollView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
+    backgroundColor: '#60a0a5',
   },
 });
 
