@@ -10,6 +10,7 @@ const config = {
   resolver: {
     blockList: [
       /android[\\/]\.gradle[\\/].*/,
+      /android[\\/]\.cxx[\\/].*/,
       /android[\\/]app[\\/]\.cxx[\\/].*/,
       /android[\\/]app[\\/]build[\\/].*/,
       /android[\\/]build[\\/].*/,
