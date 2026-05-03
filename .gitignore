@@ -86,3 +86,11 @@ web-build/
 # Watchman
 watchman-del-*
 .sixth/
+
+# React Native / Android generated files
+SolutionOrdersMobile/android/.gradle/
+SolutionOrdersMobile/android/build/
+SolutionOrdersMobile/android/app/build/
+SolutionOrdersMobile/android/.cxx/
+SolutionOrdersMobile/android/app/.cxx/
+SolutionOrdersMobile/android/local.properties

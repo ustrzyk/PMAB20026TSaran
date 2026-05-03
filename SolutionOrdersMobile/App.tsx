@@ -6,7 +6,7 @@
  */
 
 import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, Text, View } from 'react-native';
+import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
 import {
   SafeAreaProvider,
   useSafeAreaInsets,
@@ -19,7 +19,6 @@ function App() {
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <AppContent />
-      <Text>Hello, World!</Text>
     </SafeAreaProvider>
   );
 }
@@ -29,11 +28,10 @@ function AppContent() {
 
   return (
     <View style={styles.container}>
-      <Text>Hello, World!</Text>
-      {/* <NewAppScreen
+      <NewAppScreen
         templateFileName="App.tsx"
         safeAreaInsets={safeAreaInsets}
-      /> */}
+      />
     </View>
   );
 }
