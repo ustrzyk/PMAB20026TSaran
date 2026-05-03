@@ -94,3 +94,4 @@ SolutionOrdersMobile/android/app/build/
 SolutionOrdersMobile/android/.cxx/
 SolutionOrdersMobile/android/app/.cxx/
 SolutionOrdersMobile/android/local.properties
+package-lock.json
