@@ -61,6 +61,7 @@ node_modules/
 .expo/
 .expo-shared/
 dist/
+local.properties
 npm-debug.*
 yarn-debug.*
 yarn-error.*
@@ -84,3 +85,4 @@ web-build/
 
 # Watchman
 watchman-del-*
+.sixth/
