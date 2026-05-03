@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Dimensions,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -12,7 +11,7 @@ import Counter from './src/components/Counter';
 import FlatList from './src/components/FlatList';
 import SimpleForm from './src/components/SimpleForm';
 
-const {width} = Dimensions.get('window');
+
 
 function App(): React.JSX.Element {
   return (
@@ -85,7 +84,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    width: width * 0.9,
+    width: '90%',
     padding: 20,
     marginBottom: 16,
     backgroundColor: '#cfc485',
@@ -109,7 +108,7 @@ const styles = StyleSheet.create({
   },
 
   section: {
-    width: width * 0.9,
+    width: '90%',
     marginBottom: 16,
   },
 

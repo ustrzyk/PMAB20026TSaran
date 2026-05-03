@@ -95,3 +95,14 @@ SolutionOrdersMobile/android/.cxx/
 SolutionOrdersMobile/android/app/.cxx/
 SolutionOrdersMobile/android/local.properties
 package-lock.json
+
+# Visual Studio / Visual Studio for Mac
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Local NuGet packages
+packages/
+
