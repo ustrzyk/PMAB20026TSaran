@@ -1,70 +1,58 @@
 import React from 'react';
-import { View, Text, FlatList, StyleSheet } from 'react-native';
+import {FlatList as RNFlatList, StyleSheet, Text, View} from 'react-native';
 
-// TypeScript interface dlaItem
-interface Item {
+interface User {
   id: string;
   name: string;
-  price: number;
+  age: number;
 }
 
-const ItemList: React.FC = () => {
-  // Dane testowe
-  const items: Item[] = [
-    { id: '1', name: 'Laptop', price: 3000 },
-    { id: '2', name: 'Monitor', price: 800 },
-    { id: '3', name: 'Mysz', price: 50 },
-    { id: '4', name: 'Klawiatura', price: 150 },
-  ];
+const users: User[] = [
+  {id: '1', name: 'Anna', age: 25},
+  {id: '2', name: 'Piotr', age: 30},
+  {id: '3', name: 'Kasia', age: 28},
+  {id: '4', name: 'Jan', age: 35},
+];
 
-  // Render pojedynczego wiersza
-  const renderItem = ({ item }: { item: Item }) => (
-    <View style={styles.item}>
-      <View style={styles.itemContent}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.price}>{item.price} zł</Text>
-      </View>
-    </View>
-  );
-
+const FlatList: React.FC = () => {
   return (
-    <FlatList
-      data={items}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}  // Unikalny klucz
-      style={styles.list}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-    />
+    <View style={styles.container}>
+      <RNFlatList
+        data={users}
+        keyExtractor={item => item.id}
+        renderItem={({item}) => (
+          <View style={styles.item}>
+            <Text style={styles.name}>{item.name}</Text>
+            <Text style={styles.age}>Wiek: {item.age}</Text>
+          </View>
+        )}
+      />
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  list: {
-    flex: 1,
+  container: {
+    backgroundColor: '#ffffff',
+    borderRadius: 8,
+    padding: 12,
   },
   item: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: '#fff',
-  },
-  itemContent: {
-    flex: 1,
+    padding: 12,
+    marginBottom: 8,
+    backgroundColor: '#f2f2f2',
+    borderRadius: 8,
   },
   name: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontWeight: '700',
+    color: '#333333',
   },
-  price: {
+  age: {
     fontSize: 14,
-    color: '#007AFF',
+    color: '#666666',
     marginTop: 4,
-  },
-  separator: {
-    height: 1,
-    backgroundColor: '#eee',
   },
 });
 
-export default ItemList;
+export default FlatList;

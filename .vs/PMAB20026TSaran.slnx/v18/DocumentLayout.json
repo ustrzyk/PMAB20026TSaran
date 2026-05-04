@@ -3,8 +3,44 @@
   "WorkspaceRootPath": "C:\\git\\PMAB20026TSaran\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\data\\applicationdbcontext .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\data\\applicationdbcontext .cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\orderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\orderitem.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\order.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\order.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\item.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\item.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\worker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\worker.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\client.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\client.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\category.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\models\\unitofmeasurement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\models\\unitofmeasurement.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|c:\\git\\pmab20026tsaran\\solutionorders.api\\controllers\\weatherforecastcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{908CC00C-213B-1D5D-B155-F9FCAF9DBC41}|SolutionOrders.API\\SolutionOrders.API.csproj|solutionrelative:solutionorders.api\\controllers\\weatherforecastcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -19,14 +55,131 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "ApplicationDbContext .cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Data\\ApplicationDbContext .cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\Data\\ApplicationDbContext .cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Data\\ApplicationDbContext .cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\Data\\ApplicationDbContext .cs",
+              "ViewState": "AgIAAEMAAAAAAAAAAAAwwJAAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:46:11.187Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "OrderItem.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\OrderItem.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\OrderItem.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\OrderItem.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\OrderItem.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:41:09.049Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Order.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Order.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\Order.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Order.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\Order.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABAAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:40:30.429Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Item.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Item.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\Item.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Item.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\Item.cs",
+              "ViewState": "AgIAAAQAAAAAAAAAAAA1wBQAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:30:48.269Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "Worker.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Worker.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\Worker.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Worker.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\Worker.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:36:52.09Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Client.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Client.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\Client.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Client.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\Client.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAmAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:36:01.697Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "Category.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Category.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\Category.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\Category.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\Category.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:35:04.31Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "UnitOfMeasurement.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\UnitOfMeasurement.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Models\\UnitOfMeasurement.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Models\\UnitOfMeasurement.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Models\\UnitOfMeasurement.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAlAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-04T12:27:58.457Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Program.cs",
               "RelativeDocumentMoniker": "SolutionOrders.API\\Program.cs",
               "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Program.cs",
               "RelativeToolTip": "SolutionOrders.API\\Program.cs",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABgAAAATAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAzAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2026-05-03T19:34:30.225Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "WeatherForecastController.cs",
+              "DocumentMoniker": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Controllers\\WeatherForecastController.cs",
+              "RelativeDocumentMoniker": "SolutionOrders.API\\Controllers\\WeatherForecastController.cs",
+              "ToolTip": "C:\\git\\PMAB20026TSaran\\SolutionOrders.API\\Controllers\\WeatherForecastController.cs",
+              "RelativeToolTip": "SolutionOrders.API\\Controllers\\WeatherForecastController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-03T19:55:04.441Z",
               "EditorCaption": ""
             }
           ]
