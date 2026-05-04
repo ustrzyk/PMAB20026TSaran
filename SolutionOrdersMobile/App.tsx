@@ -1,17 +1,11 @@
 import React from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import Greeting from './src/components/Greeting';
-import Counter from './src/components/Counter';
-import FlatList from './src/components/FlatList';
-import SimpleForm from './src/components/SimpleForm';
+import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {SafeAreaView} from 'react-native-safe-area-context';
 
-
+import GreetingComponent from './src/components/Greeting';
+import CounterComponent from './src/components/Counter';
+import FlatListComponent from './src/components/FlatList';
+import SimpleFormComponent from './src/components/SimpleForm';
 
 function App(): React.JSX.Element {
   return (
@@ -29,39 +23,39 @@ function App(): React.JSX.Element {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Użytkownicy</Text>
 
-          <Greeting name="Anna" age={25} />
-          <Counter />
+          <GreetingComponent name="Anna" age={25} />
+          <CounterComponent />
 
-          <Greeting name="Piotr" isVip={true} />
-          <Greeting name="Kasia" age={30} isVip={true} />
-          <Greeting name="Jan" />
-          <Counter />
+          <GreetingComponent name="Piotr" isVip={true} />
+          <GreetingComponent name="Kasia" age={30} isVip={true} />
+          <GreetingComponent name="Jan" />
+          <CounterComponent />
 
-          <Greeting name="Marek" age={40} isVip={true} />
-          <Greeting name="Ewa" age={22} />
-          <Greeting name="Tomek" age={28} />
-          <Greeting name="Zofia" isVip={true} />
-          <Greeting name="Kamil" age={35} />
-          <Counter />
+          <GreetingComponent name="Marek" age={40} isVip={true} />
+          <GreetingComponent name="Ewa" age={22} />
+          <GreetingComponent name="Tomek" age={28} />
+          <GreetingComponent name="Zofia" isVip={true} />
+          <GreetingComponent name="Kamil" age={35} />
+          <CounterComponent />
 
-          <Greeting name="Agnieszka" age={27} isVip={true} />
-          <Greeting name="Bartek" />
-          <Greeting name="Olga" age={45} isVip={false} />
-          <Greeting name="Monika" age={31} />
-          <Greeting name="Dawid" isVip={true} />
-          <Greeting name="Patrycja" age={29} />
-          <Greeting name="Michal" age={33} />
-          <Counter />
+          <GreetingComponent name="Agnieszka" age={27} isVip={true} />
+          <GreetingComponent name="Bartek" />
+          <GreetingComponent name="Olga" age={45} isVip={false} />
+          <GreetingComponent name="Monika" age={31} />
+          <GreetingComponent name="Dawid" isVip={true} />
+          <GreetingComponent name="Patrycja" age={29} />
+          <GreetingComponent name="Michal" age={33} />
+          <CounterComponent />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>FlatList</Text>
-          <FlatList />
+          <FlatListComponent />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Formularz</Text>
-          <SimpleForm />
+          <SimpleFormComponent />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -87,7 +81,7 @@ const styles = StyleSheet.create({
     width: '90%',
     padding: 20,
     marginBottom: 16,
-    backgroundColor: '#cfc485',
+    backgroundColor: '#c4b65b',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#1d0624',
@@ -115,7 +109,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#d69fc6',
     marginBottom: 8,
   },
 });
