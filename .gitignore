@@ -106,3 +106,4 @@ package-lock.json
 # Local NuGet packages
 packages/
 
+.vs/

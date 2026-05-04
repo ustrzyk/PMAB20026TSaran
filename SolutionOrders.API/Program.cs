@@ -1,3 +1,7 @@
+using MediatR;
+using Microsoft.EntityFrameworkCore;
+using SolutionOrders.API.Models.Data;
+using System.Reflection;
 
 namespace SolutionOrders.API
 {
@@ -7,6 +11,13 @@ namespace SolutionOrders.API
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // DbContext
+            builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // MediatR
+            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
             // Add services to the container.
 
             builder.Services.AddControllers();
@@ -14,6 +25,21 @@ namespace SolutionOrders.API
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
+
+            // Automatyczne zastosowanie migracji przy starcie
+            using (var scope = app.Services.CreateScope())
+            {
+                try
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    dbContext.Database.Migrate();
+                }
+                catch (Exception ex)
+                {
+                    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "Błąd podczas migracji bazy danych");
+                }
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
