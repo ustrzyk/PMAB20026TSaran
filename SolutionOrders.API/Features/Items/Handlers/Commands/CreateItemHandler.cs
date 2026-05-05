@@ -13,7 +13,7 @@ namespace SolutionOrders.API.Features.Items.Handlers.Commands
         {
             logger.LogInformation("Tworzenie nowego produktu: {Name}", request.Name);
             var item = request.Adapt<Item>();
-            await itemService.CreateItem(item,cancellationToken);
+            await itemService.CreateItem(item, cancellationToken);
             logger.LogInformation("Utworzono produkt ID: {IdItem}", item.IdItem);
             // Zwracamy ID 
             return item.IdItem;
