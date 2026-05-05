@@ -14,39 +14,39 @@ const categories = [
   'Drukarki 3D',
   'Filamenty',
   'Dysze',
-  'Stoły robocze',
-  'Części',
-  'Narzędzia',
+  'StoĹ‚y robocze',
+  'CzÄ™Ĺ›ci',
+  'NarzÄ™dzia',
 ];
 
 const products = [
   {
     name: 'Creality Ender 3 V3 SE',
     category: 'Drukarka 3D',
-    price: '1 099 zł',
+    price: '1 099 zĹ‚',
     tag: 'Bestseller',
     description: 'Idealna drukarka 3D na start i do nauki druku FDM.',
   },
   {
     name: 'Bambu Lab A1 Mini',
     category: 'Drukarka 3D',
-    price: '1 499 zł',
-    tag: 'Nowość',
+    price: '1 499 zĹ‚',
+    tag: 'NowoĹ›Ä‡',
     description: 'Kompaktowa drukarka 3D z szybkim i stabilnym drukiem.',
   },
   {
     name: 'Filament PLA Black 1kg',
     category: 'Filament',
-    price: '79 zł',
+    price: '79 zĹ‚',
     tag: 'Popularne',
-    description: 'Uniwersalny filament PLA do codziennych wydruków.',
+    description: 'Uniwersalny filament PLA do codziennych wydrukĂłw.',
   },
   {
     name: 'Zestaw dysz 0.4 mm',
     category: 'Akcesoria',
-    price: '29 zł',
+    price: '29 zĹ‚',
     tag: 'Akcesoria',
-    description: 'Zapasowe dysze do najpopularniejszych głowic drukujących.',
+    description: 'Zapasowe dysze do najpopularniejszych gĹ‚owic drukujÄ…cych.',
   },
 ];
 
@@ -60,7 +60,7 @@ function App(): React.JSX.Element {
           <Text style={styles.logo}>3D PRINT STORE</Text>
           <Text style={styles.title}>Sklep z drukarkami 3D</Text>
           <Text style={styles.subtitle}>
-            Drukarki, filamenty, części zamienne i akcesoria do druku 3D.
+            Drukarki, filamenty, czÄ™Ĺ›ci zamienne i akcesoria do druku 3D.
           </Text>
         </View>
 
@@ -82,7 +82,7 @@ function App(): React.JSX.Element {
         <PromoCardComponent
           smallText="Promocja tygodnia"
           title="Filamenty PLA -15%"
-          description="Zbuduj zapas materiałów do kolejnych projektów."
+          description="Zbuduj zapas materiaĹ‚Ăłw do kolejnych projektĂłw."
         />
 
         <View style={styles.section}>
@@ -104,9 +104,9 @@ function App(): React.JSX.Element {
         </View>
 
         <View style={styles.cartPreview}>
-          <Text style={styles.sectionTitle}>Ilość w koszyku</Text>
+          <Text style={styles.sectionTitle}>IloĹ›Ä‡ w koszyku</Text>
           <Text style={styles.cartText}>
-            Przykładowy licznik z komponentu Counter.
+            PrzykĹ‚adowy licznik z komponentu Counter.
           </Text>
           <CounterComponent />
         </View>
