@@ -1,3 +1,5 @@
+using Mapster;
+using SolutionOrders.API.Features.Items.Providers;
 using Microsoft.EntityFrameworkCore;
 using SolutionOrders.API.Models.Data;
 using System.Reflection;
@@ -16,6 +18,12 @@ namespace SolutionOrders.API
 
             // MediatR
             builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+
+            // Mapster
+            TypeAdapterConfig.GlobalSettings.Scan(Assembly.GetExecutingAssembly());
+
+            // Providers
+            builder.Services.AddTransient<IItemProvider, ItemProvider>();
 
             // Add services to the container.
 
