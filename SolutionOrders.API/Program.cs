@@ -1,6 +1,7 @@
 using Mapster;
 using Microsoft.EntityFrameworkCore;
 using SolutionOrders.API.Features.Items.Providers;
+using SolutionOrders.API.Features.Items.Services;
 using SolutionOrders.API.Models.Data;
 using System.Reflection;
 
@@ -25,10 +26,16 @@ namespace SolutionOrders.API
             TypeAdapterConfig.GlobalSettings.Scan(Assembly.GetExecutingAssembly());
 
             // Providers
-            builder.Services.AddTransient<IItemProvider, ItemProvider>();
+            builder.Services.AddScoped<IItemProvider, ItemProvider>();
 
-            // Add services to the container.
+            // Services
+            builder.Services.AddScoped<IItemService, ItemService>();
+
+            // Kontrolery API
             builder.Services.AddControllers();
+
+            // Autoryzacja
+            builder.Services.AddAuthorization();
 
             // OpenAPI / Swagger
             builder.Services.AddOpenApi();

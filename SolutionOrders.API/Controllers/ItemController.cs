@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
+using SolutionOrders.API.Features.Items.Messages.Commands;
 using SolutionOrders.API.Features.Items.Messages.DTOs;
 using SolutionOrders.API.Features.Items.Messages.Queries;
 
@@ -9,25 +10,17 @@ namespace SolutionOrders.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ItemController : ControllerBase
+    public class ItemController(IMediator mediator) : ControllerBase
     {
-        private readonly IMediator _mediator;
-
-        // Dependency Injection - MediatR
-        public ItemController(IMediator mediator)
-        {
-            _mediator = mediator;
-        }
-
         [HttpGet]
-        [ProducesResponseType(typeof(List<ItemDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(IEnumerable<ItemDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllItems()
         {
             // Tworzymy Query
             var query = new GetAllItemsQuery();
 
             // Wysyłamy do MediatR
-            return Ok(await _mediator.Send(query));
+            return Ok(await mediator.Send(query));
         }
 
         /// <summary>
@@ -39,7 +32,7 @@ namespace SolutionOrders.API.Controllers
         public async Task<IActionResult> GetById(int id)
         {
             var query = new GetItemByIdQuery(id);
-            var result = await _mediator.Send(query);
+            var result = await mediator.Send(query);
 
             if (result == null)
             {
@@ -47,6 +40,22 @@ namespace SolutionOrders.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Tworzy nowy produkt
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateItemCommand command)
+        {
+            var itemId = await mediator.Send(command);
+
+            // HTTP 201 Created z Location header
+            return CreatedAtAction(nameof(GetById), new { id = itemId },
+                new { id = itemId, message = "Produkt został utworzony" }
+            );
         }
     }
 }
