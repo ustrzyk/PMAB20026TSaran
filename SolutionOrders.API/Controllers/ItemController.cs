@@ -29,5 +29,24 @@ namespace SolutionOrders.API.Controllers
             // Wysyłamy do MediatR
             return Ok(await _mediator.Send(query));
         }
+
+        /// <summary>
+        /// Pobiera produkt po ID
+        /// </summary>
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ItemDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> GetById(int id)
+        {
+            var query = new GetItemByIdQuery(id);
+            var result = await _mediator.Send(query);
+
+            if (result == null)
+            {
+                return NotFound(new { message = $"Produkt o ID {id} nie został znaleziony" });
+            }
+
+            return Ok(result);
+        }
     }
 }

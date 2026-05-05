@@ -9,22 +9,29 @@ namespace SolutionOrders.API.Features.Items.Mappings
     {
         public void Register(TypeAdapterConfig config)
         {
+            // Mapowanie encji Item na DTO zwracane przez API
             config.NewConfig<Item, ItemDto>()
-                .Map(dest => dest.CategoryName, src => src.Category.Name)
-                .Map(dest => dest.UnitName, src => src.UnitOfMeasurement != null ? src.UnitOfMeasurement.Name : null);
+                .Map(dest => dest.CategoryName, src => src.Category.Name) // Nazwa kategorii
+                .Map(
+                    dest => dest.UnitName,
+                    src => src.UnitOfMeasurement != null
+                        ? src.UnitOfMeasurement.Name
+                        : null); // Nazwa jednostki miary
 
+            // Mapowanie komendy tworzenia produktu na encję Item
             config.NewConfig<CreateItemCommand, Item>()
-                .Map(dest => dest.IsActive, _ => true)
-                .Ignore(dest => dest.IdItem)
-                .Ignore(dest => dest.Category)
-                .Ignore(dest => dest.UnitOfMeasurement!)
-                .Ignore(dest => dest.OrderItems);
+                .Map(dest => dest.IsActive, _ => true)       // Nowy produkt jest aktywny
+                .Ignore(dest => dest.IdItem)                 // ID nada baza danych
+                .Ignore(dest => dest.Category)               // Relacja nie jest mapowana z komendy
+                .Ignore(dest => dest.UnitOfMeasurement!)     // Relacja nie jest mapowana z komendy
+                .Ignore(dest => dest.OrderItems);            // Zamówienia nie są ustawiane przy tworzeniu
 
+            // Mapowanie komendy aktualizacji produktu na encję Item
             config.NewConfig<UpdateItemCommand, Item>()
-                .Ignore(dest => dest.IdItem)
-                .Ignore(dest => dest.Category)
-                .Ignore(dest => dest.UnitOfMeasurement!)
-                .Ignore(dest => dest.OrderItems);
+                .Ignore(dest => dest.IdItem)                 // Nie zmieniamy ID produktu
+                .Ignore(dest => dest.Category)               // Relacja nie jest mapowana bezpośrednio
+                .Ignore(dest => dest.UnitOfMeasurement!)     // Relacja nie jest mapowana bezpośrednio
+                .Ignore(dest => dest.OrderItems);            // Nie aktualizujemy pozycji zamówień tutaj
         }
     }
 }
