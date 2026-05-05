@@ -35,9 +35,7 @@ namespace SolutionOrders.API.Features.Items.Providers
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<Item> GetItemByIdAsync(
-            int id,
-            bool asNoTracking = true,
+        public async Task<Item> GetItemByIdAsync(int id, bool asNoTracking = true,
             CancellationToken cancellationToken = default)
         {
             // Bazowe zapytanie o aktywne produkty
@@ -55,12 +53,10 @@ namespace SolutionOrders.API.Features.Items.Providers
             // Pobranie produktu po ID
             var item = await query
                 .FirstOrDefaultAsync(
-                    i => i.IdItem == id && i.IsActive,
-                    cancellationToken);
+                    i => i.IdItem == id && i.IsActive, cancellationToken);
 
             // Jeśli nie znaleziono produktu, zwracamy błąd
-            return item ?? throw new KeyNotFoundException(
-                $"Produkt o ID {id} nie istnieje");
+            return item ?? throw new KeyNotFoundException($"Produkt o ID {id} nie istnieje");
         }
     }
 }

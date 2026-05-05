@@ -29,7 +29,7 @@ namespace SolutionOrders.API
             builder.Services.AddScoped<IItemProvider, ItemProvider>();
 
             // Services
-            builder.Services.AddScoped<IItemService, ItemService>();
+            builder.Services.AddTransient<IItemService, ItemService>();
 
             // Kontrolery API
             builder.Services.AddControllers();

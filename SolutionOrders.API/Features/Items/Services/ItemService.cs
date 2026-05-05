@@ -5,15 +5,13 @@ namespace SolutionOrders.API.Features.Items.Services
 {
     public class ItemService(ApplicationDbContext context) : IItemService
     {
-        public async Task CreateItem(Item item, CancellationToken cancellationToken) 
+        public async Task CreateItem(
+            Item item,
+            CancellationToken cancellationToken)
         {
+            // Dodanie nowego produktu do bazy
             context.Items.Add(item);
-            context.SaveChangesAsync(cancellationToken);
-        }
-
-        public Task UpgradeItem(Item item, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
+            await context.SaveChangesAsync(cancellationToken);
         }
     }
 }

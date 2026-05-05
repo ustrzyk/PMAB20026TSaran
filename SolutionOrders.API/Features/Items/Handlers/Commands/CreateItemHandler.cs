@@ -6,7 +6,7 @@ using SolutionOrders.API.Models;
 
 namespace SolutionOrders.API.Features.Items.Handlers.Commands
 {
-    public class CreateItemHandler(ItemService itemService, ILogger<CreateItemHandler> logger)
+    public class CreateItemHandler(IItemService itemService, ILogger<CreateItemHandler> logger)
         : IRequestHandler<CreateItemCommand, int>
     {
         public async Task<int> Handle(CreateItemCommand request,CancellationToken cancellationToken)
