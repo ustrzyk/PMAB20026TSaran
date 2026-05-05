@@ -15,15 +15,10 @@ namespace SolutionOrders.API.Features.Items.Handlers.Queries
             _itemProvider = itemProvider;
         }
 
-        public async Task<IEnumerable<ItemDto>> Handle(
-            GetAllItemsQuery request,
-            CancellationToken cancellationToken)
+        public async Task<IEnumerable<ItemDto>> Handle(GetAllItemsQuery request, CancellationToken cancellationToken)
         {
-            var items = await _itemProvider.GetAllItemsAsync(
-                true,
-                cancellationToken);
-
-            return items.Adapt<IEnumerable<ItemDto>>();
+            return (await _itemProvider.GetAllItemsAsync(true, cancellationToken))
+                .Adapt<IEnumerable<ItemDto>>();
         }
     }
 }
