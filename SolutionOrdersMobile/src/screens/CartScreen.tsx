@@ -1,7 +1,7 @@
 import React from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
-import CartSummaryComponent from '../components/shop/CartSummaryComponent';
+import CartSummaryComponent from '../components/shop/CartSummaryComponent.tsx';
 
 function CartScreen(): React.JSX.Element {
   return (

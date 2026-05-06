@@ -1,63 +1,87 @@
 import React from 'react';
-import {ScrollView, StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
-import {Category} from '../../types/shop';
+import {Category} from '../../types/shop.ts';
 
 interface StoryListComponentProps {
   categories: Category[];
+  onCategoryPress: (categoryId: number) => void;
 }
 
 function StoryListComponent({
   categories,
+  onCategoryPress,
 }: StoryListComponentProps): React.JSX.Element {
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.title}>Kategorie</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>Kategorie</Text>
+        <Text style={styles.subtitle}>Wybierz dział sklepu</Text>
+      </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}>
+      <View style={styles.grid}>
         {categories.map(category => (
-          <View key={category.id} style={styles.card}>
-            <Text style={styles.cardText}>{category.name}</Text>
-          </View>
+          <TouchableOpacity
+            key={category.id}
+            style={styles.card}
+            onPress={() => onCategoryPress(category.id)}>
+            <Text style={styles.cardTitle}>{category.name}</Text>
+            <Text style={styles.cardText}>Zobacz produkty</Text>
+          </TouchableOpacity>
         ))}
-      </ScrollView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: {
-    marginBottom: 20,
+    marginBottom: 22,
+  },
+
+  header: {
+    marginBottom: 12,
   },
 
   title: {
     fontSize: 20,
     fontWeight: '800',
     color: '#f8fafc',
-    marginBottom: 12,
+    marginBottom: 4,
   },
 
-  scrollContent: {
-    paddingRight: 8,
+  subtitle: {
+    color: '#94a3b8',
+    fontSize: 14,
+  },
+
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
 
   card: {
+    width: '48%',
     backgroundColor: '#111827',
-    paddingVertical: 14,
-    paddingHorizontal: 18,
-    borderRadius: 14,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 12,
     borderWidth: 1,
     borderColor: '#334155',
-    marginRight: 10,
+  },
+
+  cardTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 6,
   },
 
   cardText: {
-    color: '#f8fafc',
-    fontWeight: '700',
-    fontSize: 14,
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 

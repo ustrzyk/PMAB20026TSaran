@@ -6,8 +6,11 @@ export interface Category {
 export interface Product {
   id: number;
   name: string;
-  category: string;
-  price: string;
+  categoryId: number;
+  categoryName: string;
+  price: number;
   tag: string;
   description: string;
 }
+
+export type ProductSortOption = 'default' | 'name' | 'priceAsc' | 'priceDesc';

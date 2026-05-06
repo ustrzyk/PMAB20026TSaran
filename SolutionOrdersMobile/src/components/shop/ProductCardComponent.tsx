@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
 
-import {Product} from '../../types/shop';
+import {Product} from '../../types/shop.ts';
 
 interface ProductCardComponentProps {
   product: Product;
@@ -13,7 +13,7 @@ function ProductCardComponent({
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
-        <Text style={styles.category}>{product.category}</Text>
+        <Text style={styles.category}>{product.categoryName}</Text>
         <Text style={styles.tag}>{product.tag}</Text>
       </View>
 

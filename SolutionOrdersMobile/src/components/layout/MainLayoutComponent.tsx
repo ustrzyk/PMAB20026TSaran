@@ -2,8 +2,8 @@ import React from 'react';
 import {StyleSheet, View} from 'react-native';
 import {SafeAreaView} from 'react-native-safe-area-context';
 
-import HeaderComponent from './HeaderComponent';
-import NavbarComponent, {TabKey} from './NavbarComponent';
+import HeaderComponent from './HeaderComponent.tsx';
+import NavbarComponent, {TabKey} from './NavbarComponent.tsx';
 
 interface MainLayoutComponentProps {
   activeTab: TabKey;

@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useState} from 'react';
 import {
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -18,33 +18,10 @@ interface HitProductsCarouselComponentProps {
 function HitProductsCarouselComponent({
   products,
 }: HitProductsCarouselComponentProps): React.JSX.Element {
-  const scrollViewRef = useRef<ScrollView | null>(null);
   const {width} = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
 
   const cardWidth = width - 32;
-
-  useEffect(() => {
-    if (products.length <= 1) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setActiveIndex(previousIndex => {
-        const nextIndex =
-          previousIndex + 1 >= products.length ? 0 : previousIndex + 1;
-
-        scrollViewRef.current?.scrollTo({
-          x: nextIndex * cardWidth,
-          animated: true,
-        });
-
-        return nextIndex;
-      });
-    }, 3500);
-
-    return () => clearInterval(interval);
-  }, [cardWidth, products.length]);
 
   const handleScrollEnd = (
     event: NativeSyntheticEvent<NativeScrollEvent>,
@@ -59,11 +36,10 @@ function HitProductsCarouselComponent({
     <View style={styles.wrapper}>
       <View style={styles.header}>
         <Text style={styles.title}>Hity tygodnia</Text>
-        <Text style={styles.subtitle}>Promocje i polecane produkty</Text>
+        <Text style={styles.subtitle}>Przesuń w bok, aby zobaczyć więcej</Text>
       </View>
 
       <ScrollView
-        ref={scrollViewRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}

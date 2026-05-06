@@ -1,24 +1,31 @@
 import React from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
-import HitProductComponent from '../components/shop/HitProductComponent';
-import StoryListComponent from '../components/shop/StoryListComponent';
-import {categories, hitProduct} from '../data/shopData';
+import HitProductsCarouselComponent from '../components/shop/HitProductsCarouselComponent.tsx';
+import StoryListComponent from '../components/shop/StoryListComponent.tsx';
+import {categories, hitProducts} from '../data/shopData.ts';
 
-function HomeScreen(): React.JSX.Element {
+interface HomeScreenProps {
+  onCategoryPress: (categoryId: number) => void;
+}
+
+function HomeScreen({onCategoryPress}: HomeScreenProps): React.JSX.Element {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.infoBox}>
         <Text style={styles.infoTitle}>Witaj w sklepie 3D</Text>
         <Text style={styles.infoText}>
-          Znajdziesz tutaj drukarki 3D, filamenty i akcesoria potrzebne do
-          rozpoczęcia pracy z drukiem 3D.
+          Znajdziesz tutaj drukarki 3D, filamenty, części zamienne i akcesoria
+          potrzebne do rozpoczęcia pracy z drukiem 3D.
         </Text>
       </View>
 
-      <StoryListComponent categories={categories} />
+      <HitProductsCarouselComponent products={hitProducts} />
 
-      <HitProductComponent product={hitProduct} />
+      <StoryListComponent
+        categories={categories}
+        onCategoryPress={onCategoryPress}
+      />
     </ScrollView>
   );
 }
