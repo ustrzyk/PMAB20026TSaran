@@ -1,5 +1,7 @@
-using MediatR;
+using Mapster;
 using Microsoft.EntityFrameworkCore;
+using SolutionOrders.API.Features.Items.Providers;
+using SolutionOrders.API.Features.Items.Services;
 using SolutionOrders.API.Models.Data;
 using System.Reflection;
 
@@ -13,15 +15,29 @@ namespace SolutionOrders.API
 
             // DbContext
             builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(
+                    builder.Configuration.GetConnectionString("DefaultConnection")));
 
             // MediatR
-            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
+            builder.Services.AddMediatR(cfg =>
+                cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly()));
 
-            // Add services to the container.
+            // Mapster
+            TypeAdapterConfig.GlobalSettings.Scan(Assembly.GetExecutingAssembly());
 
+            // Providers
+            builder.Services.AddScoped<IItemProvider, ItemProvider>();
+
+            // Services
+            builder.Services.AddTransient<IItemService, ItemService>();
+
+            // Kontrolery API
             builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+            // Autoryzacja
+            builder.Services.AddAuthorization();
+
+            // OpenAPI / Swagger
             builder.Services.AddOpenApi();
 
             var app = builder.Build();
@@ -31,30 +47,30 @@ namespace SolutionOrders.API
             {
                 try
                 {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                    var dbContext =
+                        scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
                     dbContext.Database.Migrate();
                 }
                 catch (Exception ex)
                 {
-                    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                    var logger =
+                        scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
                     logger.LogError(ex, "Błąd podczas migracji bazy danych");
                 }
             }
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            app.MapOpenApi();
+
+            app.UseSwaggerUI(options =>
             {
-                app.MapOpenApi();
-                app.UseSwaggerUI(options =>
-                {
-                    options.SwaggerEndpoint("/openapi/v1.json", "v1");
-                });
-            }
+                options.SwaggerEndpoint("/openapi/v1.json", "v1");
+            });
 
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
-
 
             app.MapControllers();
 
