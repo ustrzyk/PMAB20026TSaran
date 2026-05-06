@@ -5,18 +5,21 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useWindowDimensions,
   View,
 } from 'react-native';
 
-import {Product} from '../../types/shop.ts';
+import {Product} from '../../types/shop';
 
 interface HitProductsCarouselComponentProps {
   products: Product[];
+  onProductPress: (productId: number) => void;
 }
 
 function HitProductsCarouselComponent({
   products,
+  onProductPress,
 }: HitProductsCarouselComponentProps): React.JSX.Element {
   const {width} = useWindowDimensions();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -48,7 +51,11 @@ function HitProductsCarouselComponent({
           const formattedPrice = `${product.price.toLocaleString('pl-PL')} zł`;
 
           return (
-            <View key={product.id} style={[styles.card, {width: cardWidth}]}>
+            <TouchableOpacity
+              key={product.id}
+              activeOpacity={0.9}
+              style={[styles.card, {width: cardWidth}]}
+              onPress={() => onProductPress(product.id)}>
               <View style={styles.topRow}>
                 <Text style={styles.tag}>{product.tag}</Text>
                 <Text style={styles.category}>{product.categoryName}</Text>
@@ -61,7 +68,7 @@ function HitProductsCarouselComponent({
                 <Text style={styles.price}>{formattedPrice}</Text>
                 <Text style={styles.button}>Sprawdź</Text>
               </View>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>

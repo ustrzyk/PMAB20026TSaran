@@ -1,25 +1,49 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 
-import MainLayoutComponent from './src/components/layout/MainLayoutComponent.tsx';
-import {TabKey} from './src/components/layout/NavbarComponent.tsx';
-import CartScreen from './src/screens/CartScreen.tsx';
-import HomeScreen from './src/screens/HomeScreen.tsx';
-import ProductsScreen from './src/screens/ProductsScreen.tsx';
+import MainLayoutComponent from './src/components/layout/MainLayoutComponent';
+import {TabKey} from './src/components/layout/NavbarComponent';
+import {hitProducts, products} from './src/data/shopData';
+import CartScreen from './src/screens/CartScreen';
+import HomeScreen from './src/screens/HomeScreen';
+import ProductDetailsScreen from './src/screens/ProductDetailsScreen';
+import ProductsScreen from './src/screens/ProductsScreen';
+import {Product} from './src/types/shop';
 
 function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
+  const [selectedProductId, setSelectedProductId] = useState<number | null>(
+    null,
+  );
+  const [cartProducts, setCartProducts] = useState<Product[]>([]);
+
+  const allProducts = useMemo(() => {
+    return [...products, ...hitProducts];
+  }, []);
+
+  const selectedProduct = useMemo(() => {
+    return allProducts.find(product => product.id === selectedProductId) ?? null;
+  }, [allProducts, selectedProductId]);
 
   const handleCategoryPress = (categoryId: number): void => {
     setSelectedCategoryId(categoryId);
     setActiveTab('products');
   };
 
+  const handleProductPress = (productId: number): void => {
+    setSelectedProductId(productId);
+    setActiveTab('details');
+  };
+
   const handleTabChange = (tab: TabKey): void => {
     if (tab !== 'products') {
       setSelectedCategoryId(null);
+    }
+
+    if (tab !== 'details') {
+      setSelectedProductId(null);
     }
 
     setActiveTab(tab);
@@ -29,21 +53,56 @@ function App(): React.JSX.Element {
     setSelectedCategoryId(null);
   };
 
+  const handleBackToProducts = (): void => {
+    setActiveTab('products');
+  };
+
+  const handleAddToCart = (product: Product): void => {
+    setCartProducts(previousProducts => [...previousProducts, product]);
+    setActiveTab('cart');
+  };
+
+  const handleClearCart = (): void => {
+    setCartProducts([]);
+  };
+
   const renderScreen = (): React.JSX.Element => {
     if (activeTab === 'products') {
       return (
         <ProductsScreen
           selectedCategoryId={selectedCategoryId}
           onClearCategory={handleClearCategory}
+          onProductPress={handleProductPress}
         />
       );
     }
 
     if (activeTab === 'cart') {
-      return <CartScreen />;
+      return (
+        <CartScreen
+          cartProducts={cartProducts}
+          onProductPress={handleProductPress}
+          onClearCart={handleClearCart}
+        />
+      );
     }
 
-    return <HomeScreen onCategoryPress={handleCategoryPress} />;
+    if (activeTab === 'details') {
+      return (
+        <ProductDetailsScreen
+          product={selectedProduct}
+          onBack={handleBackToProducts}
+          onAddToCart={handleAddToCart}
+        />
+      );
+    }
+
+    return (
+      <HomeScreen
+        onCategoryPress={handleCategoryPress}
+        onProductPress={handleProductPress}
+      />
+    );
   };
 
   return (

@@ -1,7 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
-export type TabKey = 'home' | 'products' | 'cart';
+export type TabKey = 'home' | 'products' | 'cart' | 'details';
 
 interface NavbarComponentProps {
   activeTab: TabKey;

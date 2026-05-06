@@ -1,19 +1,34 @@
 import React from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
-import CartSummaryComponent from '../components/shop/CartSummaryComponent.tsx';
+import CartSummaryComponent from '../components/shop/CartSummaryComponent';
+import {Product} from '../types/shop';
 
-function CartScreen(): React.JSX.Element {
+interface CartScreenProps {
+  cartProducts: Product[];
+  onProductPress: (productId: number) => void;
+  onClearCart: () => void;
+}
+
+function CartScreen({
+  cartProducts,
+  onProductPress,
+  onClearCart,
+}: CartScreenProps): React.JSX.Element {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.headerBox}>
         <Text style={styles.title}>Koszyk</Text>
         <Text style={styles.subtitle}>
-          Tutaj później pojawią się produkty dodane do zamówienia.
+          Tutaj pojawią się produkty dodane do zamówienia.
         </Text>
       </View>
 
-      <CartSummaryComponent />
+      <CartSummaryComponent
+        products={cartProducts}
+        onProductPress={onProductPress}
+        onClearCart={onClearCart}
+      />
     </ScrollView>
   );
 }

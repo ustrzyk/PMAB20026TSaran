@@ -1,15 +1,19 @@
 import React from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
-import HitProductsCarouselComponent from '../components/shop/HitProductsCarouselComponent.tsx';
-import StoryListComponent from '../components/shop/StoryListComponent.tsx';
-import {categories, hitProducts} from '../data/shopData.ts';
+import HitProductsCarouselComponent from '../components/shop/HitProductsCarouselComponent';
+import StoryListComponent from '../components/shop/StoryListComponent';
+import {categories, hitProducts} from '../data/shopData';
 
 interface HomeScreenProps {
   onCategoryPress: (categoryId: number) => void;
+  onProductPress: (productId: number) => void;
 }
 
-function HomeScreen({onCategoryPress}: HomeScreenProps): React.JSX.Element {
+function HomeScreen({
+  onCategoryPress,
+  onProductPress,
+}: HomeScreenProps): React.JSX.Element {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.infoBox}>
@@ -20,7 +24,10 @@ function HomeScreen({onCategoryPress}: HomeScreenProps): React.JSX.Element {
         </Text>
       </View>
 
-      <HitProductsCarouselComponent products={hitProducts} />
+      <HitProductsCarouselComponent
+        products={hitProducts}
+        onProductPress={onProductPress}
+      />
 
       <StoryListComponent
         categories={categories}

@@ -1,17 +1,24 @@
 import React from 'react';
-import {StyleSheet, Text, View} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
 
-import {Product} from '../../types/shop.ts';
+import {Product} from '../../types/shop';
 
 interface ProductCardComponentProps {
   product: Product;
+  onPress: (productId: number) => void;
 }
 
 function ProductCardComponent({
   product,
+  onPress,
 }: ProductCardComponentProps): React.JSX.Element {
+  const formattedPrice = `${product.price.toLocaleString('pl-PL')} zł`;
+
   return (
-    <View style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={() => onPress(product.id)}>
       <View style={styles.topRow}>
         <Text style={styles.category}>{product.categoryName}</Text>
         <Text style={styles.tag}>{product.tag}</Text>
@@ -21,10 +28,10 @@ function ProductCardComponent({
       <Text style={styles.description}>{product.description}</Text>
 
       <View style={styles.bottomRow}>
-        <Text style={styles.price}>{product.price}</Text>
-        <Text style={styles.button}>Dodaj</Text>
+        <Text style={styles.price}>{formattedPrice}</Text>
+        <Text style={styles.button}>Szczegóły</Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 
