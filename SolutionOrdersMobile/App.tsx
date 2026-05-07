@@ -1,13 +1,13 @@
 import React, {useMemo, useState} from 'react';
 
-import MainLayoutComponent from './src/components/layout/MainLayoutComponent';
-import {TabKey} from './src/components/layout/NavbarComponent';
-import {hitProducts, products} from './src/data/shopData';
-import CartScreen from './src/screens/CartScreen';
-import HomeScreen from './src/screens/HomeScreen';
-import ProductDetailsScreen from './src/screens/ProductDetailsScreen';
-import ProductsScreen from './src/screens/ProductsScreen';
-import {Product} from './src/types/shop';
+import MainLayoutComponent from './src/components/layout/MainLayoutComponent.tsx';
+import {TabKey} from './src/components/layout/NavbarComponent.tsx';
+import {hitProducts, products} from './src/data/shopData.ts';
+import CartScreen from './src/screens/CartScreen.tsx';
+import HomeScreen from './src/screens/HomeScreen.tsx';
+import ProductDetailsScreen from './src/screens/ProductDetailsScreen.tsx';
+import ProductsScreen from './src/screens/ProductsScreen.tsx';
+import {CartItem, Product} from './src/types/shop.ts';
 
 function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabKey>('home');
@@ -17,7 +17,7 @@ function App(): React.JSX.Element {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(
     null,
   );
-  const [cartProducts, setCartProducts] = useState<Product[]>([]);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
 
   const allProducts = useMemo(() => {
     return [...products, ...hitProducts];
@@ -30,6 +30,10 @@ function App(): React.JSX.Element {
   const handleCategoryPress = (categoryId: number): void => {
     setSelectedCategoryId(categoryId);
     setActiveTab('products');
+  };
+
+  const handleCategoryChange = (categoryId: number | null): void => {
+    setSelectedCategoryId(categoryId);
   };
 
   const handleProductPress = (productId: number): void => {
@@ -49,21 +53,60 @@ function App(): React.JSX.Element {
     setActiveTab(tab);
   };
 
-  const handleClearCategory = (): void => {
-    setSelectedCategoryId(null);
-  };
-
   const handleBackToProducts = (): void => {
     setActiveTab('products');
   };
 
   const handleAddToCart = (product: Product): void => {
-    setCartProducts(previousProducts => [...previousProducts, product]);
+    setCartItems(previousItems => {
+      const existingItem = previousItems.find(
+        item => item.product.id === product.id,
+      );
+
+      if (existingItem) {
+        return previousItems.map(item =>
+          item.product.id === product.id
+            ? {...item, quantity: item.quantity + 1}
+            : item,
+        );
+      }
+
+      return [...previousItems, {product, quantity: 1}];
+    });
+
     setActiveTab('cart');
   };
 
+  const handleIncreaseQuantity = (productId: number): void => {
+    setCartItems(previousItems =>
+      previousItems.map(item =>
+        item.product.id === productId
+          ? {...item, quantity: item.quantity + 1}
+          : item,
+      ),
+    );
+  };
+
+  const handleDecreaseQuantity = (productId: number): void => {
+    setCartItems(previousItems =>
+      previousItems
+        .map(item =>
+          item.product.id === productId
+            ? {...item, quantity: item.quantity - 1}
+            : item,
+        )
+        .filter(item => item.quantity > 0),
+    );
+  };
+
+  const handleRemoveFromCart = (productId: number): void => {
+    setCartItems(previousItems =>
+      previousItems.filter(item => item.product.id !== productId),
+    );
+  };
+
   const handleClearCart = (): void => {
-    setCartProducts([]);
+    setCartItems([]);
   };
 
   const renderScreen = (): React.JSX.Element => {
@@ -71,7 +114,7 @@ function App(): React.JSX.Element {
       return (
         <ProductsScreen
           selectedCategoryId={selectedCategoryId}
-          onClearCategory={handleClearCategory}
+          onCategoryChange={handleCategoryChange}
           onProductPress={handleProductPress}
         />
       );
@@ -80,8 +123,11 @@ function App(): React.JSX.Element {
     if (activeTab === 'cart') {
       return (
         <CartScreen
-          cartProducts={cartProducts}
+          cartItems={cartItems}
           onProductPress={handleProductPress}
+          onIncreaseQuantity={handleIncreaseQuantity}
+          onDecreaseQuantity={handleDecreaseQuantity}
+          onRemoveFromCart={handleRemoveFromCart}
           onClearCart={handleClearCart}
         />
       );

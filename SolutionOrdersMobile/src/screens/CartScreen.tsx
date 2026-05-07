@@ -1,18 +1,24 @@
 import React from 'react';
 import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
-import CartSummaryComponent from '../components/shop/CartSummaryComponent';
-import {Product} from '../types/shop';
+import CartSummaryComponent from '../components/shop/CartSummaryComponent.tsx';
+import {CartItem} from '../types/shop.ts';
 
 interface CartScreenProps {
-  cartProducts: Product[];
+  cartItems: CartItem[];
   onProductPress: (productId: number) => void;
+  onIncreaseQuantity: (productId: number) => void;
+  onDecreaseQuantity: (productId: number) => void;
+  onRemoveFromCart: (productId: number) => void;
   onClearCart: () => void;
 }
 
 function CartScreen({
-  cartProducts,
+  cartItems,
   onProductPress,
+  onIncreaseQuantity,
+  onDecreaseQuantity,
+  onRemoveFromCart,
   onClearCart,
 }: CartScreenProps): React.JSX.Element {
   return (
@@ -20,13 +26,16 @@ function CartScreen({
       <View style={styles.headerBox}>
         <Text style={styles.title}>Koszyk</Text>
         <Text style={styles.subtitle}>
-          Tutaj pojawią się produkty dodane do zamówienia.
+          Zarządzaj produktami przed złożeniem zamówienia.
         </Text>
       </View>
 
       <CartSummaryComponent
-        products={cartProducts}
+        cartItems={cartItems}
         onProductPress={onProductPress}
+        onIncreaseQuantity={onIncreaseQuantity}
+        onDecreaseQuantity={onDecreaseQuantity}
+        onRemoveFromCart={onRemoveFromCart}
         onClearCart={onClearCart}
       />
     </ScrollView>

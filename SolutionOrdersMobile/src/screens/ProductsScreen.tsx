@@ -1,26 +1,21 @@
 import React, {useMemo, useState} from 'react';
-import {
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import {ScrollView, StyleSheet, Text, View} from 'react-native';
 
-import ProductCardComponent from '../components/shop/ProductCardComponent';
-import SearchSortComponent from '../components/shop/SearchSortComponent';
-import {categories, products} from '../data/shopData';
-import {Product, ProductSortOption} from '../types/shop';
+import CategoryFilterComponent from '../components/shop/CategoryFilterComponent.tsx';
+import ProductCardComponent from '../components/shop/ProductCardComponent.tsx';
+import SearchSortComponent from '../components/shop/SearchSortComponent.tsx';
+import {categories, products} from '../data/shopData.ts';
+import {Product, ProductSortOption} from '../types/shop.ts';
 
 interface ProductsScreenProps {
   selectedCategoryId: number | null;
-  onClearCategory: () => void;
+  onCategoryChange: (categoryId: number | null) => void;
   onProductPress: (productId: number) => void;
 }
 
 function ProductsScreen({
   selectedCategoryId,
-  onClearCategory,
+  onCategoryChange,
   onProductPress,
 }: ProductsScreenProps): React.JSX.Element {
   const [searchText, setSearchText] = useState('');
@@ -71,16 +66,16 @@ function ProductsScreen({
 
         <Text style={styles.subtitle}>
           {selectedCategory
-            ? `Produkty z kategorii: ${selectedCategory.name}`
-            : 'Przegląd drukarek 3D, filamentów i akcesoriów.'}
+            ? `Aktualnie wybrana kategoria: ${selectedCategory.name}`
+            : 'Przegląd wszystkich produktów w sklepie.'}
         </Text>
       </View>
 
-      {selectedCategory && (
-        <TouchableOpacity style={styles.clearButton} onPress={onClearCategory}>
-          <Text style={styles.clearButtonText}>Pokaż wszystkie produkty</Text>
-        </TouchableOpacity>
-      )}
+      <CategoryFilterComponent
+        categories={categories}
+        selectedCategoryId={selectedCategoryId}
+        onCategoryChange={onCategoryChange}
+      />
 
       <SearchSortComponent
         searchText={searchText}
@@ -138,21 +133,6 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 14,
     lineHeight: 20,
-  },
-
-  clearButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginBottom: 14,
-    alignItems: 'center',
-  },
-
-  clearButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
   },
 
   resultText: {
