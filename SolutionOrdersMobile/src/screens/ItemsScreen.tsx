@@ -19,7 +19,7 @@ import type {Item} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Items'>;
 
-function ItemsScreen({}: Props): React.JSX.Element {
+function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
 
   const handleDelete = (item: Item): void => {
@@ -56,9 +56,7 @@ function ItemsScreen({}: Props): React.JSX.Element {
         <View style={styles.itemContent}>
           <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
 
-          <Text style={styles.itemPrice}>
-            Cena: {price.toFixed(2)} zł
-          </Text>
+          <Text style={styles.itemPrice}>Cena: {price.toFixed(2)} zł</Text>
 
           <Text style={styles.itemText}>
             Kategoria: {item.categoryName ?? 'Brak'}
@@ -68,12 +66,17 @@ function ItemsScreen({}: Props): React.JSX.Element {
             Ilość: {quantity} {item.unitName ?? 'szt'}
           </Text>
 
-          <Text style={styles.itemText}>
-            Kod: {item.code ?? 'Brak'}
-          </Text>
+          <Text style={styles.itemText}>Kod: {item.code ?? 'Brak'}</Text>
         </View>
 
         <View style={styles.itemActions}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('EditItem', {item})}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Edytuj</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
@@ -118,6 +121,13 @@ function ItemsScreen({}: Props): React.JSX.Element {
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={() => navigation.navigate('CreateItem')}
+        activeOpacity={0.8}>
+        <Text style={styles.createButtonText}>+ Dodaj produkt</Text>
+      </TouchableOpacity>
 
       <FlatList
         data={items}
@@ -210,6 +220,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  createButton: {
+    backgroundColor: '#16a34a',
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  createButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
   listContent: {
     padding: 16,
     paddingBottom: 30,
@@ -252,6 +277,14 @@ const styles = StyleSheet.create({
   itemActions: {
     justifyContent: 'center',
     marginLeft: 10,
+    gap: 8,
+  },
+
+  editButton: {
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: 10,
   },
 
   deleteButton: {
@@ -265,6 +298,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
+    textAlign: 'center',
   },
 
   emptyText: {

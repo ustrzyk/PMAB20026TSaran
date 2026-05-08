@@ -2,6 +2,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
 
 import type {RootStackParamList} from './types.ts';
@@ -29,6 +30,18 @@ function RootNavigator(): React.JSX.Element {
           name="Items"
           component={ItemsScreen}
           options={{title: 'Produkty'}}
+        />
+
+        <Stack.Screen
+          name="CreateItem"
+          component={ItemFormScreen}
+          options={{title: 'Dodaj produkt'}}
+        />
+
+        <Stack.Screen
+          name="EditItem"
+          component={ItemFormScreen}
+          options={{title: 'Edytuj produkt'}}
         />
       </Stack.Navigator>
     </NavigationContainer>
