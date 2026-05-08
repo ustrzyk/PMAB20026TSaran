@@ -95,10 +95,9 @@ namespace SolutionOrders.API
 
                     logger.LogError(ex, "Błąd podczas migracji bazy danych");
                 }
-            
-
+                
+                app.UseCors("AllowAll");
                 app.MapOpenApi();
-
                 app.UseSwaggerUI(options =>
                 {
                     options.SwaggerEndpoint("/openapi/v1.json", "v1");
