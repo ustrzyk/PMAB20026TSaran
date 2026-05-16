@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SolutionOrders.API.Features.UnitOfMeasurements.Messages.Commands;
 using SolutionOrders.API.Features.UnitOfMeasurements.Messages.DTOs;
 using SolutionOrders.API.Features.UnitOfMeasurements.Messages.Queries;
 
@@ -37,6 +38,29 @@ namespace SolutionOrders.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Tworzy nową jednostkę miary
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateUnitOfMeasurementCommand command)
+        {
+            try
+            {
+                var unitOfMeasurementId = await mediator.Send(command);
+
+                // HTTP 201 Created z Location header
+                return CreatedAtAction(nameof(GetById), new { id = unitOfMeasurementId },
+                    new { id = unitOfMeasurementId, message = "Jednostka miary została utworzona" }
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
