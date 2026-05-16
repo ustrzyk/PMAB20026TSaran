@@ -138,6 +138,39 @@ export interface CreateClientResponse {
   message?: string;
 }
 
+// Pracownik.
+export interface WorkerDto {
+  idWorker: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  login: string;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu pracownika - POST /api/Worker
+export interface CreateWorkerCommand {
+  firstName?: string | null;
+  lastName?: string | null;
+  login: string;
+  password?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji pracownika - PUT /api/Worker/{id}
+export interface UpdateWorkerCommand {
+  idWorker: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  login: string;
+  password?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu pracownika.
+export interface CreateWorkerResponse {
+  id: number;
+  message?: string;
+}
+
 // Model pozycji koszyka po stronie aplikacji mobilnej.
 export interface CartItemModel {
   item: ItemDto;

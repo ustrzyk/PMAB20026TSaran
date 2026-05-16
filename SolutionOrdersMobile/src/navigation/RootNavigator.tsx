@@ -12,6 +12,8 @@ import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
 import UnitFormScreen from '../screens/UnitFormScreen.tsx';
 import UnitsScreen from '../screens/UnitsScreen.tsx';
+import WorkerFormScreen from '../screens/WorkerFormScreen.tsx';
+import WorkersScreen from '../screens/WorkersScreen.tsx';
 
 import type {RootStackParamList} from './types.ts';
 
@@ -116,6 +118,24 @@ function RootNavigator(): React.JSX.Element {
           name="EditClient"
           component={ClientFormScreen}
           options={{title: 'Edytuj klienta'}}
+        />
+
+        <Stack.Screen
+          name="Workers"
+          component={WorkersScreen}
+          options={{title: 'Pracownicy'}}
+        />
+
+        <Stack.Screen
+          name="CreateWorker"
+          component={WorkerFormScreen}
+          options={{title: 'Dodaj pracownika'}}
+        />
+
+        <Stack.Screen
+          name="EditWorker"
+          component={WorkerFormScreen}
+          options={{title: 'Edytuj pracownika'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

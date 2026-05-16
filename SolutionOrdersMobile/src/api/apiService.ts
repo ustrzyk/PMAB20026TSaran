@@ -11,12 +11,16 @@ import type {
   CreateItemResponse,
   CreateUnitOfMeasurementCommand,
   CreateUnitOfMeasurementResponse,
+  CreateWorkerCommand,
+  CreateWorkerResponse,
   Item,
   UnitOfMeasurementDto,
   UpdateCategoryCommand,
   UpdateClientCommand,
   UpdateItemCommand,
   UpdateUnitOfMeasurementCommand,
+  UpdateWorkerCommand,
+  WorkerDto,
 } from '../types/models.ts';
 
 class ApiService {
@@ -218,6 +222,44 @@ class ApiService {
 
   async deleteClient(idClient: number): Promise<void> {
     return this.request<void>(`/Client/${idClient}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== PRACOWNICY ==========
+
+  async getWorkers(): Promise<WorkerDto[]> {
+    return this.request<WorkerDto[]>('/Worker');
+  }
+
+  async getWorker(idWorker: number): Promise<WorkerDto> {
+    return this.request<WorkerDto>(`/Worker/${idWorker}`);
+  }
+
+  async createWorker(
+    data: CreateWorkerCommand,
+  ): Promise<CreateWorkerResponse> {
+    return this.request<CreateWorkerResponse>('/Worker', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateWorker(
+    idWorker: number,
+    data: UpdateWorkerCommand,
+  ): Promise<void> {
+    return this.request<void>(`/Worker/${idWorker}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idWorker,
+      }),
+    });
+  }
+
+  async deleteWorker(idWorker: number): Promise<void> {
+    return this.request<void>(`/Worker/${idWorker}`, {
       method: 'DELETE',
     });
   }
