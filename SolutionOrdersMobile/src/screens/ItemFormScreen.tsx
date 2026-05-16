@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -13,9 +13,11 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import apiService from '../api/apiService.ts';
 import {useItems} from '../context/ItemsContext';
 
 import type {RootStackParamList} from '../navigation/types.ts';
+import type {CategoryDto} from '../types/models.ts';
 
 type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateItem'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditItem'>;
@@ -43,6 +45,38 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
   );
   const [code, setCode] = useState(editedItem?.code ?? '');
 
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadCategories = async (): Promise<void> => {
+      try {
+        setCategoriesLoading(true);
+        setCategoriesError(null);
+
+        const data = await apiService.getCategories();
+
+        setCategories(data);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Nieznany błąd pobierania kategorii';
+
+        setCategoriesError(message);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    loadCategories();
+  }, []);
+
+  const selectedCategory = categories.find(
+    category => category.idCategory === Number(idCategory),
+  );
+
   const validateForm = (): boolean => {
     if (name.trim().length === 0) {
       Alert.alert('Błąd', 'Podaj nazwę produktu');
@@ -55,7 +89,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     }
 
     if (idCategory.trim().length === 0 || isNaN(Number(idCategory))) {
-      Alert.alert('Błąd', 'Podaj poprawne ID kategorii');
+      Alert.alert('Błąd', 'Wybierz poprawną kategorię');
       return false;
     }
 
@@ -127,13 +161,87 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     }
   };
 
+  const renderCategorySelector = (): React.JSX.Element => {
+    if (categoriesLoading) {
+      return (
+        <View style={styles.categoryInfoBox}>
+          <Text style={styles.categoryInfoText}>Ładowanie kategorii...</Text>
+        </View>
+      );
+    }
+
+    if (categoriesError || categories.length === 0) {
+      return (
+        <View>
+          <Text style={styles.categoryErrorText}>
+            Kategorie nie zostały pobrane. Wpisz ID kategorii ręcznie.
+          </Text>
+
+          <TextInput
+            style={styles.input}
+            value={idCategory}
+            onChangeText={setIdCategory}
+            placeholder="1"
+            placeholderTextColor="#64748b"
+            keyboardType="numeric"
+          />
+        </View>
+      );
+    }
+
+    return (
+      <View>
+        <View style={styles.selectedCategoryBox}>
+          <Text style={styles.selectedCategoryLabel}>Wybrana kategoria</Text>
+          <Text style={styles.selectedCategoryName}>
+            {selectedCategory?.name ?? `ID: ${idCategory}`}
+          </Text>
+        </View>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.categoryList}>
+          {categories.map(category => {
+            const isSelected = category.idCategory === Number(idCategory);
+
+            return (
+              <TouchableOpacity
+                key={category.idCategory}
+                style={[
+                  styles.categoryButton,
+                  isSelected && styles.categoryButtonSelected,
+                ]}
+                onPress={() => setIdCategory(category.idCategory.toString())}
+                activeOpacity={0.8}>
+                <Text
+                  style={[
+                    styles.categoryButtonText,
+                    isSelected && styles.categoryButtonTextSelected,
+                  ]}>
+                  {category.name ?? 'Brak nazwy'}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.appName}>3D Print Shop</Text>
+
         <Text style={styles.title}>
           {isEditMode ? 'Edytuj produkt' : 'Dodaj produkt'}
+        </Text>
+
+        <Text style={styles.subtitle}>
+          Formularz produktu w sklepie z drukarkami 3D i akcesoriami.
         </Text>
 
         <View style={styles.formGroup}>
@@ -159,30 +267,21 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           />
         </View>
 
-        <View style={styles.row}>
-          <View style={[styles.formGroup, styles.rowItem]}>
-            <Text style={styles.label}>ID kategorii</Text>
-            <TextInput
-              style={styles.input}
-              value={idCategory}
-              onChangeText={setIdCategory}
-              placeholder="1"
-              placeholderTextColor="#64748b"
-              keyboardType="numeric"
-            />
-          </View>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Kategoria</Text>
+          {renderCategorySelector()}
+        </View>
 
-          <View style={[styles.formGroup, styles.rowItem]}>
-            <Text style={styles.label}>ID jednostki</Text>
-            <TextInput
-              style={styles.input}
-              value={idUnitOfMeasurement}
-              onChangeText={setIdUnitOfMeasurement}
-              placeholder="1"
-              placeholderTextColor="#64748b"
-              keyboardType="numeric"
-            />
-          </View>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>ID jednostki miary</Text>
+          <TextInput
+            style={styles.input}
+            value={idUnitOfMeasurement}
+            onChangeText={setIdUnitOfMeasurement}
+            placeholder="1"
+            placeholderTextColor="#64748b"
+            keyboardType="numeric"
+          />
         </View>
 
         <View style={styles.row}>
@@ -264,10 +363,26 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
+  appName: {
+    color: '#f97316',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 8,
+  },
+
   title: {
     color: '#f8fafc',
     fontSize: 26,
     fontWeight: '900',
+  },
+
+  subtitle: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
     marginBottom: 20,
   },
 
@@ -278,7 +393,7 @@ const styles = StyleSheet.create({
   label: {
     color: '#cbd5e1',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 6,
   },
 
@@ -305,6 +420,78 @@ const styles = StyleSheet.create({
 
   rowItem: {
     flex: 1,
+  },
+
+  categoryInfoBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 12,
+  },
+
+  categoryInfoText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+  },
+
+  categoryErrorText: {
+    color: '#fca5a5',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+
+  selectedCategoryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+  },
+
+  selectedCategoryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+
+  selectedCategoryName: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  categoryList: {
+    gap: 8,
+    paddingRight: 16,
+  },
+
+  categoryButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+
+  categoryButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  categoryButtonText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  categoryButtonTextSelected: {
+    color: '#ffffff',
   },
 
   saveButton: {
