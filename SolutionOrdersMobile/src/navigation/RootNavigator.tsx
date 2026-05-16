@@ -2,6 +2,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
 
@@ -13,7 +14,7 @@ function RootNavigator(): React.JSX.Element {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Items"
+        initialRouteName="Home"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#f97316',
@@ -26,6 +27,12 @@ function RootNavigator(): React.JSX.Element {
             backgroundColor: '#0f172a',
           },
         }}>
+        <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{title: '3D Print Shop'}}
+        />
+
         <Stack.Screen
           name="Items"
           component={ItemsScreen}
