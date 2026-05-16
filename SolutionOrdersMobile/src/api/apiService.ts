@@ -2,8 +2,11 @@ import {API_BASE_URL} from './config.ts';
 
 import type {
   CategoryDto,
+  ClientDto,
   CreateCategoryCommand,
   CreateCategoryResponse,
+  CreateClientCommand,
+  CreateClientResponse,
   CreateItemCommand,
   CreateItemResponse,
   CreateUnitOfMeasurementCommand,
@@ -11,6 +14,7 @@ import type {
   Item,
   UnitOfMeasurementDto,
   UpdateCategoryCommand,
+  UpdateClientCommand,
   UpdateItemCommand,
   UpdateUnitOfMeasurementCommand,
 } from '../types/models.ts';
@@ -68,17 +72,14 @@ class ApiService {
 
   // ========== PRODUKTY / ITEMS ==========
 
-  // GET /api/Item
   async getItems(): Promise<Item[]> {
     return this.request<Item[]>('/Item');
   }
 
-  // GET /api/Item/{id}
   async getItem(idItem: number): Promise<Item> {
     return this.request<Item>(`/Item/${idItem}`);
   }
 
-  // POST /api/Item
   async createItem(data: CreateItemCommand): Promise<CreateItemResponse> {
     return this.request<CreateItemResponse>('/Item', {
       method: 'POST',
@@ -86,7 +87,6 @@ class ApiService {
     });
   }
 
-  // PUT /api/Item/{id}
   async updateItem(idItem: number, data: UpdateItemCommand): Promise<void> {
     return this.request<void>(`/Item/${idItem}`, {
       method: 'PUT',
@@ -97,7 +97,6 @@ class ApiService {
     });
   }
 
-  // DELETE /api/Item/{id}
   async deleteItem(idItem: number): Promise<void> {
     return this.request<void>(`/Item/${idItem}`, {
       method: 'DELETE',
@@ -106,17 +105,14 @@ class ApiService {
 
   // ========== KATEGORIE ==========
 
-  // GET /api/Category
   async getCategories(): Promise<CategoryDto[]> {
     return this.request<CategoryDto[]>('/Category');
   }
 
-  // GET /api/Category/{id}
   async getCategory(idCategory: number): Promise<CategoryDto> {
     return this.request<CategoryDto>(`/Category/${idCategory}`);
   }
 
-  // POST /api/Category
   async createCategory(
     data: CreateCategoryCommand,
   ): Promise<CreateCategoryResponse> {
@@ -126,7 +122,6 @@ class ApiService {
     });
   }
 
-  // PUT /api/Category/{id}
   async updateCategory(
     idCategory: number,
     data: UpdateCategoryCommand,
@@ -140,7 +135,6 @@ class ApiService {
     });
   }
 
-  // DELETE /api/Category/{id}
   async deleteCategory(idCategory: number): Promise<void> {
     return this.request<void>(`/Category/${idCategory}`, {
       method: 'DELETE',
@@ -149,19 +143,16 @@ class ApiService {
 
   // ========== JEDNOSTKI MIARY ==========
 
-  // GET /api/UnitOfMeasurement
   async getUnits(): Promise<UnitOfMeasurementDto[]> {
     return this.request<UnitOfMeasurementDto[]>('/UnitOfMeasurement');
   }
 
-  // GET /api/UnitOfMeasurement/{id}
   async getUnit(idUnitOfMeasurement: number): Promise<UnitOfMeasurementDto> {
     return this.request<UnitOfMeasurementDto>(
       `/UnitOfMeasurement/${idUnitOfMeasurement}`,
     );
   }
 
-  // POST /api/UnitOfMeasurement
   async createUnit(
     data: CreateUnitOfMeasurementCommand,
   ): Promise<CreateUnitOfMeasurementResponse> {
@@ -174,7 +165,6 @@ class ApiService {
     );
   }
 
-  // PUT /api/UnitOfMeasurement/{id}
   async updateUnit(
     idUnitOfMeasurement: number,
     data: UpdateUnitOfMeasurementCommand,
@@ -188,9 +178,46 @@ class ApiService {
     });
   }
 
-  // DELETE /api/UnitOfMeasurement/{id}
   async deleteUnit(idUnitOfMeasurement: number): Promise<void> {
     return this.request<void>(`/UnitOfMeasurement/${idUnitOfMeasurement}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== KLIENCI ==========
+
+  async getClients(): Promise<ClientDto[]> {
+    return this.request<ClientDto[]>('/Client');
+  }
+
+  async getClient(idClient: number): Promise<ClientDto> {
+    return this.request<ClientDto>(`/Client/${idClient}`);
+  }
+
+  async createClient(
+    data: CreateClientCommand,
+  ): Promise<CreateClientResponse> {
+    return this.request<CreateClientResponse>('/Client', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateClient(
+    idClient: number,
+    data: UpdateClientCommand,
+  ): Promise<void> {
+    return this.request<void>(`/Client/${idClient}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idClient,
+      }),
+    });
+  }
+
+  async deleteClient(idClient: number): Promise<void> {
+    return this.request<void>(`/Client/${idClient}`, {
       method: 'DELETE',
     });
   }

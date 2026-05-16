@@ -1,4 +1,9 @@
-import type {CategoryDto, Item, UnitOfMeasurementDto} from '../types/models.ts';
+import type {
+  CategoryDto,
+  ClientDto,
+  Item,
+  UnitOfMeasurementDto,
+} from '../types/models.ts';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -22,6 +27,12 @@ export type RootStackParamList = {
   CreateUnit: undefined;
   EditUnit: {
     unit: UnitOfMeasurementDto;
+  };
+
+  Clients: undefined;
+  CreateClient: undefined;
+  EditClient: {
+    client: ClientDto;
   };
 
   Cart: undefined;

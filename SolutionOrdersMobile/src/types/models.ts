@@ -107,6 +107,37 @@ export interface CreateUnitOfMeasurementResponse {
   message?: string;
 }
 
+// Klient.
+export interface ClientDto {
+  idClient: number;
+  name: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu klienta - POST /api/Client
+export interface CreateClientCommand {
+  name: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji klienta - PUT /api/Client/{id}
+export interface UpdateClientCommand {
+  idClient: number;
+  name: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu klienta.
+export interface CreateClientResponse {
+  id: number;
+  message?: string;
+}
+
 // Model pozycji koszyka po stronie aplikacji mobilnej.
 export interface CartItemModel {
   item: ItemDto;

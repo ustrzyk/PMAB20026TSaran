@@ -4,6 +4,8 @@ import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
 import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
+import ClientFormScreen from '../screens/ClientFormScreen.tsx';
+import ClientsScreen from '../screens/ClientsScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
@@ -96,6 +98,24 @@ function RootNavigator(): React.JSX.Element {
           name="EditUnit"
           component={UnitFormScreen}
           options={{title: 'Edytuj jednostkę'}}
+        />
+
+        <Stack.Screen
+          name="Clients"
+          component={ClientsScreen}
+          options={{title: 'Klienci'}}
+        />
+
+        <Stack.Screen
+          name="CreateClient"
+          component={ClientFormScreen}
+          options={{title: 'Dodaj klienta'}}
+        />
+
+        <Stack.Screen
+          name="EditClient"
+          component={ClientFormScreen}
+          options={{title: 'Edytuj klienta'}}
         />
       </Stack.Navigator>
     </NavigationContainer>
