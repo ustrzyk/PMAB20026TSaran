@@ -2,7 +2,9 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
+import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
 
@@ -40,6 +42,12 @@ function RootNavigator(): React.JSX.Element {
         />
 
         <Stack.Screen
+          name="ItemDetails"
+          component={ItemDetailsScreen}
+          options={{title: 'Szczegóły produktu'}}
+        />
+
+        <Stack.Screen
           name="CreateItem"
           component={ItemFormScreen}
           options={{title: 'Dodaj produkt'}}
@@ -49,6 +57,12 @@ function RootNavigator(): React.JSX.Element {
           name="EditItem"
           component={ItemFormScreen}
           options={{title: 'Edytuj produkt'}}
+        />
+
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={{title: 'Kategorie'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

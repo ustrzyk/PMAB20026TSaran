@@ -77,6 +77,13 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.itemActions}>
           <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={() => navigation.navigate('ItemDetails', {item})}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Szczegóły</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditItem', {item})}
             activeOpacity={0.8}>
@@ -352,7 +359,14 @@ const styles = StyleSheet.create({
 
   itemActions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
+  },
+
+  detailsButton: {
+    flex: 1,
+    backgroundColor: '#f97316',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 
   editButton: {
@@ -371,7 +385,7 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
   },

@@ -22,24 +22,24 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.title}>Sklep z drukarkami 3D</Text>
 
         <Text style={styles.subtitle}>
-          Aplikacja mobilna do zarządzania produktami, akcesoriami,
-          kategoriami i zamówieniami w sklepie z drukarkami 3D.
+          Mobilny panel sklepu do obsługi produktów, drukarek 3D, filamentów,
+          części zamiennych i akcesoriów.
         </Text>
       </View>
 
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>1</Text>
-          <Text style={styles.statLabel}>aktywny moduł CRUD</Text>
+          <Text style={styles.statValue}>3D</Text>
+          <Text style={styles.statLabel}>drukarki i akcesoria</Text>
         </View>
 
         <View style={styles.statCard}>
-          <Text style={styles.statValue}>8</Text>
-          <Text style={styles.statLabel}>planowanych klas</Text>
+          <Text style={styles.statValue}>API</Text>
+          <Text style={styles.statLabel}>połączenie z backendem</Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Moduły aplikacji</Text>
+      <Text style={styles.sectionTitle}>Menu główne</Text>
 
       <TouchableOpacity
         style={styles.menuCard}
@@ -48,52 +48,33 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Produkty</Text>
           <Text style={styles.menuDescription}>
-            Drukarki 3D, filamenty, części zamienne i akcesoria.
+            Lista produktów sklepu: drukarki 3D, filamenty, części i akcesoria.
           </Text>
         </View>
 
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
 
-      <View style={styles.menuCardDisabled}>
+      <TouchableOpacity
+        style={styles.menuCard}
+        onPress={() => navigation.navigate('Categories')}
+        activeOpacity={0.8}>
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Kategorie</Text>
           <Text style={styles.menuDescription}>
-            Docelowo kategorie produktów, np. drukarki, filamenty, części.
+            Kategorie asortymentu sklepu z drukarkami 3D.
           </Text>
         </View>
 
-        <Text style={styles.disabledText}>wkrótce</Text>
-      </View>
-
-      <View style={styles.menuCardDisabled}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Jednostki miary</Text>
-          <Text style={styles.menuDescription}>
-            Docelowo sztuki, kilogramy, rolki i zestawy.
-          </Text>
-        </View>
-
-        <Text style={styles.disabledText}>wkrótce</Text>
-      </View>
-
-      <View style={styles.menuCardDisabled}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Zamówienia</Text>
-          <Text style={styles.menuDescription}>
-            Docelowo obsługa zamówień klientów i pozycji zamówienia.
-          </Text>
-        </View>
-
-        <Text style={styles.disabledText}>wkrótce</Text>
-      </View>
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>Plan rozbudowy</Text>
+        <Text style={styles.infoTitle}>Informacje</Text>
 
         <Text style={styles.infoText}>
-          Projekt będzie rozwijany etapami: najpierw layout, potem CRUD dla
-          kolejnych klas, a następnie relacje z kluczami obcymi.
+          Aplikacja służy do zarządzania asortymentem sklepu związanego z
+          drukiem 3D. Dane są pobierane z API.
         </Text>
       </View>
     </ScrollView>
@@ -188,19 +169,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  menuCardDisabled: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    opacity: 0.55,
-  },
-
   menuTextBox: {
     flex: 1,
   },
@@ -221,13 +189,6 @@ const styles = StyleSheet.create({
   menuArrow: {
     color: '#f97316',
     fontSize: 18,
-    fontWeight: '900',
-    marginLeft: 12,
-  },
-
-  disabledText: {
-    color: '#f97316',
-    fontSize: 12,
     fontWeight: '900',
     marginLeft: 12,
   },
