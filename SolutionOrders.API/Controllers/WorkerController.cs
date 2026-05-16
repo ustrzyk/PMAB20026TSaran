@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SolutionOrders.API.Features.Workers.Messages.Commands;
 using SolutionOrders.API.Features.Workers.Messages.DTOs;
 using SolutionOrders.API.Features.Workers.Messages.Queries;
 
@@ -37,6 +38,29 @@ namespace SolutionOrders.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Tworzy nowego pracownika
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateWorkerCommand command)
+        {
+            try
+            {
+                var workerId = await mediator.Send(command);
+
+                // HTTP 201 Created z Location header
+                return CreatedAtAction(nameof(GetById), new { id = workerId },
+                    new { id = workerId, message = "Pracownik został utworzony" }
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
