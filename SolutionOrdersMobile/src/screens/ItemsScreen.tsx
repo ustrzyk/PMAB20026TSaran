@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -6,6 +6,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -21,6 +22,30 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Items'>;
 
 function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
+
+  const [searchText, setSearchText] = useState('');
+
+  const filteredItems = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    if (search.length === 0) {
+      return items;
+    }
+
+    return items.filter(item => {
+      const name = item.name?.toLowerCase() ?? '';
+      const description = item.description?.toLowerCase() ?? '';
+      const code = item.code?.toLowerCase() ?? '';
+      const categoryName = item.categoryName?.toLowerCase() ?? '';
+
+      return (
+        name.includes(search) ||
+        description.includes(search) ||
+        code.includes(search) ||
+        categoryName.includes(search)
+      );
+    });
+  }, [items, searchText]);
 
   const handleDelete = (item: Item): void => {
     Alert.alert(
@@ -136,12 +161,33 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Produkty</Text>
-          <Text style={styles.subtitle}>Liczba produktów: {items.length}</Text>
+          <Text style={styles.subtitle}>
+            Wyświetlane: {filteredItems.length} / {items.length}
+          </Text>
         </View>
 
         <TouchableOpacity style={styles.refreshButton} onPress={refreshItems}>
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchBox}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Szukaj produktu, kodu lub kategorii..."
+          placeholderTextColor="#64748b"
+        />
+
+        {searchText.trim().length > 0 ? (
+          <TouchableOpacity
+            style={styles.clearSearchButton}
+            onPress={() => setSearchText('')}
+            activeOpacity={0.8}>
+            <Text style={styles.clearSearchText}>Wyczyść</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <TouchableOpacity
@@ -152,7 +198,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       </TouchableOpacity>
 
       <FlatList
-        data={items}
+        data={filteredItems}
         renderItem={renderItem}
         keyExtractor={item => item.idItem.toString()}
         contentContainerStyle={styles.listContent}
@@ -160,7 +206,11 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           <RefreshControl refreshing={loading} onRefresh={refreshItems} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak produktów w API</Text>
+          <Text style={styles.emptyText}>
+            {searchText.trim().length > 0
+              ? 'Brak produktów pasujących do wyszukiwania'
+              : 'Brak produktów w API'}
+          </Text>
         }
       />
     </View>
@@ -266,6 +316,38 @@ const styles = StyleSheet.create({
   },
 
   refreshButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  searchBox: {
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    padding: 16,
+  },
+
+  searchInput: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 15,
+  },
+
+  clearSearchButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
+  clearSearchText: {
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '800',
