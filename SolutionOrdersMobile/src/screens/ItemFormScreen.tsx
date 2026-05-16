@@ -1,5 +1,6 @@
-import React, {useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,10 +13,12 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 import {useItems} from '../context/ItemsContext';
 
 import type {RootStackParamList} from '../navigation/types.ts';
+import type {CategoryDto, UnitOfMeasurementDto} from '../types/models.ts';
 
 type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateItem'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditItem'>;
@@ -50,6 +53,10 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     editedItem?.idUnitOfMeasurement?.toString() ?? '1',
   );
   const [code, setCode] = useState(editedItem?.code ?? '');
+
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [units, setUnits] = useState<UnitOfMeasurementDto[]>([]);
+  const [dictionaryLoading, setDictionaryLoading] = useState(true);
 
   const [submitting, setSubmitting] = useState(false);
   const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
@@ -92,6 +99,52 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     }
   };
 
+  const loadDictionaries = useCallback(async (): Promise<void> => {
+    try {
+      setDictionaryLoading(true);
+
+      const [categoriesFromApi, unitsFromApi] = await Promise.all([
+        apiService.getCategories(),
+        apiService.getUnits(),
+      ]);
+
+      setCategories(categoriesFromApi);
+      setUnits(unitsFromApi);
+
+      if (!isEditMode) {
+        if (categoriesFromApi.length > 0) {
+          setIdCategory(categoriesFromApi[0].idCategory.toString());
+        }
+
+        if (unitsFromApi.length > 0) {
+          setIdUnitOfMeasurement(
+            unitsFromApi[0].idUnitOfMeasurement.toString(),
+          );
+        }
+      }
+    } catch (err) {
+      showDialog(
+        'error',
+        'Błąd pobierania danych',
+        (err as Error).message,
+      );
+    } finally {
+      setDictionaryLoading(false);
+    }
+  }, [isEditMode]);
+
+  useEffect(() => {
+    loadDictionaries();
+  }, [loadDictionaries]);
+
+  const selectedCategory = categories.find(
+    category => category.idCategory === Number(idCategory),
+  );
+
+  const selectedUnit = units.find(
+    unit => unit.idUnitOfMeasurement === Number(idUnitOfMeasurement),
+  );
+
   const validateForm = (): string | null => {
     const parsedCategoryId = Number(idCategory);
     const parsedUnitId = Number(idUnitOfMeasurement);
@@ -119,7 +172,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
       Number.isNaN(parsedCategoryId) ||
       parsedCategoryId <= 0
     ) {
-      return 'Podaj poprawne ID kategorii większe od 0';
+      return 'Wybierz kategorię produktu';
     }
 
     if (
@@ -127,7 +180,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
       Number.isNaN(parsedUnitId) ||
       parsedUnitId <= 0
     ) {
-      return 'Podaj poprawne ID jednostki większe od 0';
+      return 'Wybierz jednostkę miary';
     }
 
     if (price.trim().length === 0 || Number.isNaN(parsedPrice)) {
@@ -240,6 +293,77 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     closeDialog();
   };
 
+  const renderCategoryButton = (
+    category: CategoryDto,
+  ): React.JSX.Element => {
+    const isSelected = Number(idCategory) === category.idCategory;
+
+    return (
+      <TouchableOpacity
+        key={category.idCategory}
+        style={[
+          styles.optionButton,
+          isSelected && styles.optionButtonSelected,
+        ]}
+        onPress={() => setIdCategory(category.idCategory.toString())}
+        activeOpacity={0.8}
+        disabled={submitting}>
+        <Text
+          style={[
+            styles.optionButtonText,
+            isSelected && styles.optionButtonTextSelected,
+          ]}>
+          {category.name}
+        </Text>
+
+        <Text
+          style={[
+            styles.optionButtonSubtext,
+            isSelected && styles.optionButtonSubtextSelected,
+          ]}>
+          ID: {category.idCategory}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderUnitButton = (
+    unit: UnitOfMeasurementDto,
+  ): React.JSX.Element => {
+    const isSelected =
+      Number(idUnitOfMeasurement) === unit.idUnitOfMeasurement;
+
+    return (
+      <TouchableOpacity
+        key={unit.idUnitOfMeasurement}
+        style={[
+          styles.optionButton,
+          isSelected && styles.optionButtonSelected,
+        ]}
+        onPress={() =>
+          setIdUnitOfMeasurement(unit.idUnitOfMeasurement.toString())
+        }
+        activeOpacity={0.8}
+        disabled={submitting}>
+        <Text
+          style={[
+            styles.optionButtonText,
+            isSelected && styles.optionButtonTextSelected,
+          ]}>
+          {unit.name}
+        </Text>
+
+        <Text
+          style={[
+            styles.optionButtonSubtext,
+            isSelected && styles.optionButtonSubtextSelected,
+          ]}>
+          ID: {unit.idUnitOfMeasurement}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -320,36 +444,48 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Powiązania</Text>
 
-          <View style={styles.row}>
-            <View style={[styles.formGroup, styles.rowItem]}>
-              <Text style={styles.label}>ID kategorii</Text>
-              <TextInput
-                style={styles.input}
-                value={idCategory}
-                onChangeText={setIdCategory}
-                placeholder="1"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-                editable={!submitting}
-              />
+          {dictionaryLoading ? (
+            <View style={styles.dictionaryLoadingBox}>
+              <ActivityIndicator size="small" color="#f97316" />
+              <Text style={styles.dictionaryLoadingText}>
+                Ładowanie kategorii i jednostek...
+              </Text>
             </View>
+          ) : (
+            <>
+              <Text style={styles.label}>Kategoria</Text>
+              <Text style={styles.selectedText}>
+                Wybrano:{' '}
+                {selectedCategory
+                  ? selectedCategory.name
+                  : `ID ${idCategory}`}
+              </Text>
 
-            <View style={[styles.formGroup, styles.rowItem]}>
-              <Text style={styles.label}>ID jednostki</Text>
-              <TextInput
-                style={styles.input}
-                value={idUnitOfMeasurement}
-                onChangeText={setIdUnitOfMeasurement}
-                placeholder="1"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-                editable={!submitting}
-              />
-            </View>
-          </View>
+              <View style={styles.optionsContainer}>
+                {categories.map(renderCategoryButton)}
+              </View>
+
+              <Text style={styles.label}>Jednostka miary</Text>
+              <Text style={styles.selectedText}>
+                Wybrano:{' '}
+                {selectedUnit
+                  ? `${selectedUnit.name}${
+                      selectedUnit.shortcut
+                        ? ` (${selectedUnit.shortcut})`
+                        : ''
+                    }`
+                  : `ID ${idUnitOfMeasurement}`}
+              </Text>
+
+              <View style={styles.optionsContainer}>
+                {units.map(renderUnitButton)}
+              </View>
+            </>
+          )}
 
           <Text style={styles.hintText}>
-            ID kategorii i jednostki muszą istnieć po stronie backendu.
+            Kategoria i jednostka są pobierane z backendu, żeby uniknąć
+            wpisania nieistniejącego ID.
           </Text>
         </View>
 
@@ -405,7 +541,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           style={[styles.saveButton, submitting && styles.disabledButton]}
           onPress={handleSavePress}
           activeOpacity={0.8}
-          disabled={submitting}>
+          disabled={submitting || dictionaryLoading}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
@@ -519,6 +655,72 @@ const styles = StyleSheet.create({
 
   rowItem: {
     flex: 1,
+  },
+
+  dictionaryLoadingBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 14,
+    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  dictionaryLoadingText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  selectedText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    marginBottom: 8,
+  },
+
+  optionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+
+  optionButton: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+
+  optionButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  optionButtonText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  optionButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  optionButtonSubtext: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  optionButtonSubtextSelected: {
+    color: '#ffffff',
   },
 
   hintText: {
