@@ -1,4 +1,4 @@
-// Modele TypeScript dopasowane do DTO i Command z SolutionOrders.API
+// Modele TypeScript dopasowane do DTO i Command z API.
 
 // Produkt zwracany z GET /api/Item oraz GET /api/Item/{id}
 export interface ItemDto {
@@ -18,7 +18,6 @@ export interface ItemDto {
 
 export type Item = ItemDto;
 
-
 // Dane wysyłane przy tworzeniu produktu - POST /api/Item
 export interface CreateItemCommand {
   name: string;
@@ -31,7 +30,7 @@ export interface CreateItemCommand {
   code: string;
 }
 
-// Dane wysyłane przy aktualizacji produktu - PUT /api/Item
+// Dane wysyłane przy aktualizacji produktu - PUT /api/Item/{id}
 export interface UpdateItemCommand {
   idItem: number;
   name: string;
@@ -45,40 +44,57 @@ export interface UpdateItemCommand {
   isActive: boolean;
 }
 
-// Odpowiedź z API po utworzeniu produktu
-// U Ciebie Swagger zwracał np. { id: 15, message: "Produkt został utworzony" }
+// Odpowiedź z API po utworzeniu produktu.
 export interface CreateItemResponse {
   id: number;
   message: string;
 }
 
-// Kategoria produktu
-// Przyda się później, jeśli dodasz endpoint GET /api/Category
+// Kategoria produktu.
 export interface CategoryDto {
   idCategory: number;
   name: string;
   description?: string | null;
+  isActive?: boolean;
 }
 
-// Jednostka miary
-// Przyda się później, jeśli dodasz endpoint GET /api/UnitOfMeasurement
+// Dane wysyłane przy tworzeniu kategorii - POST /api/Category
+export interface CreateCategoryCommand {
+  name: string;
+  description?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji kategorii - PUT /api/Category/{id}
+export interface UpdateCategoryCommand {
+  idCategory: number;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu kategorii.
+export interface CreateCategoryResponse {
+  id: number;
+  message?: string;
+}
+
+// Jednostka miary.
 export interface UnitOfMeasurementDto {
   idUnitOfMeasurement: number;
   name: string;
   shortcut?: string | null;
 }
 
-// Model pozycji koszyka po stronie aplikacji mobilnej
-// Na razie lokalny, później można go mapować na OrderItem
+// Model pozycji koszyka po stronie aplikacji mobilnej.
 export interface CartItemModel {
   item: ItemDto;
   quantity: number;
 }
 
-// Pomocniczy typ do obsługi stanu ładowania danych z API
+// Pomocniczy typ do obsługi stanu ładowania danych z API.
 export type ApiStatus = 'idle' | 'loading' | 'success' | 'error';
 
-// Uniwersalny stan dla zapytań API
+// Uniwersalny stan dla zapytań API.
 export interface ApiState<T> {
   data: T | null;
   status: ApiStatus;

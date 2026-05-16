@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -9,11 +10,16 @@ import {
   View,
 } from 'react-native';
 
+import type {NativeStackScreenProps} from '@react-navigation/native-stack';
+
 import apiService from '../api/apiService.ts';
 
+import type {RootStackParamList} from '../navigation/types.ts';
 import type {CategoryDto} from '../types/models.ts';
 
-function CategoriesScreen(): React.JSX.Element {
+type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
+
+function CategoriesScreen({navigation}: Props): React.JSX.Element {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +46,38 @@ function CategoriesScreen(): React.JSX.Element {
     loadCategories();
   }, [loadCategories]);
 
+  const handleDelete = (category: CategoryDto): void => {
+    Alert.alert(
+      'Potwierdzenie',
+      `Czy na pewno usunąć kategorię "${category.name ?? 'bez nazwy'}"?`,
+      [
+        {
+          text: 'Anuluj',
+          style: 'cancel',
+        },
+        {
+          text: 'Usuń',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiService.deleteCategory(category.idCategory);
+
+              setCategories(previousCategories =>
+                previousCategories.filter(
+                  item => item.idCategory !== category.idCategory,
+                ),
+              );
+
+              Alert.alert('Sukces', 'Kategoria została usunięta');
+            } catch (err) {
+              Alert.alert('Błąd', (err as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const renderItem = ({item}: {item: CategoryDto}): React.JSX.Element => {
     return (
       <View style={styles.categoryCard}>
@@ -50,6 +88,22 @@ function CategoriesScreen(): React.JSX.Element {
         </Text>
 
         <Text style={styles.categoryId}>ID kategorii: {item.idCategory}</Text>
+
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('EditCategory', {category: item})}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Edytuj</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => handleDelete(item)}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Usuń</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -99,6 +153,13 @@ function CategoriesScreen(): React.JSX.Element {
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={styles.createButton}
+        onPress={() => navigation.navigate('CreateCategory')}
+        activeOpacity={0.8}>
+        <Text style={styles.createButtonText}>+ Dodaj kategorię</Text>
+      </TouchableOpacity>
 
       <FlatList
         data={categories}
@@ -228,6 +289,21 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  createButton: {
+    backgroundColor: '#16a34a',
+    marginHorizontal: 16,
+    marginTop: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  createButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
   listContent: {
     padding: 16,
     paddingBottom: 30,
@@ -260,6 +336,33 @@ const styles = StyleSheet.create({
     color: '#f97316',
     fontSize: 12,
     fontWeight: '800',
+  },
+
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+
+  editButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#7f1d1d',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  buttonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+    textAlign: 'center',
   },
 
   emptyText: {
