@@ -83,6 +83,28 @@ export interface UnitOfMeasurementDto {
   idUnitOfMeasurement: number;
   name: string;
   shortcut?: string | null;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu jednostki miary - POST /api/UnitOfMeasurement
+export interface CreateUnitOfMeasurementCommand {
+  name: string;
+  description?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji jednostki miary - PUT /api/UnitOfMeasurement/{id}
+export interface UpdateUnitOfMeasurementCommand {
+  idUnitOfMeasurement: number;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu jednostki miary.
+export interface CreateUnitOfMeasurementResponse {
+  id: number;
+  message?: string;
 }
 
 // Model pozycji koszyka po stronie aplikacji mobilnej.

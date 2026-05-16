@@ -8,6 +8,7 @@ import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
+import UnitFormScreen from '../screens/UnitFormScreen.tsx';
 import UnitsScreen from '../screens/UnitsScreen.tsx';
 
 import type {RootStackParamList} from './types.ts';
@@ -83,6 +84,18 @@ function RootNavigator(): React.JSX.Element {
           name="Units"
           component={UnitsScreen}
           options={{title: 'Jednostki miary'}}
+        />
+
+        <Stack.Screen
+          name="CreateUnit"
+          component={UnitFormScreen}
+          options={{title: 'Dodaj jednostkę'}}
+        />
+
+        <Stack.Screen
+          name="EditUnit"
+          component={UnitFormScreen}
+          options={{title: 'Edytuj jednostkę'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

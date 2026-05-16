@@ -1,4 +1,4 @@
-import type {CategoryDto, Item} from '../types/models.ts';
+import type {CategoryDto, Item, UnitOfMeasurementDto} from '../types/models.ts';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -19,5 +19,10 @@ export type RootStackParamList = {
   };
 
   Units: undefined;
+  CreateUnit: undefined;
+  EditUnit: {
+    unit: UnitOfMeasurementDto;
+  };
+
   Cart: undefined;
 };

@@ -6,10 +6,13 @@ import type {
   CreateCategoryResponse,
   CreateItemCommand,
   CreateItemResponse,
+  CreateUnitOfMeasurementCommand,
+  CreateUnitOfMeasurementResponse,
   Item,
   UnitOfMeasurementDto,
   UpdateCategoryCommand,
   UpdateItemCommand,
+  UpdateUnitOfMeasurementCommand,
 } from '../types/models.ts';
 
 class ApiService {
@@ -156,6 +159,40 @@ class ApiService {
     return this.request<UnitOfMeasurementDto>(
       `/UnitOfMeasurement/${idUnitOfMeasurement}`,
     );
+  }
+
+  // POST /api/UnitOfMeasurement
+  async createUnit(
+    data: CreateUnitOfMeasurementCommand,
+  ): Promise<CreateUnitOfMeasurementResponse> {
+    return this.request<CreateUnitOfMeasurementResponse>(
+      '/UnitOfMeasurement',
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    );
+  }
+
+  // PUT /api/UnitOfMeasurement/{id}
+  async updateUnit(
+    idUnitOfMeasurement: number,
+    data: UpdateUnitOfMeasurementCommand,
+  ): Promise<void> {
+    return this.request<void>(`/UnitOfMeasurement/${idUnitOfMeasurement}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idUnitOfMeasurement,
+      }),
+    });
+  }
+
+  // DELETE /api/UnitOfMeasurement/{id}
+  async deleteUnit(idUnitOfMeasurement: number): Promise<void> {
+    return this.request<void>(`/UnitOfMeasurement/${idUnitOfMeasurement}`, {
+      method: 'DELETE',
+    });
   }
 }
 
