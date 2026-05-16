@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SolutionOrders.API.Features.Categories.Messages.Commands;
 using SolutionOrders.API.Features.Categories.Messages.DTOs;
 using SolutionOrders.API.Features.Categories.Messages.Queries;
 
@@ -37,6 +38,29 @@ namespace SolutionOrders.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Tworzy nową kategorię
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateCategoryCommand command)
+        {
+            try
+            {
+                var categoryId = await mediator.Send(command);
+
+                // HTTP 201 Created z Location header
+                return CreatedAtAction(nameof(GetById), new { id = categoryId },
+                    new { id = categoryId, message = "Kategoria została utworzona" }
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }

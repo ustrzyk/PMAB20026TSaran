@@ -1,6 +1,5 @@
 import React, {useState} from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,6 +12,7 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
@@ -20,6 +20,14 @@ type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateCategory'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditCategory'>;
 
 type Props = CreateProps | EditProps;
+
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
+}
 
 function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditCategory';
@@ -30,28 +38,85 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
     editedCategory?.description ?? '',
   );
   const [submitting, setSubmitting] = useState(false);
+  const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
-  const validateForm = (): boolean => {
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
+
+  const showDialog = (
+    type: AppDialogType,
+    title: string,
+    message: string,
+    shouldGoBack = false,
+  ): void => {
+    setGoBackAfterDialog(shouldGoBack);
+
+    setDialog({
+      visible: true,
+      type,
+      title,
+      message,
+      loading: false,
+    });
+  };
+
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
+
+    if (goBackAfterDialog) {
+      setGoBackAfterDialog(false);
+      navigation.goBack();
+    }
+  };
+
+  const validateForm = (): string | null => {
     if (name.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj nazwę kategorii');
-      return false;
+      return 'Podaj nazwę kategorii';
     }
 
     if (name.trim().length > 64) {
-      Alert.alert('Błąd', 'Nazwa kategorii może mieć maksymalnie 64 znaki');
-      return false;
+      return 'Nazwa kategorii może mieć maksymalnie 64 znaki';
     }
 
-    return true;
+    return null;
   };
 
-  const handleSave = async (): Promise<void> => {
-    if (!validateForm()) {
+  const handleSavePress = (): void => {
+    const validationError = validateForm();
+
+    if (validationError) {
+      showDialog('error', 'Błąd formularza', validationError);
       return;
     }
 
+    setDialog({
+      visible: true,
+      type: 'confirm',
+      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      message: isEditMode
+        ? `Czy zapisać zmiany w kategorii "${name.trim()}"?`
+        : `Czy dodać nową kategorię "${name.trim()}"?`,
+      loading: false,
+    });
+  };
+
+  const submitForm = async (): Promise<void> => {
     try {
       setSubmitting(true);
+
+      setDialog(previous => ({
+        ...previous,
+        loading: true,
+      }));
 
       if (isEditMode && editedCategory) {
         await apiService.updateCategory(editedCategory.idCategory, {
@@ -62,7 +127,12 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           isActive: editedCategory.isActive ?? true,
         });
 
-        Alert.alert('Sukces', 'Kategoria została zaktualizowana');
+        showDialog(
+          'success',
+          'Kategoria zaktualizowana',
+          'Zmiany kategorii zostały zapisane.',
+          true,
+        );
       } else {
         await apiService.createCategory({
           name: name.trim(),
@@ -70,21 +140,51 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
             description.trim().length > 0 ? description.trim() : null,
         });
 
-        Alert.alert('Sukces', 'Kategoria została dodana');
+        showDialog(
+          'success',
+          'Kategoria dodana',
+          'Nowa kategoria została zapisana w systemie.',
+          true,
+        );
       }
-
-      navigation.goBack();
     } catch (err) {
-      Alert.alert('Błąd', (err as Error).message);
+      showDialog('error', 'Błąd zapisu', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleDialogConfirm = (): void => {
+    if (dialog.type === 'confirm') {
+      submitForm();
+      return;
+    }
+
+    closeDialog();
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={
+          dialog.type === 'confirm'
+            ? isEditMode
+              ? 'Zapisz'
+              : 'Dodaj'
+            : 'OK'
+        }
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={handleDialogConfirm}
+        onCancel={closeDialog}
+      />
+
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.appName}>3D Print Shop</Text>
 
@@ -103,6 +203,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           onChangeText={setName}
           placeholder="Np. Drukarki 3D"
           placeholderTextColor="#64748b"
+          editable={!submitting}
         />
 
         <Text style={styles.label}>Opis</Text>
@@ -113,11 +214,12 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           placeholder="Krótki opis kategorii"
           placeholderTextColor="#64748b"
           multiline
+          editable={!submitting}
         />
 
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}
-          onPress={handleSave}
+          onPress={handleSavePress}
           activeOpacity={0.8}
           disabled={submitting}>
           <Text style={styles.saveButtonText}>
