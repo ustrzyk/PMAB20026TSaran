@@ -20,32 +20,55 @@ import type {Item} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Items'>;
 
+type SortMode = 'default' | 'name' | 'priceAsc' | 'priceDesc' | 'quantity';
+
 function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
 
   const [searchText, setSearchText] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('default');
 
   const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
-    if (search.length === 0) {
-      return items;
+    let result = items;
+
+    if (search.length > 0) {
+      result = result.filter(item => {
+        const name = item.name?.toLowerCase() ?? '';
+        const description = item.description?.toLowerCase() ?? '';
+        const code = item.code?.toLowerCase() ?? '';
+        const categoryName = item.categoryName?.toLowerCase() ?? '';
+
+        return (
+          name.includes(search) ||
+          description.includes(search) ||
+          code.includes(search) ||
+          categoryName.includes(search)
+        );
+      });
     }
 
-    return items.filter(item => {
-      const name = item.name?.toLowerCase() ?? '';
-      const description = item.description?.toLowerCase() ?? '';
-      const code = item.code?.toLowerCase() ?? '';
-      const categoryName = item.categoryName?.toLowerCase() ?? '';
+    const sorted = [...result];
 
-      return (
-        name.includes(search) ||
-        description.includes(search) ||
-        code.includes(search) ||
-        categoryName.includes(search)
-      );
-    });
-  }, [items, searchText]);
+    if (sortMode === 'name') {
+      sorted.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    }
+
+    if (sortMode === 'priceAsc') {
+      sorted.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    }
+
+    if (sortMode === 'priceDesc') {
+      sorted.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    }
+
+    if (sortMode === 'quantity') {
+      sorted.sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+    }
+
+    return sorted;
+  }, [items, searchText, sortMode]);
 
   const handleDelete = (item: Item): void => {
     Alert.alert(
@@ -69,6 +92,28 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           },
         },
       ],
+    );
+  };
+
+  const renderSortButton = (
+    label: string,
+    value: SortMode,
+  ): React.JSX.Element => {
+    const isSelected = sortMode === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.sortButton, isSelected && styles.sortButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            isSelected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -188,6 +233,18 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.clearSearchText}>Wyczyść</Text>
           </TouchableOpacity>
         ) : null}
+      </View>
+
+      <View style={styles.sortBox}>
+        <Text style={styles.sortTitle}>Sortowanie</Text>
+
+        <View style={styles.sortButtons}>
+          {renderSortButton('Domyślnie', 'default')}
+          {renderSortButton('Nazwa', 'name')}
+          {renderSortButton('Cena ↑', 'priceAsc')}
+          {renderSortButton('Cena ↓', 'priceDesc')}
+          {renderSortButton('Stan', 'quantity')}
+        </View>
       </View>
 
       <TouchableOpacity
@@ -351,6 +408,51 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '800',
+  },
+
+  sortBox: {
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+
+  sortTitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+
+  sortButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  sortButton: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
+    color: '#ffffff',
   },
 
   createButton: {
