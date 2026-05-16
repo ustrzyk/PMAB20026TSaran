@@ -7,6 +7,7 @@ import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
+import UnitsScreen from '../screens/UnitsScreen.tsx';
 
 import type {RootStackParamList} from './types.ts';
 
@@ -63,6 +64,12 @@ function RootNavigator(): React.JSX.Element {
           name="Categories"
           component={CategoriesScreen}
           options={{title: 'Kategorie'}}
+        />
+
+        <Stack.Screen
+          name="Units"
+          component={UnitsScreen}
+          options={{title: 'Jednostki miary'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

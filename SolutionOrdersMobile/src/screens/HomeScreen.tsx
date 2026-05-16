@@ -69,6 +69,20 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.menuCard}
+        onPress={() => navigation.navigate('Units')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Jednostki miary</Text>
+          <Text style={styles.menuDescription}>
+            Jednostki używane przy produktach i stanach magazynowych.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
       <View style={styles.infoBox}>
         <Text style={styles.infoTitle}>Informacje</Text>
 
