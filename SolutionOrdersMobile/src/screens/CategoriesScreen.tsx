@@ -1,7 +1,6 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -10,23 +9,51 @@ import {
   View,
 } from 'react-native';
 
+import {useFocusEffect} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 import type {CategoryDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
 
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
+}
+
 function CategoriesScreen({navigation}: Props): React.JSX.Element {
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] =
+    useState<CategoryDto | null>(null);
+
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
+
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
+  };
 
   const loadCategories = useCallback(async (): Promise<void> => {
     try {
-      setLoading(true);
       setError(null);
 
       const data = await apiService.getCategories();
@@ -39,43 +66,82 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
       setError(message);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
-  useEffect(() => {
-    loadCategories();
-  }, [loadCategories]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      loadCategories();
+    }, [loadCategories]),
+  );
+
+  const handleRefresh = async (): Promise<void> => {
+    setRefreshing(true);
+    await loadCategories();
+  };
 
   const handleDelete = (category: CategoryDto): void => {
-    Alert.alert(
-      'Potwierdzenie',
-      `Czy na pewno usunąć kategorię "${category.name ?? 'bez nazwy'}"?`,
-      [
-        {
-          text: 'Anuluj',
-          style: 'cancel',
-        },
-        {
-          text: 'Usuń',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await apiService.deleteCategory(category.idCategory);
+    setSelectedCategory(category);
 
-              setCategories(previousCategories =>
-                previousCategories.filter(
-                  item => item.idCategory !== category.idCategory,
-                ),
-              );
+    setDialog({
+      visible: true,
+      type: 'confirm',
+      title: 'Usuwanie kategorii',
+      message: `Czy na pewno chcesz usunąć kategorię "${
+        category.name ?? 'bez nazwy'
+      }"?`,
+      loading: false,
+    });
+  };
 
-              Alert.alert('Sukces', 'Kategoria została usunięta');
-            } catch (err) {
-              Alert.alert('Błąd', (err as Error).message);
-            }
-          },
-        },
-      ],
-    );
+  const confirmDelete = async (): Promise<void> => {
+    if (!selectedCategory) {
+      return;
+    }
+
+    try {
+      setDialog(previous => ({
+        ...previous,
+        loading: true,
+      }));
+
+      await apiService.deleteCategory(selectedCategory.idCategory);
+
+      setCategories(previousCategories =>
+        previousCategories.filter(
+          item => item.idCategory !== selectedCategory.idCategory,
+        ),
+      );
+
+      setSelectedCategory(null);
+
+      setDialog({
+        visible: true,
+        type: 'success',
+        title: 'Kategoria usunięta',
+        message: 'Kategoria została poprawnie usunięta z listy.',
+        loading: false,
+      });
+    } catch (err) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Błąd usuwania',
+        message: (err as Error).message,
+        loading: false,
+      });
+    }
+  };
+
+  const handleDialogConfirm = (): void => {
+    if (dialog.type === 'confirm') {
+      confirmDelete();
+      return;
+    }
+
+    closeDialog();
   };
 
   const renderItem = ({item}: {item: CategoryDto}): React.JSX.Element => {
@@ -133,6 +199,18 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
 
   return (
     <View style={styles.container}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={handleDialogConfirm}
+        onCancel={closeDialog}
+      />
+
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
         <Text style={styles.heroTitle}>Kategorie produktów</Text>
@@ -149,7 +227,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
           </Text>
         </View>
 
-        <TouchableOpacity style={styles.refreshButton} onPress={loadCategories}>
+        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
       </View>
@@ -167,7 +245,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
         keyExtractor={item => item.idCategory.toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={loadCategories} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
           <Text style={styles.emptyText}>Brak kategorii w API</Text>
