@@ -1,7 +1,6 @@
 import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
@@ -13,6 +12,7 @@ import {
 
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 import {useItems} from '../context/ItemsContext';
 
 import type {RootStackParamList} from '../navigation/types.ts';
@@ -22,11 +22,28 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Items'>;
 
 type SortMode = 'default' | 'name' | 'priceAsc' | 'priceDesc' | 'quantity';
 
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
+}
+
 function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
 
   const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
@@ -70,29 +87,57 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     return sorted;
   }, [items, searchText, sortMode]);
 
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
+  };
+
   const handleDelete = (item: Item): void => {
-    Alert.alert(
-      'Potwierdzenie',
-      `Czy na pewno usunąć "${item.name ?? 'produkt'}"?`,
-      [
-        {
-          text: 'Anuluj',
-          style: 'cancel',
-        },
-        {
-          text: 'Usuń',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteItem(item.idItem);
-              Alert.alert('Sukces', 'Produkt został usunięty');
-            } catch (err) {
-              Alert.alert('Błąd', (err as Error).message);
-            }
-          },
-        },
-      ],
-    );
+    setSelectedItem(item);
+
+    setDialog({
+      visible: true,
+      type: 'confirm',
+      title: 'Usuwanie produktu',
+      message: `Czy na pewno chcesz usunąć produkt "${item.name ?? 'produkt'}"?`,
+      loading: false,
+    });
+  };
+
+  const confirmDelete = async (): Promise<void> => {
+    if (!selectedItem) {
+      return;
+    }
+
+    try {
+      setDialog(previous => ({
+        ...previous,
+        loading: true,
+      }));
+
+      await deleteItem(selectedItem.idItem);
+
+      setSelectedItem(null);
+
+      setDialog({
+        visible: true,
+        type: 'success',
+        title: 'Produkt usunięty',
+        message: 'Produkt został poprawnie usunięty z listy.',
+        loading: false,
+      });
+    } catch (err) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Błąd usuwania',
+        message: (err as Error).message,
+        loading: false,
+      });
+    }
   };
 
   const renderSortButton = (
@@ -194,6 +239,18 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
   return (
     <View style={styles.container}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={dialog.type === 'confirm' ? confirmDelete : closeDialog}
+        onCancel={closeDialog}
+      />
+
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
         <Text style={styles.heroTitle}>Produkty i akcesoria do druku 3D</Text>

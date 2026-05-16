@@ -1,6 +1,5 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -13,16 +12,23 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-import apiService from '../api/apiService.ts';
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 import {useItems} from '../context/ItemsContext';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {CategoryDto} from '../types/models.ts';
 
 type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateItem'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditItem'>;
 
 type Props = CreateProps | EditProps;
+
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
+}
 
 function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const {createItem, updateItem} = useItems();
@@ -45,86 +51,140 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
   );
   const [code, setCode] = useState(editedItem?.code ?? '');
 
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
-  const [categoriesLoading, setCategoriesLoading] = useState(true);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
-  useEffect(() => {
-    const loadCategories = async (): Promise<void> => {
-      try {
-        setCategoriesLoading(true);
-        setCategoriesError(null);
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
 
-        const data = await apiService.getCategories();
+  const showDialog = (
+    type: AppDialogType,
+    title: string,
+    message: string,
+    shouldGoBack = false,
+  ): void => {
+    setGoBackAfterDialog(shouldGoBack);
 
-        setCategories(data);
-      } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Nieznany błąd pobierania kategorii';
+    setDialog({
+      visible: true,
+      type,
+      title,
+      message,
+      loading: false,
+    });
+  };
 
-        setCategoriesError(message);
-      } finally {
-        setCategoriesLoading(false);
-      }
-    };
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
 
-    loadCategories();
-  }, []);
+    if (goBackAfterDialog) {
+      setGoBackAfterDialog(false);
+      navigation.goBack();
+    }
+  };
 
-  const selectedCategory = categories.find(
-    category => category.idCategory === Number(idCategory),
-  );
+  const validateForm = (): string | null => {
+    const parsedCategoryId = Number(idCategory);
+    const parsedUnitId = Number(idUnitOfMeasurement);
+    const parsedPrice = Number(price);
+    const parsedQuantity = Number(quantity);
 
-  const validateForm = (): boolean => {
     if (name.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj nazwę produktu');
-      return false;
+      return 'Podaj nazwę produktu';
+    }
+
+    if (name.trim().length > 80) {
+      return 'Nazwa produktu może mieć maksymalnie 80 znaków';
     }
 
     if (description.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj opis produktu');
-      return false;
+      return 'Podaj opis produktu';
     }
 
-    if (idCategory.trim().length === 0 || isNaN(Number(idCategory))) {
-      Alert.alert('Błąd', 'Wybierz poprawną kategorię');
-      return false;
+    if (description.trim().length < 5) {
+      return 'Opis produktu powinien mieć minimum 5 znaków';
     }
 
-    if (price.trim().length === 0 || isNaN(Number(price))) {
-      Alert.alert('Błąd', 'Podaj poprawną cenę');
-      return false;
-    }
-
-    if (quantity.trim().length === 0 || isNaN(Number(quantity))) {
-      Alert.alert('Błąd', 'Podaj poprawną ilość');
-      return false;
+    if (
+      idCategory.trim().length === 0 ||
+      Number.isNaN(parsedCategoryId) ||
+      parsedCategoryId <= 0
+    ) {
+      return 'Podaj poprawne ID kategorii większe od 0';
     }
 
     if (
       idUnitOfMeasurement.trim().length === 0 ||
-      isNaN(Number(idUnitOfMeasurement))
+      Number.isNaN(parsedUnitId) ||
+      parsedUnitId <= 0
     ) {
-      Alert.alert('Błąd', 'Podaj poprawne ID jednostki miary');
-      return false;
+      return 'Podaj poprawne ID jednostki większe od 0';
+    }
+
+    if (price.trim().length === 0 || Number.isNaN(parsedPrice)) {
+      return 'Podaj poprawną cenę';
+    }
+
+    if (parsedPrice <= 0) {
+      return 'Cena musi być większa od 0';
+    }
+
+    if (quantity.trim().length === 0 || Number.isNaN(parsedQuantity)) {
+      return 'Podaj poprawną ilość';
+    }
+
+    if (parsedQuantity < 0) {
+      return 'Ilość nie może być mniejsza od 0';
     }
 
     if (code.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj kod produktu');
-      return false;
+      return 'Podaj kod produktu';
     }
 
-    return true;
+    if (code.trim().length > 40) {
+      return 'Kod produktu może mieć maksymalnie 40 znaków';
+    }
+
+    return null;
   };
 
-  const handleSave = async (): Promise<void> => {
-    if (!validateForm()) {
+  const handleSavePress = (): void => {
+    const validationError = validateForm();
+
+    if (validationError) {
+      showDialog('error', 'Błąd formularza', validationError);
       return;
     }
 
+    setDialog({
+      visible: true,
+      type: 'confirm',
+      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      message: isEditMode
+        ? `Czy zapisać zmiany w produkcie "${name.trim()}"?`
+        : `Czy dodać nowy produkt "${name.trim()}"?`,
+      loading: false,
+    });
+  };
+
+  const submitForm = async (): Promise<void> => {
     try {
+      setSubmitting(true);
+
+      setDialog(previous => ({
+        ...previous,
+        loading: true,
+      }));
+
       if (isEditMode && editedItem) {
         await updateItem(editedItem.idItem, {
           idItem: editedItem.idItem,
@@ -139,7 +199,12 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           isActive: editedItem.isActive,
         });
 
-        Alert.alert('Sukces', 'Produkt został zaktualizowany');
+        showDialog(
+          'success',
+          'Produkt zaktualizowany',
+          'Zmiany produktu zostały zapisane.',
+          true,
+        );
       } else {
         await createItem({
           name: name.trim(),
@@ -152,199 +217,209 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           code: code.trim(),
         });
 
-        Alert.alert('Sukces', 'Produkt został dodany');
+        showDialog(
+          'success',
+          'Produkt dodany',
+          'Nowy produkt został zapisany w systemie.',
+          true,
+        );
       }
-
-      navigation.goBack();
     } catch (err) {
-      Alert.alert('Błąd', (err as Error).message);
+      showDialog('error', 'Błąd zapisu', (err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const renderCategorySelector = (): React.JSX.Element => {
-    if (categoriesLoading) {
-      return (
-        <View style={styles.categoryInfoBox}>
-          <Text style={styles.categoryInfoText}>Ładowanie kategorii...</Text>
-        </View>
-      );
+  const handleDialogConfirm = (): void => {
+    if (dialog.type === 'confirm') {
+      submitForm();
+      return;
     }
 
-    if (categoriesError || categories.length === 0) {
-      return (
-        <View>
-          <Text style={styles.categoryErrorText}>
-            Kategorie nie zostały pobrane. Wpisz ID kategorii ręcznie.
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            value={idCategory}
-            onChangeText={setIdCategory}
-            placeholder="1"
-            placeholderTextColor="#64748b"
-            keyboardType="numeric"
-          />
-        </View>
-      );
-    }
-
-    return (
-      <View>
-        <View style={styles.selectedCategoryBox}>
-          <Text style={styles.selectedCategoryLabel}>Wybrana kategoria</Text>
-          <Text style={styles.selectedCategoryName}>
-            {selectedCategory?.name ?? `ID: ${idCategory}`}
-          </Text>
-        </View>
-
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoryList}>
-          {categories.map(category => {
-            const isSelected = category.idCategory === Number(idCategory);
-
-            return (
-              <TouchableOpacity
-                key={category.idCategory}
-                style={[
-                  styles.categoryButton,
-                  isSelected && styles.categoryButtonSelected,
-                ]}
-                onPress={() => setIdCategory(category.idCategory.toString())}
-                activeOpacity={0.8}>
-                <Text
-                  style={[
-                    styles.categoryButtonText,
-                    isSelected && styles.categoryButtonTextSelected,
-                  ]}>
-                  {category.name ?? 'Brak nazwy'}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      </View>
-    );
+    closeDialog();
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={
+          dialog.type === 'confirm'
+            ? isEditMode
+              ? 'Zapisz'
+              : 'Dodaj'
+            : 'OK'
+        }
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={handleDialogConfirm}
+        onCancel={closeDialog}
+      />
+
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.appName}>3D Print Shop</Text>
+        <View style={styles.heroBox}>
+          <Text style={styles.appName}>3D Print Shop</Text>
 
-        <Text style={styles.title}>
-          {isEditMode ? 'Edytuj produkt' : 'Dodaj produkt'}
-        </Text>
+          <Text style={styles.title}>
+            {isEditMode ? 'Edytuj produkt' : 'Dodaj produkt'}
+          </Text>
 
-        <Text style={styles.subtitle}>
-          Formularz produktu w sklepie z drukarkami 3D i akcesoriami.
-        </Text>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Nazwa</Text>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="Np. Filament PLA"
-            placeholderTextColor="#64748b"
-          />
+          <Text style={styles.subtitle}>
+            Uzupełnij dane produktu sprzedawanego w sklepie z drukarkami 3D.
+          </Text>
         </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Opis</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Opis produktu"
-            placeholderTextColor="#64748b"
-            multiline
-          />
-        </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Dane podstawowe</Text>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Kategoria</Text>
-          {renderCategorySelector()}
-        </View>
-
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>ID jednostki miary</Text>
-          <TextInput
-            style={styles.input}
-            value={idUnitOfMeasurement}
-            onChangeText={setIdUnitOfMeasurement}
-            placeholder="1"
-            placeholderTextColor="#64748b"
-            keyboardType="numeric"
-          />
-        </View>
-
-        <View style={styles.row}>
-          <View style={[styles.formGroup, styles.rowItem]}>
-            <Text style={styles.label}>Cena</Text>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Nazwa produktu</Text>
             <TextInput
               style={styles.input}
-              value={price}
-              onChangeText={setPrice}
-              placeholder="99.99"
+              value={name}
+              onChangeText={setName}
+              placeholder="Np. Filament PLA 1.75 mm"
               placeholderTextColor="#64748b"
-              keyboardType="numeric"
+              editable={!submitting}
             />
           </View>
 
-          <View style={[styles.formGroup, styles.rowItem]}>
-            <Text style={styles.label}>Ilość</Text>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Opis</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Krótki opis produktu"
+              placeholderTextColor="#64748b"
+              multiline
+              editable={!submitting}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Kod produktu</Text>
             <TextInput
               style={styles.input}
-              value={quantity}
-              onChangeText={setQuantity}
-              placeholder="10"
+              value={code}
+              onChangeText={setCode}
+              placeholder="Np. FIL-PLA-001"
               placeholderTextColor="#64748b"
-              keyboardType="numeric"
+              autoCapitalize="characters"
+              editable={!submitting}
             />
           </View>
         </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>Kod</Text>
-          <TextInput
-            style={styles.input}
-            value={code}
-            onChangeText={setCode}
-            placeholder="Np. FIL001"
-            placeholderTextColor="#64748b"
-          />
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Powiązania</Text>
+
+          <View style={styles.row}>
+            <View style={[styles.formGroup, styles.rowItem]}>
+              <Text style={styles.label}>ID kategorii</Text>
+              <TextInput
+                style={styles.input}
+                value={idCategory}
+                onChangeText={setIdCategory}
+                placeholder="1"
+                placeholderTextColor="#64748b"
+                keyboardType="numeric"
+                editable={!submitting}
+              />
+            </View>
+
+            <View style={[styles.formGroup, styles.rowItem]}>
+              <Text style={styles.label}>ID jednostki</Text>
+              <TextInput
+                style={styles.input}
+                value={idUnitOfMeasurement}
+                onChangeText={setIdUnitOfMeasurement}
+                placeholder="1"
+                placeholderTextColor="#64748b"
+                keyboardType="numeric"
+                editable={!submitting}
+              />
+            </View>
+          </View>
+
+          <Text style={styles.hintText}>
+            ID kategorii i jednostki muszą istnieć po stronie backendu.
+          </Text>
         </View>
 
-        <View style={styles.formGroup}>
-          <Text style={styles.label}>URL zdjęcia</Text>
-          <TextInput
-            style={styles.input}
-            value={fotoUrl}
-            onChangeText={setFotoUrl}
-            placeholder="Opcjonalnie"
-            placeholderTextColor="#64748b"
-          />
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Cena i magazyn</Text>
+
+          <View style={styles.row}>
+            <View style={[styles.formGroup, styles.rowItem]}>
+              <Text style={styles.label}>Cena</Text>
+              <TextInput
+                style={styles.input}
+                value={price}
+                onChangeText={setPrice}
+                placeholder="99.99"
+                placeholderTextColor="#64748b"
+                keyboardType="numeric"
+                editable={!submitting}
+              />
+            </View>
+
+            <View style={[styles.formGroup, styles.rowItem]}>
+              <Text style={styles.label}>Ilość</Text>
+              <TextInput
+                style={styles.input}
+                value={quantity}
+                onChangeText={setQuantity}
+                placeholder="10"
+                placeholderTextColor="#64748b"
+                keyboardType="numeric"
+                editable={!submitting}
+              />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Zdjęcie</Text>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>URL zdjęcia</Text>
+            <TextInput
+              style={styles.input}
+              value={fotoUrl}
+              onChangeText={setFotoUrl}
+              placeholder="Opcjonalnie"
+              placeholderTextColor="#64748b"
+              editable={!submitting}
+            />
+          </View>
         </View>
 
         <TouchableOpacity
-          style={styles.saveButton}
-          onPress={handleSave}
-          activeOpacity={0.8}>
+          style={[styles.saveButton, submitting && styles.disabledButton]}
+          onPress={handleSavePress}
+          activeOpacity={0.8}
+          disabled={submitting}>
           <Text style={styles.saveButtonText}>
-            {isEditMode ? 'Zapisz zmiany' : 'Dodaj produkt'}
+            {submitting
+              ? 'Zapisywanie...'
+              : isEditMode
+                ? 'Zapisz zmiany'
+                : 'Dodaj produkt'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}>
+          activeOpacity={0.8}
+          disabled={submitting}>
           <Text style={styles.cancelButtonText}>Anuluj</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -361,6 +436,15 @@ const styles = StyleSheet.create({
   content: {
     padding: 16,
     paddingBottom: 32,
+  },
+
+  heroBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
   },
 
   appName: {
@@ -383,7 +467,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
-    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  sectionTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 12,
   },
 
   formGroup: {
@@ -398,7 +497,7 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    backgroundColor: '#111827',
+    backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
@@ -409,7 +508,7 @@ const styles = StyleSheet.create({
   },
 
   textArea: {
-    height: 90,
+    height: 96,
     textAlignVertical: 'top',
   },
 
@@ -422,76 +521,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  categoryInfoBox: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 12,
-  },
-
-  categoryInfoText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-  },
-
-  categoryErrorText: {
-    color: '#fca5a5',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-
-  selectedCategoryBox: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-  },
-
-  selectedCategoryLabel: {
+  hintText: {
     color: '#94a3b8',
     fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-  },
-
-  selectedCategoryName: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  categoryList: {
-    gap: 8,
-    paddingRight: 16,
-  },
-
-  categoryButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-  },
-
-  categoryButtonSelected: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
-  },
-
-  categoryButtonText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  categoryButtonTextSelected: {
-    color: '#ffffff',
+    lineHeight: 18,
   },
 
   saveButton: {
@@ -499,7 +532,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
+  },
+
+  disabledButton: {
+    opacity: 0.65,
   },
 
   saveButtonText: {
