@@ -16,9 +16,9 @@ import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {CategoryDto} from '../types/models.ts';
+import type {ClientDto} from '../types/models.ts';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Clients'>;
 
 interface DialogState {
   visible: boolean;
@@ -28,13 +28,12 @@ interface DialogState {
   loading: boolean;
 }
 
-function CategoriesScreen({navigation}: Props): React.JSX.Element {
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
+function ClientsScreen({navigation}: Props): React.JSX.Element {
+  const [clients, setClients] = useState<ClientDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] =
-    useState<CategoryDto | null>(null);
+  const [selectedClient, setSelectedClient] = useState<ClientDto | null>(null);
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -52,13 +51,13 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     }));
   };
 
-  const loadCategories = useCallback(async (): Promise<void> => {
+  const loadClients = useCallback(async (): Promise<void> => {
     try {
       setError(null);
 
-      const data = await apiService.getCategories();
+      const data = await apiService.getClients();
 
-      setCategories(data);
+      setClients(data);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Nieznany błąd pobierania danych';
@@ -73,31 +72,31 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      loadCategories();
-    }, [loadCategories]),
+      loadClients();
+    }, [loadClients]),
   );
 
   const handleRefresh = async (): Promise<void> => {
     setRefreshing(true);
-    await loadCategories();
+    await loadClients();
   };
 
-  const handleDelete = (category: CategoryDto): void => {
-    setSelectedCategory(category);
+  const handleDelete = (client: ClientDto): void => {
+    setSelectedClient(client);
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Usuwanie kategorii',
-      message: `Czy na pewno chcesz usunąć kategorię "${
-        category.name ?? 'bez nazwy'
+      title: 'Usuwanie klienta',
+      message: `Czy na pewno chcesz usunąć klienta "${
+        client.name ?? 'bez nazwy'
       }"?`,
       loading: false,
     });
   };
 
   const confirmDelete = async (): Promise<void> => {
-    if (!selectedCategory) {
+    if (!selectedClient) {
       return;
     }
 
@@ -107,21 +106,19 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
         loading: true,
       }));
 
-      await apiService.deleteCategory(selectedCategory.idCategory);
+      await apiService.deleteClient(selectedClient.idClient);
 
-      setCategories(previousCategories =>
-        previousCategories.filter(
-          item => item.idCategory !== selectedCategory.idCategory,
-        ),
+      setClients(previousClients =>
+        previousClients.filter(item => item.idClient !== selectedClient.idClient),
       );
 
-      setSelectedCategory(null);
+      setSelectedClient(null);
 
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Kategoria usunięta',
-        message: 'Kategoria została poprawnie usunięta z listy.',
+        title: 'Klient usunięty',
+        message: 'Klient został poprawnie usunięty z listy.',
         loading: false,
       });
     } catch (err) {
@@ -144,21 +141,25 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     closeDialog();
   };
 
-  const renderItem = ({item}: {item: CategoryDto}): React.JSX.Element => {
+  const renderItem = ({item}: {item: ClientDto}): React.JSX.Element => {
     return (
-      <View style={styles.categoryCard}>
-        <Text style={styles.categoryName}>{item.name ?? 'Brak nazwy'}</Text>
+      <View style={styles.clientCard}>
+        <Text style={styles.clientName}>{item.name ?? 'Brak nazwy'}</Text>
 
-        <Text style={styles.categoryDescription}>
-          {item.description ?? 'Brak opisu kategorii'}
+        <Text style={styles.clientText}>
+          Adres: {item.adress ?? 'Brak adresu'}
         </Text>
 
-        <Text style={styles.categoryId}>ID kategorii: {item.idCategory}</Text>
+        <Text style={styles.clientText}>
+          Telefon: {item.phoneNumber ?? 'Brak telefonu'}
+        </Text>
+
+        <Text style={styles.clientId}>ID klienta: {item.idClient}</Text>
 
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => navigation.navigate('EditCategory', {category: item})}
+            onPress={() => navigation.navigate('EditClient', {client: item})}
             activeOpacity={0.8}>
             <Text style={styles.buttonText}>Edytuj</Text>
           </TouchableOpacity>
@@ -178,7 +179,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Ładowanie kategorii...</Text>
+        <Text style={styles.loadingText}>Ładowanie klientów...</Text>
       </View>
     );
   }
@@ -186,11 +187,11 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>Nie udało się pobrać kategorii</Text>
+        <Text style={styles.errorTitle}>Nie udało się pobrać klientów</Text>
 
         <Text style={styles.errorText}>{error}</Text>
 
-        <TouchableOpacity style={styles.retryButton} onPress={loadCategories}>
+        <TouchableOpacity style={styles.retryButton} onPress={loadClients}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
         </TouchableOpacity>
       </View>
@@ -213,18 +214,16 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
 
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Kategorie produktów</Text>
+        <Text style={styles.heroTitle}>Klienci</Text>
         <Text style={styles.heroSubtitle}>
-          Kategorie porządkują asortyment sklepu z drukarkami 3D i akcesoriami.
+          Klienci sklepu i dane kontaktowe używane przy zamówieniach.
         </Text>
       </View>
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Kategorie</Text>
-          <Text style={styles.subtitle}>
-            Liczba kategorii: {categories.length}
-          </Text>
+          <Text style={styles.title}>Klienci</Text>
+          <Text style={styles.subtitle}>Liczba klientów: {clients.length}</Text>
         </View>
 
         <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
@@ -234,21 +233,21 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
 
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => navigation.navigate('CreateCategory')}
+        onPress={() => navigation.navigate('CreateClient')}
         activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj kategorię</Text>
+        <Text style={styles.createButtonText}>+ Dodaj klienta</Text>
       </TouchableOpacity>
 
       <FlatList
-        data={categories}
+        data={clients}
         renderItem={renderItem}
-        keyExtractor={item => item.idCategory.toString()}
+        keyExtractor={item => item.idClient.toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak kategorii w API</Text>
+          <Text style={styles.emptyText}>Brak klientów w API</Text>
         }
       />
     </View>
@@ -387,7 +386,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  categoryCard: {
+  clientCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
@@ -396,24 +395,25 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
 
-  categoryName: {
+  clientName: {
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
     marginBottom: 6,
   },
 
-  categoryDescription: {
+  clientText: {
     color: '#cbd5e1',
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 8,
+    marginBottom: 5,
   },
 
-  categoryId: {
+  clientId: {
     color: '#f97316',
     fontSize: 12,
     fontWeight: '800',
+    marginTop: 4,
   },
 
   actions: {
@@ -451,4 +451,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoriesScreen;
+export default ClientsScreen;

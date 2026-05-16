@@ -16,8 +16,8 @@ import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
-type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateCategory'>;
-type EditProps = NativeStackScreenProps<RootStackParamList, 'EditCategory'>;
+type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateClient'>;
+type EditProps = NativeStackScreenProps<RootStackParamList, 'EditClient'>;
 
 type Props = CreateProps | EditProps;
 
@@ -29,14 +29,16 @@ interface DialogState {
   loading: boolean;
 }
 
-function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
-  const isEditMode = route.name === 'EditCategory';
-  const editedCategory = isEditMode ? route.params.category : undefined;
+function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
+  const isEditMode = route.name === 'EditClient';
+  const editedClient = isEditMode ? route.params.client : undefined;
 
-  const [name, setName] = useState(editedCategory?.name ?? '');
-  const [description, setDescription] = useState(
-    editedCategory?.description ?? '',
+  const [name, setName] = useState(editedClient?.name ?? '');
+  const [adress, setAdress] = useState(editedClient?.adress ?? '');
+  const [phoneNumber, setPhoneNumber] = useState(
+    editedClient?.phoneNumber ?? '',
   );
+
   const [submitting, setSubmitting] = useState(false);
   const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
@@ -80,11 +82,15 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const validateForm = (): string | null => {
     if (name.trim().length === 0) {
-      return 'Podaj nazwę kategorii';
+      return 'Podaj nazwę klienta';
     }
 
-    if (name.trim().length > 64) {
-      return 'Nazwa kategorii może mieć maksymalnie 64 znaki';
+    if (name.trim().length > 80) {
+      return 'Nazwa klienta może mieć maksymalnie 80 znaków';
+    }
+
+    if (phoneNumber.trim().length > 30) {
+      return 'Numer telefonu może mieć maksymalnie 30 znaków';
     }
 
     return null;
@@ -103,8 +109,8 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
       type: 'confirm',
       title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
       message: isEditMode
-        ? `Czy zapisać zmiany w kategorii "${name.trim()}"?`
-        : `Czy dodać nową kategorię "${name.trim()}"?`,
+        ? `Czy zapisać zmiany klienta "${name.trim()}"?`
+        : `Czy dodać nowego klienta "${name.trim()}"?`,
       loading: false,
     });
   };
@@ -118,32 +124,34 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
-      if (isEditMode && editedCategory) {
-        await apiService.updateCategory(editedCategory.idCategory, {
-          idCategory: editedCategory.idCategory,
+      if (isEditMode && editedClient) {
+        await apiService.updateClient(editedClient.idClient, {
+          idClient: editedClient.idClient,
           name: name.trim(),
-          description:
-            description.trim().length > 0 ? description.trim() : null,
-          isActive: editedCategory.isActive ?? true,
+          adress: adress.trim().length > 0 ? adress.trim() : null,
+          phoneNumber:
+            phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
+          isActive: editedClient.isActive ?? true,
         });
 
         showDialog(
           'success',
-          'Kategoria zaktualizowana',
-          'Zmiany kategorii zostały zapisane.',
+          'Klient zaktualizowany',
+          'Dane klienta zostały zapisane.',
           true,
         );
       } else {
-        await apiService.createCategory({
+        await apiService.createClient({
           name: name.trim(),
-          description:
-            description.trim().length > 0 ? description.trim() : null,
+          adress: adress.trim().length > 0 ? adress.trim() : null,
+          phoneNumber:
+            phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
         });
 
         showDialog(
           'success',
-          'Kategoria dodana',
-          'Nowa kategoria została zapisana w systemie.',
+          'Klient dodany',
+          'Nowy klient został zapisany w systemie.',
           true,
         );
       }
@@ -189,31 +197,42 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.appName}>3D Print Shop</Text>
 
         <Text style={styles.title}>
-          {isEditMode ? 'Edytuj kategorię' : 'Dodaj kategorię'}
+          {isEditMode ? 'Edytuj klienta' : 'Dodaj klienta'}
         </Text>
 
         <Text style={styles.subtitle}>
-          Kategorie pomagają uporządkować produkty sklepu.
+          Dane klienta będą później używane przy obsłudze zamówień.
         </Text>
 
-        <Text style={styles.label}>Nazwa kategorii</Text>
+        <Text style={styles.label}>Nazwa klienta</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="Np. Drukarki 3D"
+          placeholder="Np. Jan Kowalski"
           placeholderTextColor="#64748b"
           editable={!submitting}
         />
 
-        <Text style={styles.label}>Opis</Text>
+        <Text style={styles.label}>Adres</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Krótki opis kategorii"
+          value={adress}
+          onChangeText={setAdress}
+          placeholder="Np. ul. Testowa 10"
           placeholderTextColor="#64748b"
           multiline
+          editable={!submitting}
+        />
+
+        <Text style={styles.label}>Telefon</Text>
+        <TextInput
+          style={styles.input}
+          value={phoneNumber}
+          onChangeText={setPhoneNumber}
+          placeholder="Np. 500-100-200"
+          placeholderTextColor="#64748b"
+          keyboardType="phone-pad"
           editable={!submitting}
         />
 
@@ -227,7 +246,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
               ? 'Zapisywanie...'
               : isEditMode
                 ? 'Zapisz zmiany'
-                : 'Dodaj kategorię'}
+                : 'Dodaj klienta'}
           </Text>
         </TouchableOpacity>
 
@@ -334,4 +353,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoryFormScreen;
+export default ClientFormScreen;

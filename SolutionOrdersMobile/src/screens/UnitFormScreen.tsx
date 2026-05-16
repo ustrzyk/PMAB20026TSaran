@@ -16,8 +16,8 @@ import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
-type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateCategory'>;
-type EditProps = NativeStackScreenProps<RootStackParamList, 'EditCategory'>;
+type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateUnit'>;
+type EditProps = NativeStackScreenProps<RootStackParamList, 'EditUnit'>;
 
 type Props = CreateProps | EditProps;
 
@@ -29,14 +29,15 @@ interface DialogState {
   loading: boolean;
 }
 
-function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
-  const isEditMode = route.name === 'EditCategory';
-  const editedCategory = isEditMode ? route.params.category : undefined;
+function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
+  const isEditMode = route.name === 'EditUnit';
+  const editedUnit = isEditMode ? route.params.unit : undefined;
 
-  const [name, setName] = useState(editedCategory?.name ?? '');
+  const [name, setName] = useState(editedUnit?.name ?? '');
   const [description, setDescription] = useState(
-    editedCategory?.description ?? '',
+    editedUnit?.description ?? '',
   );
+
   const [submitting, setSubmitting] = useState(false);
   const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
@@ -80,11 +81,11 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const validateForm = (): string | null => {
     if (name.trim().length === 0) {
-      return 'Podaj nazwę kategorii';
+      return 'Podaj nazwę jednostki miary';
     }
 
-    if (name.trim().length > 64) {
-      return 'Nazwa kategorii może mieć maksymalnie 64 znaki';
+    if (name.trim().length > 32) {
+      return 'Nazwa jednostki może mieć maksymalnie 32 znaki';
     }
 
     return null;
@@ -103,8 +104,8 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
       type: 'confirm',
       title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
       message: isEditMode
-        ? `Czy zapisać zmiany w kategorii "${name.trim()}"?`
-        : `Czy dodać nową kategorię "${name.trim()}"?`,
+        ? `Czy zapisać zmiany w jednostce "${name.trim()}"?`
+        : `Czy dodać nową jednostkę "${name.trim()}"?`,
       loading: false,
     });
   };
@@ -118,23 +119,23 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
-      if (isEditMode && editedCategory) {
-        await apiService.updateCategory(editedCategory.idCategory, {
-          idCategory: editedCategory.idCategory,
+      if (isEditMode && editedUnit) {
+        await apiService.updateUnit(editedUnit.idUnitOfMeasurement, {
+          idUnitOfMeasurement: editedUnit.idUnitOfMeasurement,
           name: name.trim(),
           description:
             description.trim().length > 0 ? description.trim() : null,
-          isActive: editedCategory.isActive ?? true,
+          isActive: editedUnit.isActive ?? true,
         });
 
         showDialog(
           'success',
-          'Kategoria zaktualizowana',
-          'Zmiany kategorii zostały zapisane.',
+          'Jednostka zaktualizowana',
+          'Zmiany jednostki miary zostały zapisane.',
           true,
         );
       } else {
-        await apiService.createCategory({
+        await apiService.createUnit({
           name: name.trim(),
           description:
             description.trim().length > 0 ? description.trim() : null,
@@ -142,8 +143,8 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
 
         showDialog(
           'success',
-          'Kategoria dodana',
-          'Nowa kategoria została zapisana w systemie.',
+          'Jednostka dodana',
+          'Nowa jednostka miary została zapisana w systemie.',
           true,
         );
       }
@@ -189,19 +190,20 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.appName}>3D Print Shop</Text>
 
         <Text style={styles.title}>
-          {isEditMode ? 'Edytuj kategorię' : 'Dodaj kategorię'}
+          {isEditMode ? 'Edytuj jednostkę' : 'Dodaj jednostkę'}
         </Text>
 
         <Text style={styles.subtitle}>
-          Kategorie pomagają uporządkować produkty sklepu.
+          Jednostki miary są używane przy produktach sklepu, np. szt, kg, m albo
+          rolka.
         </Text>
 
-        <Text style={styles.label}>Nazwa kategorii</Text>
+        <Text style={styles.label}>Nazwa jednostki</Text>
         <TextInput
           style={styles.input}
           value={name}
           onChangeText={setName}
-          placeholder="Np. Drukarki 3D"
+          placeholder="Np. szt, kg, rolka"
           placeholderTextColor="#64748b"
           editable={!submitting}
         />
@@ -211,7 +213,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
-          placeholder="Krótki opis kategorii"
+          placeholder="Krótki opis jednostki"
           placeholderTextColor="#64748b"
           multiline
           editable={!submitting}
@@ -227,7 +229,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
               ? 'Zapisywanie...'
               : isEditMode
                 ? 'Zapisz zmiany'
-                : 'Dodaj kategorię'}
+                : 'Dodaj jednostkę'}
           </Text>
         </TouchableOpacity>
 
@@ -334,4 +336,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoryFormScreen;
+export default UnitFormScreen;

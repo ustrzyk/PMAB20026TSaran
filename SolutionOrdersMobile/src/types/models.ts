@@ -83,6 +83,92 @@ export interface UnitOfMeasurementDto {
   idUnitOfMeasurement: number;
   name: string;
   shortcut?: string | null;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu jednostki miary - POST /api/UnitOfMeasurement
+export interface CreateUnitOfMeasurementCommand {
+  name: string;
+  description?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji jednostki miary - PUT /api/UnitOfMeasurement/{id}
+export interface UpdateUnitOfMeasurementCommand {
+  idUnitOfMeasurement: number;
+  name: string;
+  description?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu jednostki miary.
+export interface CreateUnitOfMeasurementResponse {
+  id: number;
+  message?: string;
+}
+
+// Klient.
+export interface ClientDto {
+  idClient: number;
+  name: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu klienta - POST /api/Client
+export interface CreateClientCommand {
+  name: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji klienta - PUT /api/Client/{id}
+export interface UpdateClientCommand {
+  idClient: number;
+  name: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu klienta.
+export interface CreateClientResponse {
+  id: number;
+  message?: string;
+}
+
+// Pracownik.
+export interface WorkerDto {
+  idWorker: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  login: string;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu pracownika - POST /api/Worker
+export interface CreateWorkerCommand {
+  firstName?: string | null;
+  lastName?: string | null;
+  login: string;
+  password?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji pracownika - PUT /api/Worker/{id}
+export interface UpdateWorkerCommand {
+  idWorker: number;
+  firstName?: string | null;
+  lastName?: string | null;
+  login: string;
+  password?: string | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu pracownika.
+export interface CreateWorkerResponse {
+  id: number;
+  message?: string;
 }
 
 // Model pozycji koszyka po stronie aplikacji mobilnej.

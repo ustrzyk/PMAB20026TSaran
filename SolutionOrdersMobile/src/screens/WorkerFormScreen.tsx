@@ -16,8 +16,8 @@ import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
-type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateCategory'>;
-type EditProps = NativeStackScreenProps<RootStackParamList, 'EditCategory'>;
+type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateWorker'>;
+type EditProps = NativeStackScreenProps<RootStackParamList, 'EditWorker'>;
 
 type Props = CreateProps | EditProps;
 
@@ -29,14 +29,15 @@ interface DialogState {
   loading: boolean;
 }
 
-function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
-  const isEditMode = route.name === 'EditCategory';
-  const editedCategory = isEditMode ? route.params.category : undefined;
+function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
+  const isEditMode = route.name === 'EditWorker';
+  const editedWorker = isEditMode ? route.params.worker : undefined;
 
-  const [name, setName] = useState(editedCategory?.name ?? '');
-  const [description, setDescription] = useState(
-    editedCategory?.description ?? '',
-  );
+  const [firstName, setFirstName] = useState(editedWorker?.firstName ?? '');
+  const [lastName, setLastName] = useState(editedWorker?.lastName ?? '');
+  const [login, setLogin] = useState(editedWorker?.login ?? '');
+  const [password, setPassword] = useState('');
+
   const [submitting, setSubmitting] = useState(false);
   const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
@@ -79,12 +80,20 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const validateForm = (): string | null => {
-    if (name.trim().length === 0) {
-      return 'Podaj nazwę kategorii';
+    if (firstName.trim().length === 0) {
+      return 'Podaj imię pracownika';
     }
 
-    if (name.trim().length > 64) {
-      return 'Nazwa kategorii może mieć maksymalnie 64 znaki';
+    if (lastName.trim().length === 0) {
+      return 'Podaj nazwisko pracownika';
+    }
+
+    if (login.trim().length === 0) {
+      return 'Podaj login pracownika';
+    }
+
+    if (!isEditMode && password.trim().length === 0) {
+      return 'Podaj hasło dla nowego pracownika';
     }
 
     return null;
@@ -103,8 +112,8 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
       type: 'confirm',
       title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
       message: isEditMode
-        ? `Czy zapisać zmiany w kategorii "${name.trim()}"?`
-        : `Czy dodać nową kategorię "${name.trim()}"?`,
+        ? `Czy zapisać zmiany pracownika "${firstName.trim()} ${lastName.trim()}"?`
+        : `Czy dodać nowego pracownika "${firstName.trim()} ${lastName.trim()}"?`,
       loading: false,
     });
   };
@@ -118,32 +127,34 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
-      if (isEditMode && editedCategory) {
-        await apiService.updateCategory(editedCategory.idCategory, {
-          idCategory: editedCategory.idCategory,
-          name: name.trim(),
-          description:
-            description.trim().length > 0 ? description.trim() : null,
-          isActive: editedCategory.isActive ?? true,
+      if (isEditMode && editedWorker) {
+        await apiService.updateWorker(editedWorker.idWorker, {
+          idWorker: editedWorker.idWorker,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          login: login.trim(),
+          password: password.trim().length > 0 ? password.trim() : null,
+          isActive: editedWorker.isActive ?? true,
         });
 
         showDialog(
           'success',
-          'Kategoria zaktualizowana',
-          'Zmiany kategorii zostały zapisane.',
+          'Pracownik zaktualizowany',
+          'Dane pracownika zostały zapisane.',
           true,
         );
       } else {
-        await apiService.createCategory({
-          name: name.trim(),
-          description:
-            description.trim().length > 0 ? description.trim() : null,
+        await apiService.createWorker({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          login: login.trim(),
+          password: password.trim(),
         });
 
         showDialog(
           'success',
-          'Kategoria dodana',
-          'Nowa kategoria została zapisana w systemie.',
+          'Pracownik dodany',
+          'Nowy pracownik został zapisany w systemie.',
           true,
         );
       }
@@ -189,31 +200,57 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.appName}>3D Print Shop</Text>
 
         <Text style={styles.title}>
-          {isEditMode ? 'Edytuj kategorię' : 'Dodaj kategorię'}
+          {isEditMode ? 'Edytuj pracownika' : 'Dodaj pracownika'}
         </Text>
 
         <Text style={styles.subtitle}>
-          Kategorie pomagają uporządkować produkty sklepu.
+          Pracownicy będą później przypisywani do zamówień obsługiwanych w
+          sklepie.
         </Text>
 
-        <Text style={styles.label}>Nazwa kategorii</Text>
+        <Text style={styles.label}>Imię</Text>
         <TextInput
           style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Np. Drukarki 3D"
+          value={firstName}
+          onChangeText={setFirstName}
+          placeholder="Np. Adam"
           placeholderTextColor="#64748b"
           editable={!submitting}
         />
 
-        <Text style={styles.label}>Opis</Text>
+        <Text style={styles.label}>Nazwisko</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Krótki opis kategorii"
+          style={styles.input}
+          value={lastName}
+          onChangeText={setLastName}
+          placeholder="Np. Kowalski"
           placeholderTextColor="#64748b"
-          multiline
+          editable={!submitting}
+        />
+
+        <Text style={styles.label}>Login</Text>
+        <TextInput
+          style={styles.input}
+          value={login}
+          onChangeText={setLogin}
+          placeholder="Np. akowalski"
+          placeholderTextColor="#64748b"
+          autoCapitalize="none"
+          editable={!submitting}
+        />
+
+        <Text style={styles.label}>
+          {isEditMode ? 'Nowe hasło' : 'Hasło'}
+        </Text>
+        <TextInput
+          style={styles.input}
+          value={password}
+          onChangeText={setPassword}
+          placeholder={
+            isEditMode ? 'Opcjonalnie - wpisz nowe hasło' : 'Hasło pracownika'
+          }
+          placeholderTextColor="#64748b"
+          secureTextEntry
           editable={!submitting}
         />
 
@@ -227,7 +264,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
               ? 'Zapisywanie...'
               : isEditMode
                 ? 'Zapisz zmiany'
-                : 'Dodaj kategorię'}
+                : 'Dodaj pracownika'}
           </Text>
         </TouchableOpacity>
 
@@ -296,11 +333,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-
   saveButton: {
     backgroundColor: '#16a34a',
     paddingVertical: 14,
@@ -334,4 +366,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoryFormScreen;
+export default WorkerFormScreen;

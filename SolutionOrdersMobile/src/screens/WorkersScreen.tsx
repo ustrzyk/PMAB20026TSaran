@@ -16,9 +16,9 @@ import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {CategoryDto} from '../types/models.ts';
+import type {WorkerDto} from '../types/models.ts';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Categories'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'Workers'>;
 
 interface DialogState {
   visible: boolean;
@@ -28,13 +28,12 @@ interface DialogState {
   loading: boolean;
 }
 
-function CategoriesScreen({navigation}: Props): React.JSX.Element {
-  const [categories, setCategories] = useState<CategoryDto[]>([]);
+function WorkersScreen({navigation}: Props): React.JSX.Element {
+  const [workers, setWorkers] = useState<WorkerDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] =
-    useState<CategoryDto | null>(null);
+  const [selectedWorker, setSelectedWorker] = useState<WorkerDto | null>(null);
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -52,13 +51,13 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     }));
   };
 
-  const loadCategories = useCallback(async (): Promise<void> => {
+  const loadWorkers = useCallback(async (): Promise<void> => {
     try {
       setError(null);
 
-      const data = await apiService.getCategories();
+      const data = await apiService.getWorkers();
 
-      setCategories(data);
+      setWorkers(data);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Nieznany błąd pobierania danych';
@@ -73,31 +72,31 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
   useFocusEffect(
     useCallback(() => {
       setLoading(true);
-      loadCategories();
-    }, [loadCategories]),
+      loadWorkers();
+    }, [loadWorkers]),
   );
 
   const handleRefresh = async (): Promise<void> => {
     setRefreshing(true);
-    await loadCategories();
+    await loadWorkers();
   };
 
-  const handleDelete = (category: CategoryDto): void => {
-    setSelectedCategory(category);
+  const handleDelete = (worker: WorkerDto): void => {
+    setSelectedWorker(worker);
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Usuwanie kategorii',
-      message: `Czy na pewno chcesz usunąć kategorię "${
-        category.name ?? 'bez nazwy'
-      }"?`,
+      title: 'Usuwanie pracownika',
+      message: `Czy na pewno chcesz usunąć pracownika "${
+        worker.firstName ?? ''
+      } ${worker.lastName ?? ''}"?`,
       loading: false,
     });
   };
 
   const confirmDelete = async (): Promise<void> => {
-    if (!selectedCategory) {
+    if (!selectedWorker) {
       return;
     }
 
@@ -107,21 +106,21 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
         loading: true,
       }));
 
-      await apiService.deleteCategory(selectedCategory.idCategory);
+      await apiService.deleteWorker(selectedWorker.idWorker);
 
-      setCategories(previousCategories =>
-        previousCategories.filter(
-          item => item.idCategory !== selectedCategory.idCategory,
+      setWorkers(previousWorkers =>
+        previousWorkers.filter(
+          item => item.idWorker !== selectedWorker.idWorker,
         ),
       );
 
-      setSelectedCategory(null);
+      setSelectedWorker(null);
 
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Kategoria usunięta',
-        message: 'Kategoria została poprawnie usunięta z listy.',
+        title: 'Pracownik usunięty',
+        message: 'Pracownik został poprawnie usunięty z listy.',
         loading: false,
       });
     } catch (err) {
@@ -144,21 +143,23 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     closeDialog();
   };
 
-  const renderItem = ({item}: {item: CategoryDto}): React.JSX.Element => {
-    return (
-      <View style={styles.categoryCard}>
-        <Text style={styles.categoryName}>{item.name ?? 'Brak nazwy'}</Text>
+  const renderItem = ({item}: {item: WorkerDto}): React.JSX.Element => {
+    const fullName = `${item.firstName ?? ''} ${item.lastName ?? ''}`.trim();
 
-        <Text style={styles.categoryDescription}>
-          {item.description ?? 'Brak opisu kategorii'}
+    return (
+      <View style={styles.workerCard}>
+        <Text style={styles.workerName}>
+          {fullName.length > 0 ? fullName : 'Brak imienia i nazwiska'}
         </Text>
 
-        <Text style={styles.categoryId}>ID kategorii: {item.idCategory}</Text>
+        <Text style={styles.workerText}>Login: {item.login}</Text>
+
+        <Text style={styles.workerId}>ID pracownika: {item.idWorker}</Text>
 
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.editButton}
-            onPress={() => navigation.navigate('EditCategory', {category: item})}
+            onPress={() => navigation.navigate('EditWorker', {worker: item})}
             activeOpacity={0.8}>
             <Text style={styles.buttonText}>Edytuj</Text>
           </TouchableOpacity>
@@ -178,7 +179,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Ładowanie kategorii...</Text>
+        <Text style={styles.loadingText}>Ładowanie pracowników...</Text>
       </View>
     );
   }
@@ -186,11 +187,13 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>Nie udało się pobrać kategorii</Text>
+        <Text style={styles.errorTitle}>
+          Nie udało się pobrać pracowników
+        </Text>
 
         <Text style={styles.errorText}>{error}</Text>
 
-        <TouchableOpacity style={styles.retryButton} onPress={loadCategories}>
+        <TouchableOpacity style={styles.retryButton} onPress={loadWorkers}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
         </TouchableOpacity>
       </View>
@@ -213,17 +216,17 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
 
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Kategorie produktów</Text>
+        <Text style={styles.heroTitle}>Pracownicy</Text>
         <Text style={styles.heroSubtitle}>
-          Kategorie porządkują asortyment sklepu z drukarkami 3D i akcesoriami.
+          Pracownicy obsługujący panel sklepu i zamówienia.
         </Text>
       </View>
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Kategorie</Text>
+          <Text style={styles.title}>Pracownicy</Text>
           <Text style={styles.subtitle}>
-            Liczba kategorii: {categories.length}
+            Liczba pracowników: {workers.length}
           </Text>
         </View>
 
@@ -234,21 +237,21 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
 
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => navigation.navigate('CreateCategory')}
+        onPress={() => navigation.navigate('CreateWorker')}
         activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj kategorię</Text>
+        <Text style={styles.createButtonText}>+ Dodaj pracownika</Text>
       </TouchableOpacity>
 
       <FlatList
-        data={categories}
+        data={workers}
         renderItem={renderItem}
-        keyExtractor={item => item.idCategory.toString()}
+        keyExtractor={item => item.idWorker.toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak kategorii w API</Text>
+          <Text style={styles.emptyText}>Brak pracowników w API</Text>
         }
       />
     </View>
@@ -387,7 +390,7 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  categoryCard: {
+  workerCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
@@ -396,24 +399,25 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
 
-  categoryName: {
+  workerName: {
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
     marginBottom: 6,
   },
 
-  categoryDescription: {
+  workerText: {
     color: '#cbd5e1',
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 8,
+    marginBottom: 5,
   },
 
-  categoryId: {
+  workerId: {
     color: '#f97316',
     fontSize: 12,
     fontWeight: '800',
+    marginTop: 4,
   },
 
   actions: {
@@ -451,4 +455,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default CategoriesScreen;
+export default WorkersScreen;
