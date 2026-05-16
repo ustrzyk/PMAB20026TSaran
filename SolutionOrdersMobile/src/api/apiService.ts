@@ -2,10 +2,13 @@ import {API_BASE_URL} from './config.ts';
 
 import type {
   CategoryDto,
+  CreateCategoryCommand,
+  CreateCategoryResponse,
   CreateItemCommand,
   CreateItemResponse,
   Item,
   UnitOfMeasurementDto,
+  UpdateCategoryCommand,
   UpdateItemCommand,
 } from '../types/models.ts';
 
@@ -16,7 +19,7 @@ class ApiService {
     this.baseUrl = API_BASE_URL;
   }
 
-  // Wspólna metoda do obsługi zapytań HTTP
+  // Wspólna metoda do obsługi zapytań HTTP.
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -44,7 +47,7 @@ class ApiService {
         );
       }
 
-      // PUT / DELETE często zwracają 204 No Content
+      // PUT / DELETE często zwracają 204 No Content.
       if (response.status === 204) {
         return {} as T;
       }
@@ -99,25 +102,56 @@ class ApiService {
   }
 
   // ========== KATEGORIE ==========
-  // Zostawione pod przyszły CategoryController.
-  // Nie wywołuj, jeśli Swagger nie pokazuje /api/Category.
 
+  // GET /api/Category
   async getCategories(): Promise<CategoryDto[]> {
     return this.request<CategoryDto[]>('/Category');
   }
 
+  // GET /api/Category/{id}
   async getCategory(idCategory: number): Promise<CategoryDto> {
     return this.request<CategoryDto>(`/Category/${idCategory}`);
   }
 
-  // ========== JEDNOSTKI MIARY ==========
-  // Zostawione pod przyszły UnitOfMeasurementController.
-  // Nie wywołuj, jeśli Swagger nie pokazuje /api/UnitOfMeasurement.
+  // POST /api/Category
+  async createCategory(
+    data: CreateCategoryCommand,
+  ): Promise<CreateCategoryResponse> {
+    return this.request<CreateCategoryResponse>('/Category', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 
+  // PUT /api/Category/{id}
+  async updateCategory(
+    idCategory: number,
+    data: UpdateCategoryCommand,
+  ): Promise<void> {
+    return this.request<void>(`/Category/${idCategory}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idCategory,
+      }),
+    });
+  }
+
+  // DELETE /api/Category/{id}
+  async deleteCategory(idCategory: number): Promise<void> {
+    return this.request<void>(`/Category/${idCategory}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== JEDNOSTKI MIARY ==========
+
+  // GET /api/UnitOfMeasurement
   async getUnits(): Promise<UnitOfMeasurementDto[]> {
     return this.request<UnitOfMeasurementDto[]>('/UnitOfMeasurement');
   }
 
+  // GET /api/UnitOfMeasurement/{id}
   async getUnit(idUnitOfMeasurement: number): Promise<UnitOfMeasurementDto> {
     return this.request<UnitOfMeasurementDto>(
       `/UnitOfMeasurement/${idUnitOfMeasurement}`,
@@ -125,5 +159,5 @@ class ApiService {
   }
 }
 
-// Singleton używany w całej aplikacji
+// Singleton używany w całej aplikacji.
 export default new ApiService();

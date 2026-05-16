@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,7 +13,6 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 import {useItems} from '../context/ItemsContext';
 
 import type {RootStackParamList} from '../navigation/types.ts';
@@ -21,14 +21,6 @@ type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateItem'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditItem'>;
 
 type Props = CreateProps | EditProps;
-
-interface DialogState {
-  visible: boolean;
-  type: AppDialogType;
-  title: string;
-  message: string;
-  loading: boolean;
-}
 
 function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const {createItem, updateItem} = useItems();
@@ -50,68 +42,32 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     editedItem?.idUnitOfMeasurement?.toString() ?? '1',
   );
   const [code, setCode] = useState(editedItem?.code ?? '');
-
   const [submitting, setSubmitting] = useState(false);
-  const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
-  const [dialog, setDialog] = useState<DialogState>({
-    visible: false,
-    type: 'success',
-    title: '',
-    message: '',
-    loading: false,
-  });
-
-  const showDialog = (
-    type: AppDialogType,
-    title: string,
-    message: string,
-    shouldGoBack = false,
-  ): void => {
-    setGoBackAfterDialog(shouldGoBack);
-
-    setDialog({
-      visible: true,
-      type,
-      title,
-      message,
-      loading: false,
-    });
-  };
-
-  const closeDialog = (): void => {
-    setDialog(previous => ({
-      ...previous,
-      visible: false,
-      loading: false,
-    }));
-
-    if (goBackAfterDialog) {
-      setGoBackAfterDialog(false);
-      navigation.goBack();
-    }
-  };
-
-  const validateForm = (): string | null => {
+  const validateForm = (): boolean => {
     const parsedCategoryId = Number(idCategory);
     const parsedUnitId = Number(idUnitOfMeasurement);
     const parsedPrice = Number(price);
     const parsedQuantity = Number(quantity);
 
     if (name.trim().length === 0) {
-      return 'Podaj nazwę produktu';
+      Alert.alert('Błąd', 'Podaj nazwę produktu');
+      return false;
     }
 
     if (name.trim().length > 80) {
-      return 'Nazwa produktu może mieć maksymalnie 80 znaków';
+      Alert.alert('Błąd', 'Nazwa produktu może mieć maksymalnie 80 znaków');
+      return false;
     }
 
     if (description.trim().length === 0) {
-      return 'Podaj opis produktu';
+      Alert.alert('Błąd', 'Podaj opis produktu');
+      return false;
     }
 
     if (description.trim().length < 5) {
-      return 'Opis produktu powinien mieć minimum 5 znaków';
+      Alert.alert('Błąd', 'Opis produktu powinien mieć minimum 5 znaków');
+      return false;
     }
 
     if (
@@ -119,7 +75,8 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
       Number.isNaN(parsedCategoryId) ||
       parsedCategoryId <= 0
     ) {
-      return 'Podaj poprawne ID kategorii większe od 0';
+      Alert.alert('Błąd', 'Podaj poprawne ID kategorii większe od 0');
+      return false;
     }
 
     if (
@@ -127,63 +84,50 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
       Number.isNaN(parsedUnitId) ||
       parsedUnitId <= 0
     ) {
-      return 'Podaj poprawne ID jednostki większe od 0';
+      Alert.alert('Błąd', 'Podaj poprawne ID jednostki większe od 0');
+      return false;
     }
 
     if (price.trim().length === 0 || Number.isNaN(parsedPrice)) {
-      return 'Podaj poprawną cenę';
+      Alert.alert('Błąd', 'Podaj poprawną cenę');
+      return false;
     }
 
     if (parsedPrice <= 0) {
-      return 'Cena musi być większa od 0';
+      Alert.alert('Błąd', 'Cena musi być większa od 0');
+      return false;
     }
 
     if (quantity.trim().length === 0 || Number.isNaN(parsedQuantity)) {
-      return 'Podaj poprawną ilość';
+      Alert.alert('Błąd', 'Podaj poprawną ilość');
+      return false;
     }
 
     if (parsedQuantity < 0) {
-      return 'Ilość nie może być mniejsza od 0';
+      Alert.alert('Błąd', 'Ilość nie może być mniejsza od 0');
+      return false;
     }
 
     if (code.trim().length === 0) {
-      return 'Podaj kod produktu';
+      Alert.alert('Błąd', 'Podaj kod produktu');
+      return false;
     }
 
     if (code.trim().length > 40) {
-      return 'Kod produktu może mieć maksymalnie 40 znaków';
+      Alert.alert('Błąd', 'Kod produktu może mieć maksymalnie 40 znaków');
+      return false;
     }
 
-    return null;
+    return true;
   };
 
-  const handleSavePress = (): void => {
-    const validationError = validateForm();
-
-    if (validationError) {
-      showDialog('error', 'Błąd formularza', validationError);
+  const handleSave = async (): Promise<void> => {
+    if (!validateForm()) {
       return;
     }
 
-    setDialog({
-      visible: true,
-      type: 'confirm',
-      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
-      message: isEditMode
-        ? `Czy zapisać zmiany w produkcie "${name.trim()}"?`
-        : `Czy dodać nowy produkt "${name.trim()}"?`,
-      loading: false,
-    });
-  };
-
-  const submitForm = async (): Promise<void> => {
     try {
       setSubmitting(true);
-
-      setDialog(previous => ({
-        ...previous,
-        loading: true,
-      }));
 
       if (isEditMode && editedItem) {
         await updateItem(editedItem.idItem, {
@@ -199,12 +143,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           isActive: editedItem.isActive,
         });
 
-        showDialog(
-          'success',
-          'Produkt zaktualizowany',
-          'Zmiany produktu zostały zapisane.',
-          true,
-        );
+        Alert.alert('Sukces', 'Produkt został zaktualizowany');
       } else {
         await createItem({
           name: name.trim(),
@@ -217,51 +156,21 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           code: code.trim(),
         });
 
-        showDialog(
-          'success',
-          'Produkt dodany',
-          'Nowy produkt został zapisany w systemie.',
-          true,
-        );
+        Alert.alert('Sukces', 'Produkt został dodany');
       }
+
+      navigation.goBack();
     } catch (err) {
-      showDialog('error', 'Błąd zapisu', (err as Error).message);
+      Alert.alert('Błąd', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
-  };
-
-  const handleDialogConfirm = (): void => {
-    if (dialog.type === 'confirm') {
-      submitForm();
-      return;
-    }
-
-    closeDialog();
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <AppDialog
-        visible={dialog.visible}
-        type={dialog.type}
-        title={dialog.title}
-        message={dialog.message}
-        confirmText={
-          dialog.type === 'confirm'
-            ? isEditMode
-              ? 'Zapisz'
-              : 'Dodaj'
-            : 'OK'
-        }
-        cancelText="Anuluj"
-        loading={dialog.loading}
-        onConfirm={handleDialogConfirm}
-        onCancel={closeDialog}
-      />
-
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
@@ -403,7 +312,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
 
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}
-          onPress={handleSavePress}
+          onPress={handleSave}
           activeOpacity={0.8}
           disabled={submitting}>
           <Text style={styles.saveButtonText}>

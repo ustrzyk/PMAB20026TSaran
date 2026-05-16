@@ -2,8 +2,13 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import CategoriesScreen from '../screens/CategoriesScreen.tsx';
+import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
+import HomeScreen from '../screens/HomeScreen.tsx';
+import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
+import UnitsScreen from '../screens/UnitsScreen.tsx';
 
 import type {RootStackParamList} from './types.ts';
 
@@ -13,7 +18,7 @@ function RootNavigator(): React.JSX.Element {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Items"
+        initialRouteName="Home"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#f97316',
@@ -27,9 +32,21 @@ function RootNavigator(): React.JSX.Element {
           },
         }}>
         <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{title: '3D Print Shop'}}
+        />
+
+        <Stack.Screen
           name="Items"
           component={ItemsScreen}
           options={{title: 'Produkty'}}
+        />
+
+        <Stack.Screen
+          name="ItemDetails"
+          component={ItemDetailsScreen}
+          options={{title: 'Szczegóły produktu'}}
         />
 
         <Stack.Screen
@@ -42,6 +59,30 @@ function RootNavigator(): React.JSX.Element {
           name="EditItem"
           component={ItemFormScreen}
           options={{title: 'Edytuj produkt'}}
+        />
+
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={{title: 'Kategorie'}}
+        />
+
+        <Stack.Screen
+          name="CreateCategory"
+          component={CategoryFormScreen}
+          options={{title: 'Dodaj kategorię'}}
+        />
+
+        <Stack.Screen
+          name="EditCategory"
+          component={CategoryFormScreen}
+          options={{title: 'Edytuj kategorię'}}
+        />
+
+        <Stack.Screen
+          name="Units"
+          component={UnitsScreen}
+          options={{title: 'Jednostki miary'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

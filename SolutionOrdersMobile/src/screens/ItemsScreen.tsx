@@ -1,17 +1,18 @@
-import React from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 import {useItems} from '../context/ItemsContext';
 
 import type {RootStackParamList} from '../navigation/types.ts';
@@ -19,31 +20,145 @@ import type {Item} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Items'>;
 
+type SortMode = 'default' | 'name' | 'priceAsc' | 'priceDesc' | 'quantity';
+
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
+}
+
 function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
 
+  const [searchText, setSearchText] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
+
+  const filteredItems = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    let result = items;
+
+    if (search.length > 0) {
+      result = result.filter(item => {
+        const name = item.name?.toLowerCase() ?? '';
+        const description = item.description?.toLowerCase() ?? '';
+        const code = item.code?.toLowerCase() ?? '';
+        const categoryName = item.categoryName?.toLowerCase() ?? '';
+
+        return (
+          name.includes(search) ||
+          description.includes(search) ||
+          code.includes(search) ||
+          categoryName.includes(search)
+        );
+      });
+    }
+
+    const sorted = [...result];
+
+    if (sortMode === 'name') {
+      sorted.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    }
+
+    if (sortMode === 'priceAsc') {
+      sorted.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
+    }
+
+    if (sortMode === 'priceDesc') {
+      sorted.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
+    }
+
+    if (sortMode === 'quantity') {
+      sorted.sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+    }
+
+    return sorted;
+  }, [items, searchText, sortMode]);
+
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
+  };
+
   const handleDelete = (item: Item): void => {
-    Alert.alert(
-      'Potwierdzenie',
-      `Czy na pewno usunąć "${item.name ?? 'produkt'}"?`,
-      [
-        {
-          text: 'Anuluj',
-          style: 'cancel',
-        },
-        {
-          text: 'Usuń',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteItem(item.idItem);
-              Alert.alert('Sukces', 'Produkt został usunięty');
-            } catch (err) {
-              Alert.alert('Błąd', (err as Error).message);
-            }
-          },
-        },
-      ],
+    setSelectedItem(item);
+
+    setDialog({
+      visible: true,
+      type: 'confirm',
+      title: 'Usuwanie produktu',
+      message: `Czy na pewno chcesz usunąć produkt "${item.name ?? 'produkt'}"?`,
+      loading: false,
+    });
+  };
+
+  const confirmDelete = async (): Promise<void> => {
+    if (!selectedItem) {
+      return;
+    }
+
+    try {
+      setDialog(previous => ({
+        ...previous,
+        loading: true,
+      }));
+
+      await deleteItem(selectedItem.idItem);
+
+      setSelectedItem(null);
+
+      setDialog({
+        visible: true,
+        type: 'success',
+        title: 'Produkt usunięty',
+        message: 'Produkt został poprawnie usunięty z listy.',
+        loading: false,
+      });
+    } catch (err) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Błąd usuwania',
+        message: (err as Error).message,
+        loading: false,
+      });
+    }
+  };
+
+  const renderSortButton = (
+    label: string,
+    value: SortMode,
+  ): React.JSX.Element => {
+    const isSelected = sortMode === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.sortButton, isSelected && styles.sortButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            isSelected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -56,20 +171,33 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.itemContent}>
           <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
 
+          <Text style={styles.itemDescription} numberOfLines={2}>
+            {item.description ?? 'Brak opisu produktu'}
+          </Text>
+
+          <View style={styles.badgeRow}>
+            <Text style={styles.categoryBadge}>
+              {item.categoryName ?? 'Brak kategorii'}
+            </Text>
+
+            <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
+          </View>
+
           <Text style={styles.itemPrice}>Cena: {price.toFixed(2)} zł</Text>
 
           <Text style={styles.itemText}>
-            Kategoria: {item.categoryName ?? 'Brak'}
+            Stan magazynu: {quantity} {item.unitName ?? 'szt'}
           </Text>
-
-          <Text style={styles.itemText}>
-            Ilość: {quantity} {item.unitName ?? 'szt'}
-          </Text>
-
-          <Text style={styles.itemText}>Kod: {item.code ?? 'Brak'}</Text>
         </View>
 
         <View style={styles.itemActions}>
+          <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={() => navigation.navigate('ItemDetails', {item})}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Szczegóły</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditItem', {item})}
@@ -111,15 +239,69 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
   return (
     <View style={styles.container}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={dialog.type === 'confirm' ? confirmDelete : closeDialog}
+        onCancel={closeDialog}
+      />
+
+      <View style={styles.heroBox}>
+        <Text style={styles.shopName}>3D Print Shop</Text>
+        <Text style={styles.heroTitle}>Produkty i akcesoria do druku 3D</Text>
+        <Text style={styles.heroSubtitle}>
+          Zarządzanie drukarkami 3D, filamentami, częściami zamiennymi i
+          akcesoriami sklepu.
+        </Text>
+      </View>
+
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Produkty</Text>
-          <Text style={styles.subtitle}>Liczba produktów: {items.length}</Text>
+          <Text style={styles.subtitle}>
+            Wyświetlane: {filteredItems.length} / {items.length}
+          </Text>
         </View>
 
         <TouchableOpacity style={styles.refreshButton} onPress={refreshItems}>
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchBox}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Szukaj produktu, kodu lub kategorii..."
+          placeholderTextColor="#64748b"
+        />
+
+        {searchText.trim().length > 0 ? (
+          <TouchableOpacity
+            style={styles.clearSearchButton}
+            onPress={() => setSearchText('')}
+            activeOpacity={0.8}>
+            <Text style={styles.clearSearchText}>Wyczyść</Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+
+      <View style={styles.sortBox}>
+        <Text style={styles.sortTitle}>Sortowanie</Text>
+
+        <View style={styles.sortButtons}>
+          {renderSortButton('Domyślnie', 'default')}
+          {renderSortButton('Nazwa', 'name')}
+          {renderSortButton('Cena ↑', 'priceAsc')}
+          {renderSortButton('Cena ↓', 'priceDesc')}
+          {renderSortButton('Stan', 'quantity')}
+        </View>
       </View>
 
       <TouchableOpacity
@@ -130,7 +312,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       </TouchableOpacity>
 
       <FlatList
-        data={items}
+        data={filteredItems}
         renderItem={renderItem}
         keyExtractor={item => item.idItem.toString()}
         contentContainerStyle={styles.listContent}
@@ -138,7 +320,11 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           <RefreshControl refreshing={loading} onRefresh={refreshItems} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak produktów w API</Text>
+          <Text style={styles.emptyText}>
+            {searchText.trim().length > 0
+              ? 'Brak produktów pasujących do wyszukiwania'
+              : 'Brak produktów w API'}
+          </Text>
         }
       />
     </View>
@@ -185,6 +371,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  heroBox: {
+    backgroundColor: '#111827',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+
+  shopName: {
+    color: '#f97316',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+
+  heroTitle: {
+    color: '#f8fafc',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  heroSubtitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+  },
+
   header: {
     padding: 16,
     backgroundColor: '#111827',
@@ -220,6 +435,83 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  searchBox: {
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    padding: 16,
+  },
+
+  searchInput: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 15,
+  },
+
+  clearSearchButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
+  clearSearchText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  sortBox: {
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+  },
+
+  sortTitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+
+  sortButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  sortButton: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
+    color: '#ffffff',
+  },
+
   createButton: {
     backgroundColor: '#16a34a',
     marginHorizontal: 16,
@@ -247,50 +539,88 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: '#334155',
-    flexDirection: 'row',
   },
 
   itemContent: {
-    flex: 1,
+    marginBottom: 12,
   },
 
   itemName: {
     color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
     marginBottom: 6,
+  },
+
+  itemDescription: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+  },
+
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  categoryBadge: {
+    color: '#ffffff',
+    backgroundColor: '#2563eb',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  codeBadge: {
+    color: '#ffffff',
+    backgroundColor: '#334155',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: '800',
   },
 
   itemPrice: {
     color: '#22c55e',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     marginBottom: 4,
   },
 
   itemText: {
     color: '#cbd5e1',
     fontSize: 13,
-    marginBottom: 2,
   },
 
   itemActions: {
-    justifyContent: 'center',
-    marginLeft: 10,
+    flexDirection: 'row',
     gap: 8,
   },
 
+  detailsButton: {
+    flex: 1,
+    backgroundColor: '#f97316',
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
   editButton: {
+    flex: 1,
     backgroundColor: '#2563eb',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 10,
   },
 
   deleteButton: {
+    flex: 1,
     backgroundColor: '#7f1d1d',
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderRadius: 10,
   },
 
