@@ -10,6 +10,10 @@ import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
 import ItemsScreen from '../screens/ItemsScreen.tsx';
+import OrderFormScreen from '../screens/OrderFormScreen.tsx';
+import OrderItemFormScreen from '../screens/OrderItemFormScreen.tsx';
+import OrderItemsScreen from '../screens/OrderItemsScreen.tsx';
+import OrdersScreen from '../screens/OrdersScreen.tsx';
 import UnitFormScreen from '../screens/UnitFormScreen.tsx';
 import UnitsScreen from '../screens/UnitsScreen.tsx';
 import WorkerFormScreen from '../screens/WorkerFormScreen.tsx';
@@ -136,6 +140,42 @@ function RootNavigator(): React.JSX.Element {
           name="EditWorker"
           component={WorkerFormScreen}
           options={{title: 'Edytuj pracownika'}}
+        />
+
+        <Stack.Screen
+          name="Orders"
+          component={OrdersScreen}
+          options={{title: 'Zamówienia'}}
+        />
+
+        <Stack.Screen
+          name="CreateOrder"
+          component={OrderFormScreen}
+          options={{title: 'Dodaj zamówienie'}}
+        />
+
+        <Stack.Screen
+          name="EditOrder"
+          component={OrderFormScreen}
+          options={{title: 'Edytuj zamówienie'}}
+        />
+
+        <Stack.Screen
+          name="OrderItems"
+          component={OrderItemsScreen}
+          options={{title: 'Pozycje zamówienia'}}
+        />
+
+        <Stack.Screen
+          name="CreateOrderItem"
+          component={OrderItemFormScreen}
+          options={{title: 'Dodaj pozycję'}}
+        />
+
+        <Stack.Screen
+          name="EditOrderItem"
+          component={OrderItemFormScreen}
+          options={{title: 'Edytuj pozycję'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

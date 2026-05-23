@@ -111,6 +111,34 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={styles.menuCard}
+        onPress={() => navigation.navigate('Orders')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Zamówienia</Text>
+          <Text style={styles.menuDescription}>
+            Zamówienia klientów z przypisanym klientem i pracownikiem.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.menuCard}
+        onPress={() => navigation.navigate('OrderItems')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Pozycje zamówienia</Text>
+          <Text style={styles.menuDescription}>
+            Produkty dodane do zamówień wraz z ilościami.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
       <View style={styles.infoBox}>
         <Text style={styles.infoTitle}>Informacje</Text>
 

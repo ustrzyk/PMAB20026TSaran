@@ -2,6 +2,8 @@ import type {
   CategoryDto,
   ClientDto,
   Item,
+  OrderDto,
+  OrderItemDto,
   UnitOfMeasurementDto,
   WorkerDto,
 } from '../types/models.ts';
@@ -40,6 +42,18 @@ export type RootStackParamList = {
   CreateWorker: undefined;
   EditWorker: {
     worker: WorkerDto;
+  };
+
+  Orders: undefined;
+  CreateOrder: undefined;
+  EditOrder: {
+    order: OrderDto;
+  };
+
+  OrderItems: undefined;
+  CreateOrderItem: undefined;
+  EditOrderItem: {
+    orderItem: OrderItemDto;
   };
 
   Cart: undefined;

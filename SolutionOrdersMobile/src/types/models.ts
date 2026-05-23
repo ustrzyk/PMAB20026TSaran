@@ -171,6 +171,83 @@ export interface CreateWorkerResponse {
   message?: string;
 }
 
+// Zamówienie.
+export interface OrderDto {
+  idOrder: number;
+  dataOrder?: string | null;
+
+  idClient?: number | null;
+  clientName?: string | null;
+
+  idWorker?: number | null;
+  workerName?: string | null;
+
+  notes?: string | null;
+  deliveryDate?: string | null;
+
+  orderItemsCount: number;
+}
+
+// Dane wysyłane przy tworzeniu zamówienia - POST /api/Order
+export interface CreateOrderCommand {
+  dataOrder?: string | null;
+  idClient?: number | null;
+  idWorker?: number | null;
+  notes?: string | null;
+  deliveryDate?: string | null;
+}
+
+// Dane wysyłane przy aktualizacji zamówienia - PUT /api/Order/{id}
+export interface UpdateOrderCommand {
+  idOrder: number;
+  dataOrder?: string | null;
+  idClient?: number | null;
+  idWorker?: number | null;
+  notes?: string | null;
+  deliveryDate?: string | null;
+}
+
+// Odpowiedź z API po utworzeniu zamówienia.
+export interface CreateOrderResponse {
+  id: number;
+  message?: string;
+}
+
+// Pozycja zamówienia.
+export interface OrderItemDto {
+  idOrderItem: number;
+  idOrder: number;
+
+  idItem: number;
+  itemName?: string | null;
+  itemCode?: string | null;
+
+  quantity?: number | null;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu pozycji zamówienia - POST /api/OrderItem
+export interface CreateOrderItemCommand {
+  idOrder: number;
+  idItem: number;
+  quantity?: number | null;
+}
+
+// Dane wysyłane przy aktualizacji pozycji zamówienia - PUT /api/OrderItem/{id}
+export interface UpdateOrderItemCommand {
+  idOrderItem: number;
+  idOrder: number;
+  idItem: number;
+  quantity?: number | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu pozycji zamówienia.
+export interface CreateOrderItemResponse {
+  id: number;
+  message?: string;
+}
+
 // Model pozycji koszyka po stronie aplikacji mobilnej.
 export interface CartItemModel {
   item: ItemDto;

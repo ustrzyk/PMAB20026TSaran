@@ -9,15 +9,23 @@ import type {
   CreateClientResponse,
   CreateItemCommand,
   CreateItemResponse,
+  CreateOrderCommand,
+  CreateOrderItemCommand,
+  CreateOrderItemResponse,
+  CreateOrderResponse,
   CreateUnitOfMeasurementCommand,
   CreateUnitOfMeasurementResponse,
   CreateWorkerCommand,
   CreateWorkerResponse,
   Item,
+  OrderDto,
+  OrderItemDto,
   UnitOfMeasurementDto,
   UpdateCategoryCommand,
   UpdateClientCommand,
   UpdateItemCommand,
+  UpdateOrderCommand,
+  UpdateOrderItemCommand,
   UpdateUnitOfMeasurementCommand,
   UpdateWorkerCommand,
   WorkerDto,
@@ -260,6 +268,80 @@ class ApiService {
 
   async deleteWorker(idWorker: number): Promise<void> {
     return this.request<void>(`/Worker/${idWorker}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== ZAMÓWIENIA ==========
+
+  async getOrders(): Promise<OrderDto[]> {
+    return this.request<OrderDto[]>('/Order');
+  }
+
+  async getOrder(idOrder: number): Promise<OrderDto> {
+    return this.request<OrderDto>(`/Order/${idOrder}`);
+  }
+
+  async createOrder(data: CreateOrderCommand): Promise<CreateOrderResponse> {
+    return this.request<CreateOrderResponse>('/Order', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateOrder(
+    idOrder: number,
+    data: UpdateOrderCommand,
+  ): Promise<void> {
+    return this.request<void>(`/Order/${idOrder}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idOrder,
+      }),
+    });
+  }
+
+  async deleteOrder(idOrder: number): Promise<void> {
+    return this.request<void>(`/Order/${idOrder}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== POZYCJE ZAMÓWIENIA ==========
+
+  async getOrderItems(): Promise<OrderItemDto[]> {
+    return this.request<OrderItemDto[]>('/OrderItem');
+  }
+
+  async getOrderItem(idOrderItem: number): Promise<OrderItemDto> {
+    return this.request<OrderItemDto>(`/OrderItem/${idOrderItem}`);
+  }
+
+  async createOrderItem(
+    data: CreateOrderItemCommand,
+  ): Promise<CreateOrderItemResponse> {
+    return this.request<CreateOrderItemResponse>('/OrderItem', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateOrderItem(
+    idOrderItem: number,
+    data: UpdateOrderItemCommand,
+  ): Promise<void> {
+    return this.request<void>(`/OrderItem/${idOrderItem}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idOrderItem,
+      }),
+    });
+  }
+
+  async deleteOrderItem(idOrderItem: number): Promise<void> {
+    return this.request<void>(`/OrderItem/${idOrderItem}`, {
       method: 'DELETE',
     });
   }
