@@ -213,6 +213,41 @@ export interface CreateOrderResponse {
   message?: string;
 }
 
+// Pozycja zamówienia.
+export interface OrderItemDto {
+  idOrderItem: number;
+  idOrder: number;
+
+  idItem: number;
+  itemName?: string | null;
+  itemCode?: string | null;
+
+  quantity?: number | null;
+  isActive?: boolean;
+}
+
+// Dane wysyłane przy tworzeniu pozycji zamówienia - POST /api/OrderItem
+export interface CreateOrderItemCommand {
+  idOrder: number;
+  idItem: number;
+  quantity?: number | null;
+}
+
+// Dane wysyłane przy aktualizacji pozycji zamówienia - PUT /api/OrderItem/{id}
+export interface UpdateOrderItemCommand {
+  idOrderItem: number;
+  idOrder: number;
+  idItem: number;
+  quantity?: number | null;
+  isActive?: boolean;
+}
+
+// Odpowiedź z API po utworzeniu pozycji zamówienia.
+export interface CreateOrderItemResponse {
+  id: number;
+  message?: string;
+}
+
 // Model pozycji koszyka po stronie aplikacji mobilnej.
 export interface CartItemModel {
   item: ItemDto;
