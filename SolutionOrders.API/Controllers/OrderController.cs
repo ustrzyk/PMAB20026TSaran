@@ -62,5 +62,34 @@ namespace SolutionOrders.API.Controllers
                 return BadRequest(new { message = ex.Message });
             }
         }
+
+        /// <summary>
+        /// Aktualizuje zamówienie
+        /// </summary>
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateOrderCommand command)
+        {
+            if (id != command.IdOrder)
+            {
+                return BadRequest(new { message = "ID w URL różni się od ID w body" });
+            }
+
+            try
+            {
+                await mediator.Send(command);
+                return NoContent();  // HTTP 204 - sukces bez body
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return NotFound(new { message = ex.Message });
+            }
+        }
     }
 }
