@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SolutionOrders.API.Features.Orders.Messages.Commands;
 using SolutionOrders.API.Features.Orders.Messages.DTOs;
 using SolutionOrders.API.Features.Orders.Messages.Queries;
 
@@ -37,6 +38,29 @@ namespace SolutionOrders.API.Controllers
             }
 
             return Ok(result);
+        }
+
+        /// <summary>
+        /// Tworzy nowe zamówienie
+        /// </summary>
+        [HttpPost]
+        [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> Create([FromBody] CreateOrderCommand command)
+        {
+            try
+            {
+                var orderId = await mediator.Send(command);
+
+                // HTTP 201 Created z Location header
+                return CreatedAtAction(nameof(GetById), new { id = orderId },
+                    new { id = orderId, message = "Zamówienie zostało utworzone" }
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
     }
 }
