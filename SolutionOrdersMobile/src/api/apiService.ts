@@ -9,15 +9,19 @@ import type {
   CreateClientResponse,
   CreateItemCommand,
   CreateItemResponse,
+  CreateOrderCommand,
+  CreateOrderResponse,
   CreateUnitOfMeasurementCommand,
   CreateUnitOfMeasurementResponse,
   CreateWorkerCommand,
   CreateWorkerResponse,
   Item,
+  OrderDto,
   UnitOfMeasurementDto,
   UpdateCategoryCommand,
   UpdateClientCommand,
   UpdateItemCommand,
+  UpdateOrderCommand,
   UpdateUnitOfMeasurementCommand,
   UpdateWorkerCommand,
   WorkerDto,
@@ -260,6 +264,42 @@ class ApiService {
 
   async deleteWorker(idWorker: number): Promise<void> {
     return this.request<void>(`/Worker/${idWorker}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ========== ZAMÓWIENIA ==========
+
+  async getOrders(): Promise<OrderDto[]> {
+    return this.request<OrderDto[]>('/Order');
+  }
+
+  async getOrder(idOrder: number): Promise<OrderDto> {
+    return this.request<OrderDto>(`/Order/${idOrder}`);
+  }
+
+  async createOrder(data: CreateOrderCommand): Promise<CreateOrderResponse> {
+    return this.request<CreateOrderResponse>('/Order', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateOrder(
+    idOrder: number,
+    data: UpdateOrderCommand,
+  ): Promise<void> {
+    return this.request<void>(`/Order/${idOrder}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...data,
+        idOrder,
+      }),
+    });
+  }
+
+  async deleteOrder(idOrder: number): Promise<void> {
+    return this.request<void>(`/Order/${idOrder}`, {
       method: 'DELETE',
     });
   }
