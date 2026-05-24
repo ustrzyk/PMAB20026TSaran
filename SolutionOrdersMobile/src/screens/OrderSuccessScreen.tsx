@@ -19,8 +19,28 @@ function formatMoney(value?: number | null): string {
   return `${safeValue.toFixed(2)} zł`;
 }
 
+function formatDate(value?: string | null): string {
+  if (!value) {
+    return 'Brak daty';
+  }
+
+  return value.substring(0, 10);
+}
+
 function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
-  const {idOrder, totalValue, message} = route.params;
+  const {
+    idOrder,
+    totalValue,
+    message,
+    deliveryPrice,
+    finalValue,
+    deliveryMethod,
+    paymentMethod,
+    deliveryDate,
+  } = route.params;
+
+  const safeDeliveryPrice = deliveryPrice ?? 0;
+  const safeFinalValue = finalValue ?? totalValue + safeDeliveryPrice;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -30,21 +50,16 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.title}>Dziękujemy za zamówienie</Text>
 
         <Text style={styles.subtitle}>
-          Twoje zamówienie zostało poprawnie zapisane w systemie sklepu.
+          Zamówienie zostało poprawnie zapisane w systemie sklepu.
         </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Podsumowanie</Text>
+        <Text style={styles.sectionTitle}>Podsumowanie zamówienia</Text>
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Numer zamówienia</Text>
           <Text style={styles.orderNumber}>#{idOrder}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Wartość zamówienia</Text>
-          <Text style={styles.orderValue}>{formatMoney(totalValue)}</Text>
         </View>
 
         <View style={styles.infoRow}>
@@ -53,15 +68,46 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
             {message ?? 'Zamówienie zostało złożone'}
           </Text>
         </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Wartość produktów</Text>
+          <Text style={styles.productValue}>{formatMoney(totalValue)}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Dostawa</Text>
+          <Text style={styles.deliveryValue}>
+            {formatMoney(safeDeliveryPrice)}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Razem do zapłaty</Text>
+          <Text style={styles.finalValue}>{formatMoney(safeFinalValue)}</Text>
+        </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Co dalej?</Text>
+        <Text style={styles.sectionTitle}>Dostawa i płatność</Text>
 
-        <Text style={styles.description}>
-          Zamówienie pojawi się w panelu administracyjnym. Pracownik sklepu może
-          je sprawdzić, zobaczyć klienta, pozycje zamówienia oraz wartość.
-        </Text>
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Metoda dostawy</Text>
+          <Text style={styles.infoValue}>
+            {deliveryMethod ?? 'Brak informacji'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Metoda płatności</Text>
+          <Text style={styles.infoValue}>
+            {paymentMethod ?? 'Brak informacji'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Przewidywana data dostawy</Text>
+          <Text style={styles.infoValue}>{formatDate(deliveryDate)}</Text>
+        </View>
       </View>
 
       <TouchableOpacity
@@ -69,6 +115,17 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         onPress={() => navigation.navigate('Items')}
         activeOpacity={0.8}>
         <Text style={styles.primaryButtonText}>Kontynuuj zakupy</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.trackButton}
+        onPress={() =>
+          navigation.navigate('TrackOrder', {
+            idOrder,
+          })
+        }
+        activeOpacity={0.8}>
+        <Text style={styles.trackButtonText}>Sprawdź to zamówienie</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -168,9 +225,21 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  orderValue: {
+  productValue: {
+    color: '#f97316',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  deliveryValue: {
+    color: '#38bdf8',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  finalValue: {
     color: '#16a34a',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
   },
 
@@ -178,12 +247,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 14,
     fontWeight: '800',
-  },
-
-  description: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
   },
 
   primaryButton: {
@@ -197,6 +260,20 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '900',
+  },
+
+  trackButton: {
+    backgroundColor: '#38bdf8',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  trackButtonText: {
+    color: '#0f172a',
+    fontSize: 15,
     fontWeight: '900',
   },
 

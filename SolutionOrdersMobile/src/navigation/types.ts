@@ -13,24 +13,36 @@ export type RootStackParamList = {
 
   Dashboard: undefined;
   AdminPanel: undefined;
-
   Items: undefined;
   AdminItems: undefined;
-  TrackOrder: undefined;
+
+  TrackOrder:
+    | {
+        idOrder?: number;
+      }
+    | undefined;
 
   ItemDetails: {
     item: Item;
   };
+
   CreateItem: undefined;
   EditItem: {
     item: Item;
   };
 
   Cart: undefined;
+
   OrderSuccess: {
     idOrder: number;
     totalValue: number;
     message?: string | null;
+
+    deliveryPrice?: number;
+    finalValue?: number;
+    deliveryMethod?: string;
+    paymentMethod?: string;
+    deliveryDate?: string;
   };
 
   Categories: undefined;

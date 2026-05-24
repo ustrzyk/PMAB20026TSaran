@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -32,8 +32,13 @@ function formatDate(value?: string | null): string {
   return value.substring(0, 10);
 }
 
-function TrackOrderScreen({navigation}: Props): React.JSX.Element {
-  const [orderNumber, setOrderNumber] = useState('');
+function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
+  const initialOrderId = route.params?.idOrder;
+
+  const [orderNumber, setOrderNumber] = useState(
+    initialOrderId ? initialOrderId.toString() : '',
+  );
+
   const [order, setOrder] = useState<OrderDto | null>(null);
   const [orderItems, setOrderItems] = useState<OrderItemDto[]>([]);
   const [loading, setLoading] = useState(false);
@@ -45,22 +50,13 @@ function TrackOrderScreen({navigation}: Props): React.JSX.Element {
     setError(null);
   };
 
-  const searchOrder = async (): Promise<void> => {
-    const parsedId = Number(orderNumber.trim());
-
-    if (!Number.isInteger(parsedId) || parsedId <= 0) {
-      setError('Podaj poprawny numer zamówienia');
-      setOrder(null);
-      setOrderItems([]);
-      return;
-    }
-
+  const loadOrder = async (idOrder: number): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
-      const foundOrder = await apiService.getOrder(parsedId);
-      const foundItems = await apiService.getOrderItemsByOrder(parsedId);
+      const foundOrder = await apiService.getOrder(idOrder);
+      const foundItems = await apiService.getOrderItemsByOrder(idOrder);
 
       setOrder(foundOrder);
       setOrderItems(foundItems);
@@ -73,6 +69,25 @@ function TrackOrderScreen({navigation}: Props): React.JSX.Element {
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (initialOrderId && initialOrderId > 0) {
+      loadOrder(initialOrderId);
+    }
+  }, [initialOrderId]);
+
+  const searchOrder = async (): Promise<void> => {
+    const parsedId = Number(orderNumber.trim());
+
+    if (!Number.isInteger(parsedId) || parsedId <= 0) {
+      setError('Podaj poprawny numer zamówienia');
+      setOrder(null);
+      setOrderItems([]);
+      return;
+    }
+
+    await loadOrder(parsedId);
   };
 
   const renderOrderItem = (item: OrderItemDto): React.JSX.Element => {

@@ -114,16 +114,6 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
-
-      <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>Logika aplikacji</Text>
-
-        <Text style={styles.infoText}>
-          Klient może przeglądać produkty, dodać je do koszyka, złożyć
-          zamówienie i później sprawdzić jego szczegóły po numerze zamówienia.
-          Panel administracyjny jest osobną częścią dla obsługi sklepu.
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -266,28 +256,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginLeft: 12,
-  },
-
-  infoBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginTop: 4,
-  },
-
-  infoTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  infoText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
   },
 });
 

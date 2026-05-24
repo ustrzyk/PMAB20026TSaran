@@ -43,6 +43,8 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -52,10 +54,34 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const categories = useMemo(() => {
+    const categoryNames = items
+      .filter(item => item.isActive)
+      .map(item => item.categoryName ?? 'Brak kategorii')
+      .filter((categoryName, index, array) => {
+        return array.indexOf(categoryName) === index;
+      })
+      .sort((a, b) => a.localeCompare(b));
+
+    return categoryNames;
+  }, [items]);
+
   const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
     let result = items.filter(item => item.isActive);
+
+    if (selectedCategory !== 'all') {
+      result = result.filter(item => {
+        const categoryName = item.categoryName ?? 'Brak kategorii';
+
+        return categoryName === selectedCategory;
+      });
+    }
+
+    if (onlyAvailable) {
+      result = result.filter(item => (item.quantity ?? 0) > 0);
+    }
 
     if (search.length > 0) {
       result = result.filter(item => {
@@ -92,7 +118,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [items, searchText, sortMode]);
+  }, [items, searchText, sortMode, selectedCategory, onlyAvailable]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -128,6 +154,13 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     });
   };
 
+  const clearFilters = (): void => {
+    setSearchText('');
+    setSelectedCategory('all');
+    setOnlyAvailable(false);
+    setSortMode('default');
+  };
+
   const renderSortButton = (
     label: string,
     value: SortMode,
@@ -136,17 +169,141 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
-        style={[styles.sortButton, isSelected && styles.sortButtonSelected]}
+        style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.8}>
         <Text
           style={[
-            styles.sortButtonText,
-            isSelected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            isSelected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
       </TouchableOpacity>
+    );
+  };
+
+  const renderCategoryButton = (categoryName: string): React.JSX.Element => {
+    const isSelected = selectedCategory === categoryName;
+
+    return (
+      <TouchableOpacity
+        key={categoryName}
+        style={[
+          styles.categoryButton,
+          isSelected && styles.categoryButtonSelected,
+        ]}
+        onPress={() => setSelectedCategory(categoryName)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.categoryButtonText,
+            isSelected && styles.categoryButtonTextSelected,
+          ]}>
+          {categoryName === 'all' ? 'Wszystkie' : categoryName}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderListHeader = (): React.JSX.Element => {
+    return (
+      <>
+        <View style={styles.heroBox}>
+          <Text style={styles.shopName}>3D Print Shop</Text>
+          <Text style={styles.heroTitle}>Sklep z drukarkami 3D</Text>
+          <Text style={styles.heroSubtitle}>
+            Wybierz produkt, dodaj go do koszyka i złóż zamówienie z dostawą.
+          </Text>
+        </View>
+
+        <View style={styles.cartBar}>
+          <View>
+            <Text style={styles.cartBarTitle}>Koszyk</Text>
+            <Text style={styles.cartBarText}>
+              Produkty: {totalQuantity} | {formatMoney(totalValue)}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.cartButton}
+            onPress={() => navigation.navigate('Cart')}
+            activeOpacity={0.8}>
+            <Text style={styles.cartButtonText}>Przejdź</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Produkty</Text>
+            <Text style={styles.subtitle}>
+              Wyświetlane: {filteredItems.length} / {items.length}
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.refreshButton} onPress={refreshItems}>
+            <Text style={styles.refreshButtonText}>Odśwież</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Szukaj produktu, kodu lub kategorii..."
+            placeholderTextColor="#64748b"
+          />
+
+          <TouchableOpacity
+            style={styles.onlyAvailableButton}
+            onPress={() => setOnlyAvailable(previous => !previous)}
+            activeOpacity={0.8}>
+            <Text
+              style={[
+                styles.onlyAvailableText,
+                onlyAvailable && styles.onlyAvailableTextSelected,
+              ]}>
+              {onlyAvailable ? '✓ Tylko dostępne' : 'Tylko dostępne'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.categoryBox}>
+          <Text style={styles.filterTitle}>Kategorie</Text>
+
+          <View style={styles.categoryButtons}>
+            {renderCategoryButton('all')}
+            {categories.map(renderCategoryButton)}
+          </View>
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.filterTitle}>Sortowanie</Text>
+
+          <View style={styles.filterButtons}>
+            {renderSortButton('Domyślnie', 'default')}
+            {renderSortButton('Nazwa', 'name')}
+            {renderSortButton('Cena ↑', 'priceAsc')}
+            {renderSortButton('Cena ↓', 'priceDesc')}
+            {renderSortButton('Stan', 'quantity')}
+          </View>
+        </View>
+
+        <View style={styles.filterSummaryBox}>
+          <Text style={styles.filterSummaryText}>
+            Filtr:{' '}
+            {selectedCategory === 'all'
+              ? 'wszystkie kategorie'
+              : selectedCategory}
+            {onlyAvailable ? ' | tylko dostępne' : ''}
+          </Text>
+
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
+            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+          </TouchableOpacity>
+        </View>
+      </>
     );
   };
 
@@ -170,6 +327,13 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             </Text>
 
             <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
+
+            <Text
+              style={
+                isAvailable ? styles.availableBadge : styles.notAvailableBadge
+              }>
+              {isAvailable ? 'Dostępny' : 'Brak na stanie'}
+            </Text>
           </View>
 
           <Text style={styles.itemPrice}>Cena: {formatMoney(price)}</Text>
@@ -239,86 +403,22 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         onCancel={closeDialog}
       />
 
-      <View style={styles.heroBox}>
-        <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Sklep z drukarkami 3D</Text>
-        <Text style={styles.heroSubtitle}>
-          Wybierz produkt, dodaj go do koszyka i złóż zamówienie z dostawą.
-        </Text>
-      </View>
-
-      <View style={styles.cartBar}>
-        <View>
-          <Text style={styles.cartBarTitle}>Koszyk</Text>
-          <Text style={styles.cartBarText}>
-            Produkty: {totalQuantity} | {formatMoney(totalValue)}
-          </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.cartButton}
-          onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.8}>
-          <Text style={styles.cartButtonText}>Przejdź</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Produkty</Text>
-          <Text style={styles.subtitle}>
-            Wyświetlane: {filteredItems.length} / {items.length}
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.refreshButton} onPress={refreshItems}>
-          <Text style={styles.refreshButtonText}>Odśwież</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.searchBox}>
-        <TextInput
-          style={styles.searchInput}
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="Szukaj produktu, kodu lub kategorii..."
-          placeholderTextColor="#64748b"
-        />
-
-        {searchText.trim().length > 0 ? (
-          <TouchableOpacity
-            style={styles.clearSearchButton}
-            onPress={() => setSearchText('')}
-            activeOpacity={0.8}>
-            <Text style={styles.clearSearchText}>Wyczyść</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
-
-      <View style={styles.sortBox}>
-        <Text style={styles.sortTitle}>Sortowanie</Text>
-
-        <View style={styles.sortButtons}>
-          {renderSortButton('Domyślnie', 'default')}
-          {renderSortButton('Nazwa', 'name')}
-          {renderSortButton('Cena ↑', 'priceAsc')}
-          {renderSortButton('Cena ↓', 'priceDesc')}
-          {renderSortButton('Stan', 'quantity')}
-        </View>
-      </View>
-
       <FlatList
         data={filteredItems}
         renderItem={renderItem}
         keyExtractor={item => item.idItem.toString()}
+        ListHeaderComponent={renderListHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={loading} onRefresh={refreshItems} />
         }
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText.trim().length > 0
-              ? 'Brak produktów pasujących do wyszukiwania'
+            {searchText.trim().length > 0 ||
+            selectedCategory !== 'all' ||
+            onlyAvailable
+              ? 'Brak produktów pasujących do filtrów'
               : 'Brak produktów w API'}
           </Text>
         }
@@ -365,6 +465,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  listContent: {
+    paddingBottom: 30,
   },
 
   heroBox: {
@@ -483,15 +587,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  clearSearchButton: {
-    alignSelf: 'flex-end',
-    marginTop: 8,
+  onlyAvailableButton: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
 
-  clearSearchText: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '800',
+  onlyAvailableText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  onlyAvailableTextSelected: {
+    color: '#16a34a',
+  },
+
+  categoryBox: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
   },
 
   sortBox: {
@@ -499,20 +618,20 @@ const styles = StyleSheet.create({
     paddingTop: 12,
   },
 
-  sortTitle: {
+  filterTitle: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '900',
     marginBottom: 8,
   },
 
-  sortButtons: {
+  categoryButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
 
-  sortButton: {
+  categoryButton: {
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
@@ -521,31 +640,81 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
 
-  sortButtonSelected: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
+  categoryButtonSelected: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
   },
 
-  sortButtonText: {
+  categoryButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '800',
   },
 
-  sortButtonTextSelected: {
+  categoryButtonTextSelected: {
     color: '#ffffff',
   },
 
-  listContent: {
-    padding: 16,
-    paddingBottom: 30,
+  filterButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  filterButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  filterButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  filterButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  filterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  filterSummaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 12,
+  },
+
+  filterSummaryText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  clearFiltersText: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   itemCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#334155',
   },
@@ -588,6 +757,26 @@ const styles = StyleSheet.create({
   codeBadge: {
     backgroundColor: '#422006',
     color: '#fed7aa',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  availableBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  notAvailableBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 999,
@@ -641,6 +830,7 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
     marginTop: 40,
+    marginHorizontal: 16,
     fontSize: 16,
   },
 });

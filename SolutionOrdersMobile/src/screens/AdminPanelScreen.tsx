@@ -36,8 +36,8 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Dashboard</Text>
           <Text style={styles.menuDescription}>
-            Raporty sklepu: sprzedaż, TOP produkty, niskie stany magazynowe,
-            sprzedaż według kategorii i najnowsze zamówienia.
+            Sprzedaż, TOP produkty, niskie stany magazynowe, sprzedaż według
+            kategorii i najnowsze zamówienia.
           </Text>
         </View>
 
@@ -69,7 +69,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.menuTitle}>Kategorie</Text>
           <Text style={styles.menuDescription}>
             Zarządzanie kategoriami produktów, np. drukarki 3D, filamenty,
-            dysze, części i akcesoria.
+            części i akcesoria.
           </Text>
         </View>
 
@@ -150,16 +150,6 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
 
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
-
-      <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>Po co ten ekran?</Text>
-
-        <Text style={styles.infoText}>
-          Ekran sklepu jest przeznaczony dla klienta, a ten panel jest dla
-          właściciela lub pracownika sklepu. Dzięki temu aplikacja ma logiczny
-          podział na część zakupową i administracyjną.
-        </Text>
-      </View>
     </ScrollView>
   );
 }
@@ -256,28 +246,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginLeft: 12,
-  },
-
-  infoBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginTop: 4,
-  },
-
-  infoTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  infoText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
   },
 });
 

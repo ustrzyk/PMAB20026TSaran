@@ -255,6 +255,11 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         idOrder: result.idOrder,
         totalValue: result.totalValue,
         message: result.message,
+        deliveryPrice,
+        finalValue,
+        deliveryMethod: getDeliveryMethodLabel(deliveryMethod),
+        paymentMethod: getPaymentMethodLabel(paymentMethod),
+        deliveryDate: estimatedDeliveryDate,
       });
     } catch (err) {
       setDialog({
