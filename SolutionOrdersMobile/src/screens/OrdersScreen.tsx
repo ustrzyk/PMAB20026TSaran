@@ -36,6 +36,12 @@ function formatDate(value?: string | null): string {
   return value.substring(0, 10);
 }
 
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
+
+  return `${safeValue.toFixed(2)} zł`;
+}
+
 function OrdersScreen({navigation}: Props): React.JSX.Element {
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,6 +153,13 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     closeDialog();
   };
 
+  const openOrderItems = (order: OrderDto): void => {
+    navigation.navigate('OrderItems', {
+      idOrder: order.idOrder,
+      orderTitle: `Zamówienie nr ${order.idOrder}`,
+    });
+  };
+
   const renderItem = ({item}: {item: OrderDto}): React.JSX.Element => {
     return (
       <View style={styles.orderCard}>
@@ -172,11 +185,23 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
           Pozycje: {item.orderItemsCount}
         </Text>
 
+        <View style={styles.totalBox}>
+          <Text style={styles.totalLabel}>Wartość zamówienia</Text>
+          <Text style={styles.totalValue}>{formatMoney(item.totalValue)}</Text>
+        </View>
+
         <Text style={styles.orderNotes}>
           {item.notes ?? 'Brak notatek'}
         </Text>
 
         <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.itemsButton}
+            onPress={() => openOrderItems(item)}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Pozycje</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditOrder', {order: item})}
@@ -236,7 +261,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.shopName}>3D Print Shop</Text>
         <Text style={styles.heroTitle}>Zamówienia</Text>
         <Text style={styles.heroSubtitle}>
-          Zamówienia klientów z przypisanym klientem i pracownikiem.
+          Zamówienia klientów z przypisanym klientem, pracownikiem i wartością.
         </Text>
       </View>
 
@@ -431,6 +456,29 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
 
+  totalBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+
+  totalLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  totalValue: {
+    color: '#f97316',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+
   orderNotes: {
     color: '#94a3b8',
     fontSize: 13,
@@ -440,8 +488,15 @@ const styles = StyleSheet.create({
 
   actions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginTop: 12,
+  },
+
+  itemsButton: {
+    flex: 1,
+    backgroundColor: '#9333ea',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 
   editButton: {
@@ -460,7 +515,7 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
   },

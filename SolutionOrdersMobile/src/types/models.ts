@@ -186,6 +186,9 @@ export interface OrderDto {
   deliveryDate?: string | null;
 
   orderItemsCount: number;
+
+  // Suma wartości zamówienia wyliczana w backendzie.
+  totalValue: number;
 }
 
 // Dane wysyłane przy tworzeniu zamówienia - POST /api/Order
@@ -223,6 +226,13 @@ export interface OrderItemDto {
   itemCode?: string | null;
 
   quantity?: number | null;
+
+  // Cena produktu pobrana z backendu.
+  itemPrice: number;
+
+  // Wartość pozycji: quantity * itemPrice.
+  lineValue: number;
+
   isActive?: boolean;
 }
 

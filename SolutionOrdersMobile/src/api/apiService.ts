@@ -314,6 +314,10 @@ class ApiService {
     return this.request<OrderItemDto[]>('/OrderItem');
   }
 
+  async getOrderItemsByOrder(idOrder: number): Promise<OrderItemDto[]> {
+    return this.request<OrderItemDto[]>(`/OrderItem/Order/${idOrder}`);
+  }
+
   async getOrderItem(idOrderItem: number): Promise<OrderItemDto> {
     return this.request<OrderItemDto>(`/OrderItem/${idOrderItem}`);
   }

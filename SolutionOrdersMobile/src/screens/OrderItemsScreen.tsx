@@ -28,7 +28,18 @@ interface DialogState {
   loading: boolean;
 }
 
-function OrderItemsScreen({navigation}: Props): React.JSX.Element {
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
+
+  return `${safeValue.toFixed(2)} zł`;
+}
+
+function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
+  const idOrderFromRoute = route.params?.idOrder;
+  const orderTitleFromRoute = route.params?.orderTitle;
+
+  const isOrderFiltered = typeof idOrderFromRoute === 'number';
+
   const [orderItems, setOrderItems] = useState<OrderItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,6 +55,11 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const visibleTotalValue = orderItems.reduce(
+    (sum, item) => sum + (item.lineValue ?? 0),
+    0,
+  );
+
   const closeDialog = (): void => {
     setDialog(previous => ({
       ...previous,
@@ -56,7 +72,10 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
     try {
       setError(null);
 
-      const data = await apiService.getOrderItems();
+      const data =
+        isOrderFiltered && idOrderFromRoute
+          ? await apiService.getOrderItemsByOrder(idOrderFromRoute)
+          : await apiService.getOrderItems();
 
       setOrderItems(data);
     } catch (err) {
@@ -68,7 +87,7 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [idOrderFromRoute, isOrderFiltered]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +108,9 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Usuwanie pozycji',
-      message: `Czy na pewno chcesz usunąć pozycję "${orderItem.itemName}" z zamówienia nr ${orderItem.idOrder}?`,
+      message: `Czy na pewno chcesz usunąć pozycję "${
+        orderItem.itemName ?? 'produkt'
+      }" z zamówienia nr ${orderItem.idOrder}?`,
       loading: false,
     });
   };
@@ -142,6 +163,26 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
     closeDialog();
   };
 
+  const openCreateOrderItem = (): void => {
+    if (isOrderFiltered && idOrderFromRoute) {
+      navigation.navigate('CreateOrderItem', {
+        idOrder: idOrderFromRoute,
+      });
+
+      return;
+    }
+
+    navigation.navigate('CreateOrderItem');
+  };
+
+  const screenTitle = isOrderFiltered
+    ? orderTitleFromRoute ?? `Zamówienie nr ${idOrderFromRoute}`
+    : 'Pozycje zamówienia';
+
+  const screenSubtitle = isOrderFiltered
+    ? `Pozycje tylko dla zamówienia nr ${idOrderFromRoute}`
+    : 'Produkty przypisane do wszystkich zamówień wraz z ilością.';
+
   const renderItem = ({item}: {item: OrderItemDto}): React.JSX.Element => {
     return (
       <View style={styles.orderItemCard}>
@@ -161,9 +202,23 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
           ID produktu: {item.idItem}
         </Text>
 
-        <Text style={styles.orderItemQuantity}>
+        <Text style={styles.orderItemText}>
           Ilość: {item.quantity ?? 0}
         </Text>
+
+        <View style={styles.priceBox}>
+          <View style={styles.priceColumn}>
+            <Text style={styles.priceLabel}>Cena produktu</Text>
+            <Text style={styles.priceValue}>{formatMoney(item.itemPrice)}</Text>
+          </View>
+
+          <View style={styles.priceColumn}>
+            <Text style={styles.priceLabel}>Wartość pozycji</Text>
+            <Text style={styles.lineValue}>
+              {formatMoney(item.lineValue)}
+            </Text>
+          </View>
+        </View>
 
         <Text style={styles.orderItemId}>
           ID pozycji: {item.idOrderItem}
@@ -233,15 +288,15 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
 
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Pozycje zamówienia</Text>
-        <Text style={styles.heroSubtitle}>
-          Produkty przypisane do zamówień wraz z ilością.
-        </Text>
+        <Text style={styles.heroTitle}>{screenTitle}</Text>
+        <Text style={styles.heroSubtitle}>{screenSubtitle}</Text>
       </View>
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Pozycje</Text>
+          <Text style={styles.title}>
+            {isOrderFiltered ? 'Pozycje zamówienia' : 'Pozycje'}
+          </Text>
           <Text style={styles.subtitle}>
             Liczba pozycji: {orderItems.length}
           </Text>
@@ -252,9 +307,29 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryLabel}>
+          {isOrderFiltered
+            ? 'Suma pozycji tego zamówienia'
+            : 'Suma widocznych pozycji'}
+        </Text>
+
+        <Text style={styles.summaryValue}>
+          {formatMoney(visibleTotalValue)}
+        </Text>
+      </View>
+
+      {isOrderFiltered && (
+        <View style={styles.filterBox}>
+          <Text style={styles.filterText}>
+            Widok filtrowany: zamówienie nr {idOrderFromRoute}
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => navigation.navigate('CreateOrderItem')}
+        onPress={openCreateOrderItem}
         activeOpacity={0.8}>
         <Text style={styles.createButtonText}>+ Dodaj pozycję</Text>
       </TouchableOpacity>
@@ -268,7 +343,11 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak pozycji zamówienia w API</Text>
+          <Text style={styles.emptyText}>
+            {isOrderFiltered
+              ? 'Brak pozycji dla tego zamówienia'
+              : 'Brak pozycji zamówienia w API'}
+          </Text>
         }
       />
     </View>
@@ -387,6 +466,45 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  summaryValue: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  filterBox: {
+    backgroundColor: '#312e81',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+  },
+
+  filterText: {
+    color: '#e0e7ff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
   createButton: {
     backgroundColor: '#16a34a',
     marginHorizontal: 16,
@@ -430,11 +548,39 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
 
-  orderItemQuantity: {
-    color: '#f97316',
-    fontSize: 14,
+  priceBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+
+  priceColumn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  priceLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  priceValue: {
+    color: '#cbd5e1',
+    fontSize: 13,
     fontWeight: '900',
-    marginTop: 4,
+  },
+
+  lineValue: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   orderItemId: {

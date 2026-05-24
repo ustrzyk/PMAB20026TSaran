@@ -13,6 +13,12 @@
 
         public decimal? Quantity { get; set; }
 
+        // Cena produktu pobrana z tabeli Items
+        public decimal ItemPrice { get; set; }
+
+        // Wartość pozycji: ilość * cena produktu
+        public decimal LineValue { get; set; }
+
         public bool IsActive { get; set; }
     }
 }

@@ -6,17 +6,19 @@ using SolutionOrders.API.Models.Data;
 
 namespace SolutionOrders.API.Features.OrderItems.Handlers.Queries
 {
-    public class GetAllOrderItemsQueryHandler(ApplicationDbContext context)
-        : IRequestHandler<GetAllOrderItemsQuery, IEnumerable<OrderItemDto>>
+    public class GetOrderItemsByOrderIdQueryHandler(ApplicationDbContext context)
+        : IRequestHandler<GetOrderItemsByOrderIdQuery, IEnumerable<OrderItemDto>>
     {
         public async Task<IEnumerable<OrderItemDto>> Handle(
-            GetAllOrderItemsQuery request,
+            GetOrderItemsByOrderIdQuery request,
             CancellationToken cancellationToken)
         {
             var orderItems = await context.OrderItems
                 .AsNoTracking()
                 .Include(orderItem => orderItem.Item)
-                .Where(orderItem => orderItem.IsActive)
+                .Where(orderItem =>
+                    orderItem.IdOrder == request.IdOrder &&
+                    orderItem.IsActive)
                 .OrderByDescending(orderItem => orderItem.IdOrderItem)
                 .Select(orderItem => new OrderItemDto
                 {

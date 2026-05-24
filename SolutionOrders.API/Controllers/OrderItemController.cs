@@ -41,6 +41,18 @@ namespace SolutionOrders.API.Controllers
         }
 
         /// <summary>
+        /// Pobiera pozycje dla konkretnego zamówienia
+        /// </summary>
+        [HttpGet("Order/{idOrder}")]
+        [ProducesResponseType(typeof(IEnumerable<OrderItemDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetByOrderId(int idOrder)
+        {
+            var query = new GetOrderItemsByOrderIdQuery(idOrder);
+
+            return Ok(await mediator.Send(query));
+        }
+
+        /// <summary>
         /// Tworzy nową pozycję zamówienia
         /// </summary>
         [HttpPost]

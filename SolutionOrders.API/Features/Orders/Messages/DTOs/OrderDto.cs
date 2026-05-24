@@ -16,5 +16,9 @@
         public DateTime? DeliveryDate { get; set; }
 
         public int OrderItemsCount { get; set; }
+
+        // Suma wartości aktywnych pozycji zamówienia:
+        // ilość * cena produktu
+        public decimal TotalValue { get; set; }
     }
 }
