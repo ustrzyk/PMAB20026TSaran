@@ -34,6 +34,12 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
   const {item} = route.params;
   const {addToCart, totalQuantity, totalValue} = useCart();
 
+  const availableQuantity = item.quantity ?? 0;
+  const isAvailable = availableQuantity > 0;
+  const [selectedQuantity, setSelectedQuantity] = useState(
+    isAvailable ? 1 : 0,
+  );
+
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
     type: 'success',
@@ -50,10 +56,28 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
     }));
   };
 
-  const handleAddToCart = (): void => {
-    const quantity = item.quantity ?? 0;
+  const decreaseQuantity = (): void => {
+    setSelectedQuantity(previous => {
+      if (previous <= 1) {
+        return previous;
+      }
 
-    if (quantity <= 0) {
+      return previous - 1;
+    });
+  };
+
+  const increaseQuantity = (): void => {
+    setSelectedQuantity(previous => {
+      if (previous >= availableQuantity) {
+        return previous;
+      }
+
+      return previous + 1;
+    });
+  };
+
+  const handleAddToCart = (): void => {
+    if (!isAvailable) {
       setDialog({
         visible: true,
         type: 'error',
@@ -65,13 +89,25 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       return;
     }
 
-    addToCart(item, 1);
+    if (selectedQuantity <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Niepoprawna ilość',
+        message: 'Wybierz ilość większą od 0.',
+        loading: false,
+      });
+
+      return;
+    }
+
+    addToCart(item, selectedQuantity);
 
     setDialog({
       visible: true,
       type: 'success',
       title: 'Dodano do koszyka',
-      message: `Produkt "${item.name}" został dodany do koszyka.`,
+      message: `Dodano "${item.name}" w ilości ${selectedQuantity}.`,
       loading: false,
     });
   };
@@ -95,9 +131,17 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
 
         <Text style={styles.title}>{item.name}</Text>
 
-        <Text style={styles.subtitle}>
-          Szczegóły produktu dostępnego w sklepie z drukarkami 3D.
-        </Text>
+        <View style={styles.badgeRow}>
+          <Text style={styles.categoryBadge}>
+            {item.categoryName ?? 'Brak kategorii'}
+          </Text>
+
+          <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
+
+          <Text style={isAvailable ? styles.availableBadge : styles.emptyBadge}>
+            {isAvailable ? 'Dostępny' : 'Brak na stanie'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.cartBox}>
@@ -116,6 +160,15 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.priceCard}>
+        <Text style={styles.priceLabel}>Cena</Text>
+        <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
+
+        <Text style={styles.stockText}>
+          Dostępne: {availableQuantity} {item.unitName ?? 'szt'}
+        </Text>
+      </View>
+
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Opis produktu</Text>
 
@@ -125,74 +178,52 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Dane produktu</Text>
+        <Text style={styles.sectionTitle}>Ilość</Text>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Kod</Text>
-          <Text style={styles.infoValue}>{item.code ?? 'Brak kodu'}</Text>
+        <View style={styles.quantityRow}>
+          <TouchableOpacity
+            style={[
+              styles.quantityButton,
+              selectedQuantity <= 1 && styles.disabledButton,
+            ]}
+            onPress={decreaseQuantity}
+            activeOpacity={0.8}
+            disabled={selectedQuantity <= 1 || !isAvailable}>
+            <Text style={styles.quantityButtonText}>-</Text>
+          </TouchableOpacity>
+
+          <View style={styles.quantityValueBox}>
+            <Text style={styles.quantityValue}>{selectedQuantity}</Text>
+            <Text style={styles.quantityUnit}>{item.unitName ?? 'szt'}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[
+              styles.quantityButton,
+              selectedQuantity >= availableQuantity && styles.disabledButton,
+            ]}
+            onPress={increaseQuantity}
+            activeOpacity={0.8}
+            disabled={selectedQuantity >= availableQuantity || !isAvailable}>
+            <Text style={styles.quantityButtonText}>+</Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Kategoria</Text>
-          <Text style={styles.infoValue}>
-            {item.categoryName ?? 'Brak kategorii'}
-          </Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Jednostka</Text>
-          <Text style={styles.infoValue}>
-            {item.unitName ?? 'Brak jednostki'}
-          </Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Stan magazynu</Text>
-          <Text style={styles.infoValue}>
-            {item.quantity ?? 0} {item.unitName ?? 'szt'}
-          </Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Cena</Text>
-          <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
-        </View>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Informacje techniczne</Text>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>ID produktu</Text>
-          <Text style={styles.infoValue}>{item.idItem}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>ID kategorii</Text>
-          <Text style={styles.infoValue}>{item.idCategory}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>ID jednostki</Text>
-          <Text style={styles.infoValue}>{item.idUnitOfMeasurement}</Text>
-        </View>
-
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Aktywny</Text>
-          <Text style={styles.infoValue}>{item.isActive ? 'Tak' : 'Nie'}</Text>
-        </View>
+        <Text style={styles.lineValue}>
+          Wartość: {formatMoney(selectedQuantity * (item.price ?? 0))}
+        </Text>
       </View>
 
       <TouchableOpacity
         style={[
           styles.addToCartButton,
-          (item.quantity ?? 0) <= 0 && styles.disabledButton,
+          !isAvailable && styles.disabledButton,
         ]}
         onPress={handleAddToCart}
         activeOpacity={0.8}
-        disabled={(item.quantity ?? 0) <= 0}>
+        disabled={!isAvailable}>
         <Text style={styles.addToCartButtonText}>
-          {(item.quantity ?? 0) > 0 ? 'Dodaj do koszyka' : 'Brak na stanie'}
+          {isAvailable ? 'Dodaj do koszyka' : 'Brak na stanie'}
         </Text>
       </TouchableOpacity>
 
@@ -246,13 +277,53 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 26,
     fontWeight: '900',
+    marginBottom: 12,
   },
 
-  subtitle: {
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  categoryBadge: {
+    backgroundColor: '#1e293b',
     color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  codeBadge: {
+    backgroundColor: '#422006',
+    color: '#fed7aa',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  availableBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  emptyBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
   },
 
   cartBox: {
@@ -294,6 +365,35 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  priceCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  priceLabel: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  priceValue: {
+    color: '#f97316',
+    fontSize: 30,
+    fontWeight: '900',
+  },
+
+  stockText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 6,
+  },
+
   card: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -316,29 +416,52 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
-  infoRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    paddingVertical: 9,
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  infoLabel: {
+  quantityButton: {
+    backgroundColor: '#f97316',
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  quantityButtonText: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  quantityValueBox: {
+    minWidth: 90,
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+
+  quantityValue: {
+    color: '#f8fafc',
+    fontSize: 26,
+    fontWeight: '900',
+  },
+
+  quantityUnit: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 3,
+    marginTop: 2,
   },
 
-  infoValue: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  priceValue: {
-    color: '#f97316',
+  lineValue: {
+    color: '#16a34a',
     fontSize: 18,
     fontWeight: '900',
+    textAlign: 'center',
+    marginTop: 12,
   },
 
   addToCartButton: {

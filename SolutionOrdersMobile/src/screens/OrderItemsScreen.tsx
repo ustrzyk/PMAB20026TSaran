@@ -1,10 +1,11 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +20,8 @@ import type {RootStackParamList} from '../navigation/types.ts';
 import type {OrderItemDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderItems'>;
+
+type SortMode = 'default' | 'name' | 'quantityDesc' | 'valueDesc' | 'valueAsc';
 
 interface DialogState {
   visible: boolean;
@@ -47,6 +50,9 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
   const [selectedOrderItem, setSelectedOrderItem] =
     useState<OrderItemDto | null>(null);
 
+  const [searchText, setSearchText] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
     type: 'success',
@@ -55,10 +61,59 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     loading: false,
   });
 
-  const visibleTotalValue = orderItems.reduce(
-    (sum, item) => sum + (item.lineValue ?? 0),
-    0,
-  );
+  const filteredItems = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    let result = orderItems;
+
+    if (search.length > 0) {
+      result = result.filter(item => {
+        const orderNumber = item.idOrder.toString();
+        const itemName = item.itemName?.toLowerCase() ?? '';
+        const itemCode = item.itemCode?.toLowerCase() ?? '';
+
+        return (
+          orderNumber.includes(search) ||
+          itemName.includes(search) ||
+          itemCode.includes(search)
+        );
+      });
+    }
+
+    const sorted = [...result];
+
+    if (sortMode === 'name') {
+      sorted.sort((a, b) =>
+        (a.itemName ?? '').localeCompare(b.itemName ?? ''),
+      );
+    }
+
+    if (sortMode === 'quantityDesc') {
+      sorted.sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
+    }
+
+    if (sortMode === 'valueDesc') {
+      sorted.sort((a, b) => (b.lineValue ?? 0) - (a.lineValue ?? 0));
+    }
+
+    if (sortMode === 'valueAsc') {
+      sorted.sort((a, b) => (a.lineValue ?? 0) - (b.lineValue ?? 0));
+    }
+
+    return sorted;
+  }, [orderItems, searchText, sortMode]);
+
+  const visibleTotalValue = useMemo(() => {
+    return filteredItems.reduce((sum, item) => {
+      return sum + (item.lineValue ?? 0);
+    }, 0);
+  }, [filteredItems]);
+
+  const visibleTotalQuantity = useMemo(() => {
+    return filteredItems.reduce((sum, item) => {
+      return sum + (item.quantity ?? 0);
+    }, 0);
+  }, [filteredItems]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -175,54 +230,159 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     navigation.navigate('CreateOrderItem');
   };
 
+  const clearFilters = (): void => {
+    setSearchText('');
+    setSortMode('default');
+  };
+
   const screenTitle = isOrderFiltered
     ? orderTitleFromRoute ?? `Zamówienie nr ${idOrderFromRoute}`
     : 'Pozycje zamówienia';
 
   const screenSubtitle = isOrderFiltered
-    ? `Pozycje tylko dla zamówienia nr ${idOrderFromRoute}`
-    : 'Produkty przypisane do wszystkich zamówień wraz z ilością.';
+    ? `Produkty w zamówieniu nr ${idOrderFromRoute}`
+    : 'Produkty przypisane do zamówień.';
 
-  const renderItem = ({item}: {item: OrderItemDto}): React.JSX.Element => {
+  const renderSortButton = (
+    label: string,
+    value: SortMode,
+  ): React.JSX.Element => {
+    const selected = sortMode === value;
+
     return (
-      <View style={styles.orderItemCard}>
-        <Text style={styles.orderItemTitle}>
-          {item.itemName ?? `Produkt ID ${item.idItem}`}
+      <TouchableOpacity
+        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            selected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
         </Text>
+      </TouchableOpacity>
+    );
+  };
 
-        <Text style={styles.orderItemText}>
-          Kod produktu: {item.itemCode ?? 'Brak kodu'}
-        </Text>
+  const renderListHeader = (): React.JSX.Element => {
+    return (
+      <>
+        <View style={styles.heroBox}>
+          <Text style={styles.shopName}>3D Print Shop</Text>
+          <Text style={styles.heroTitle}>{screenTitle}</Text>
+          <Text style={styles.heroSubtitle}>{screenSubtitle}</Text>
+        </View>
 
-        <Text style={styles.orderItemText}>
-          Zamówienie nr: {item.idOrder}
-        </Text>
-
-        <Text style={styles.orderItemText}>
-          ID produktu: {item.idItem}
-        </Text>
-
-        <Text style={styles.orderItemText}>
-          Ilość: {item.quantity ?? 0}
-        </Text>
-
-        <View style={styles.priceBox}>
-          <View style={styles.priceColumn}>
-            <Text style={styles.priceLabel}>Cena produktu</Text>
-            <Text style={styles.priceValue}>{formatMoney(item.itemPrice)}</Text>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>
+              {isOrderFiltered ? 'Produkty w zamówieniu' : 'Pozycje'}
+            </Text>
+            <Text style={styles.subtitle}>
+              Wyświetlane: {filteredItems.length} / {orderItems.length}
+            </Text>
           </View>
 
-          <View style={styles.priceColumn}>
-            <Text style={styles.priceLabel}>Wartość pozycji</Text>
-            <Text style={styles.lineValue}>
-              {formatMoney(item.lineValue)}
+          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+            <Text style={styles.refreshButtonText}>Odśwież</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Ilość produktów</Text>
+            <Text style={styles.summaryQuantity}>{visibleTotalQuantity}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Wartość</Text>
+            <Text style={styles.summaryValue}>
+              {formatMoney(visibleTotalValue)}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.orderItemId}>
-          ID pozycji: {item.idOrderItem}
-        </Text>
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={openCreateOrderItem}
+          activeOpacity={0.8}>
+          <Text style={styles.createButtonText}>+ Dodaj pozycję</Text>
+        </TouchableOpacity>
+
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Szukaj po produkcie, kodzie albo numerze zamówienia..."
+            placeholderTextColor="#64748b"
+          />
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.sortTitle}>Sortowanie</Text>
+
+          <View style={styles.sortButtons}>
+            {renderSortButton('Domyślnie', 'default')}
+            {renderSortButton('Nazwa', 'name')}
+            {renderSortButton('Ilość ↓', 'quantityDesc')}
+            {renderSortButton('Wartość ↓', 'valueDesc')}
+            {renderSortButton('Wartość ↑', 'valueAsc')}
+          </View>
+        </View>
+
+        <View style={styles.filterSummaryBox}>
+          <Text style={styles.filterSummaryText}>
+            Filtr:{' '}
+            {searchText.trim().length > 0
+              ? searchText.trim()
+              : 'brak wyszukiwania'}
+          </Text>
+
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
+            <Text style={styles.clearFiltersText}>Wyczyść</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
+  const renderItem = ({item}: {item: OrderItemDto}): React.JSX.Element => {
+    return (
+      <View style={styles.orderItemCard}>
+        <View style={styles.topRow}>
+          <View style={styles.itemTitleBox}>
+            <Text style={styles.orderItemTitle}>
+              {item.itemName ?? `Produkt ${item.idItem}`}
+            </Text>
+
+            <Text style={styles.orderItemCode}>
+              Kod: {item.itemCode ?? 'Brak kodu'}
+            </Text>
+          </View>
+
+          <View style={styles.orderBadge}>
+            <Text style={styles.orderBadgeText}>Zam. {item.idOrder}</Text>
+          </View>
+        </View>
+
+        <View style={styles.rowBox}>
+          <View style={styles.smallInfoBox}>
+            <Text style={styles.infoLabel}>Ilość</Text>
+            <Text style={styles.infoValue}>{item.quantity ?? 0}</Text>
+          </View>
+
+          <View style={styles.smallInfoBox}>
+            <Text style={styles.infoLabel}>Cena</Text>
+            <Text style={styles.infoValue}>{formatMoney(item.itemPrice)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.valueBox}>
+          <Text style={styles.valueLabel}>Wartość pozycji</Text>
+          <Text style={styles.lineValue}>{formatMoney(item.lineValue)}</Text>
+        </View>
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -286,67 +446,23 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         onCancel={closeDialog}
       />
 
-      <View style={styles.heroBox}>
-        <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>{screenTitle}</Text>
-        <Text style={styles.heroSubtitle}>{screenSubtitle}</Text>
-      </View>
-
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>
-            {isOrderFiltered ? 'Pozycje zamówienia' : 'Pozycje'}
-          </Text>
-          <Text style={styles.subtitle}>
-            Liczba pozycji: {orderItems.length}
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <Text style={styles.refreshButtonText}>Odśwież</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.summaryBox}>
-        <Text style={styles.summaryLabel}>
-          {isOrderFiltered
-            ? 'Suma pozycji tego zamówienia'
-            : 'Suma widocznych pozycji'}
-        </Text>
-
-        <Text style={styles.summaryValue}>
-          {formatMoney(visibleTotalValue)}
-        </Text>
-      </View>
-
-      {isOrderFiltered && (
-        <View style={styles.filterBox}>
-          <Text style={styles.filterText}>
-            Widok filtrowany: zamówienie nr {idOrderFromRoute}
-          </Text>
-        </View>
-      )}
-
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={openCreateOrderItem}
-        activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj pozycję</Text>
-      </TouchableOpacity>
-
       <FlatList
-        data={orderItems}
+        data={filteredItems}
         renderItem={renderItem}
         keyExtractor={item => item.idOrderItem.toString()}
+        ListHeaderComponent={renderListHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {isOrderFiltered
-              ? 'Brak pozycji dla tego zamówienia'
-              : 'Brak pozycji zamówienia w API'}
+            {searchText.trim().length > 0
+              ? 'Brak pozycji pasujących do wyszukiwania'
+              : isOrderFiltered
+                ? 'Brak pozycji dla tego zamówienia'
+                : 'Brak pozycji zamówienia w API'}
           </Text>
         }
       />
@@ -400,6 +516,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  listContent: {
+    paddingBottom: 30,
   },
 
   heroBox: {
@@ -474,6 +594,12 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 14,
     borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  summaryColumn: {
+    flex: 1,
   },
 
   summaryLabel: {
@@ -483,26 +609,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  summaryValue: {
-    color: '#f97316',
+  summaryQuantity: {
+    color: '#38bdf8',
     fontSize: 22,
     fontWeight: '900',
   },
 
-  filterBox: {
-    backgroundColor: '#312e81',
-    borderWidth: 1,
-    borderColor: '#6366f1',
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 12,
-    borderRadius: 12,
-  },
-
-  filterText: {
-    color: '#e0e7ff',
-    fontSize: 13,
-    fontWeight: '800',
+  summaryValue: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
   },
 
   createButton: {
@@ -520,74 +636,184 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  listContent: {
-    padding: 16,
-    paddingBottom: 30,
+  searchBox: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    backgroundColor: '#0f172a',
+  },
+
+  searchInput: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+  },
+
+  sortBox: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+
+  sortTitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  sortButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  sortButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  filterSummaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 12,
+  },
+
+  filterSummaryText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  clearFiltersText: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   orderItemCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#334155',
+  },
+
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  itemTitleBox: {
+    flex: 1,
   },
 
   orderItemTitle: {
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 4,
   },
 
-  orderItemText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 5,
-  },
-
-  priceBox: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 8,
-    marginBottom: 8,
-    gap: 8,
-  },
-
-  priceColumn: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  priceLabel: {
+  orderItemCode: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
   },
 
-  priceValue: {
+  orderBadge: {
+    backgroundColor: '#1e293b',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+
+  orderBadgeText: {
     color: '#cbd5e1',
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: '900',
+  },
+
+  rowBox: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  smallInfoBox: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 12,
+    padding: 10,
+  },
+
+  infoLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  infoValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  valueBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 10,
+  },
+
+  valueLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
   },
 
   lineValue: {
     color: '#f97316',
-    fontSize: 15,
+    fontSize: 19,
     fontWeight: '900',
-  },
-
-  orderItemId: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 4,
   },
 
   actions: {
@@ -621,6 +847,7 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
     marginTop: 40,
+    marginHorizontal: 16,
     fontSize: 16,
   },
 });
