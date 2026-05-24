@@ -1,338 +1,215 @@
 import React, {useState} from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-import {useItems} from '../context/ItemsContext';
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {useCart} from '../context/CartContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
-type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateItem'>;
-type EditProps = NativeStackScreenProps<RootStackParamList, 'EditItem'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'ItemDetails'>;
 
-type Props = CreateProps | EditProps;
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
+}
 
-function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
-  const {createItem, updateItem} = useItems();
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
 
-  const isEditMode = route.name === 'EditItem';
-  const editedItem = isEditMode ? route.params.item : undefined;
+  return `${safeValue.toFixed(2)} zł`;
+}
 
-  const [name, setName] = useState(editedItem?.name ?? '');
-  const [description, setDescription] = useState(editedItem?.description ?? '');
-  const [idCategory, setIdCategory] = useState(
-    editedItem?.idCategory?.toString() ?? '1',
-  );
-  const [price, setPrice] = useState(editedItem?.price?.toString() ?? '');
-  const [quantity, setQuantity] = useState(
-    editedItem?.quantity?.toString() ?? '',
-  );
-  const [fotoUrl, setFotoUrl] = useState(editedItem?.fotoUrl ?? '');
-  const [idUnitOfMeasurement, setIdUnitOfMeasurement] = useState(
-    editedItem?.idUnitOfMeasurement?.toString() ?? '1',
-  );
-  const [code, setCode] = useState(editedItem?.code ?? '');
-  const [submitting, setSubmitting] = useState(false);
+function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
+  const {item} = route.params;
+  const {addToCart, totalQuantity, totalValue} = useCart();
 
-  const validateForm = (): boolean => {
-    const parsedCategoryId = Number(idCategory);
-    const parsedUnitId = Number(idUnitOfMeasurement);
-    const parsedPrice = Number(price);
-    const parsedQuantity = Number(quantity);
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
 
-    if (name.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj nazwę produktu');
-      return false;
-    }
-
-    if (name.trim().length > 80) {
-      Alert.alert('Błąd', 'Nazwa produktu może mieć maksymalnie 80 znaków');
-      return false;
-    }
-
-    if (description.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj opis produktu');
-      return false;
-    }
-
-    if (description.trim().length < 5) {
-      Alert.alert('Błąd', 'Opis produktu powinien mieć minimum 5 znaków');
-      return false;
-    }
-
-    if (
-      idCategory.trim().length === 0 ||
-      Number.isNaN(parsedCategoryId) ||
-      parsedCategoryId <= 0
-    ) {
-      Alert.alert('Błąd', 'Podaj poprawne ID kategorii większe od 0');
-      return false;
-    }
-
-    if (
-      idUnitOfMeasurement.trim().length === 0 ||
-      Number.isNaN(parsedUnitId) ||
-      parsedUnitId <= 0
-    ) {
-      Alert.alert('Błąd', 'Podaj poprawne ID jednostki większe od 0');
-      return false;
-    }
-
-    if (price.trim().length === 0 || Number.isNaN(parsedPrice)) {
-      Alert.alert('Błąd', 'Podaj poprawną cenę');
-      return false;
-    }
-
-    if (parsedPrice <= 0) {
-      Alert.alert('Błąd', 'Cena musi być większa od 0');
-      return false;
-    }
-
-    if (quantity.trim().length === 0 || Number.isNaN(parsedQuantity)) {
-      Alert.alert('Błąd', 'Podaj poprawną ilość');
-      return false;
-    }
-
-    if (parsedQuantity < 0) {
-      Alert.alert('Błąd', 'Ilość nie może być mniejsza od 0');
-      return false;
-    }
-
-    if (code.trim().length === 0) {
-      Alert.alert('Błąd', 'Podaj kod produktu');
-      return false;
-    }
-
-    if (code.trim().length > 40) {
-      Alert.alert('Błąd', 'Kod produktu może mieć maksymalnie 40 znaków');
-      return false;
-    }
-
-    return true;
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
   };
 
-  const handleSave = async (): Promise<void> => {
-    if (!validateForm()) {
+  const handleAddToCart = (): void => {
+    const quantity = item.quantity ?? 0;
+
+    if (quantity <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Brak produktu',
+        message: 'Tego produktu nie ma aktualnie na stanie.',
+        loading: false,
+      });
+
       return;
     }
 
-    try {
-      setSubmitting(true);
+    addToCart(item, 1);
 
-      if (isEditMode && editedItem) {
-        await updateItem(editedItem.idItem, {
-          idItem: editedItem.idItem,
-          name: name.trim(),
-          description: description.trim(),
-          idCategory: Number(idCategory),
-          price: Number(price),
-          quantity: Number(quantity),
-          fotoUrl: fotoUrl.trim().length > 0 ? fotoUrl.trim() : null,
-          idUnitOfMeasurement: Number(idUnitOfMeasurement),
-          code: code.trim(),
-          isActive: editedItem.isActive,
-        });
-
-        Alert.alert('Sukces', 'Produkt został zaktualizowany');
-      } else {
-        await createItem({
-          name: name.trim(),
-          description: description.trim(),
-          idCategory: Number(idCategory),
-          price: Number(price),
-          quantity: Number(quantity),
-          fotoUrl: fotoUrl.trim().length > 0 ? fotoUrl.trim() : null,
-          idUnitOfMeasurement: Number(idUnitOfMeasurement),
-          code: code.trim(),
-        });
-
-        Alert.alert('Sukces', 'Produkt został dodany');
-      }
-
-      navigation.goBack();
-    } catch (err) {
-      Alert.alert('Błąd', (err as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+    setDialog({
+      visible: true,
+      type: 'success',
+      title: 'Dodano do koszyka',
+      message: `Produkt "${item.name}" został dodany do koszyka.`,
+      loading: false,
+    });
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.heroBox}>
-          <Text style={styles.appName}>3D Print Shop</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText="OK"
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={closeDialog}
+        onCancel={closeDialog}
+      />
 
-          <Text style={styles.title}>
-            {isEditMode ? 'Edytuj produkt' : 'Dodaj produkt'}
+      <View style={styles.heroBox}>
+        <Text style={styles.appName}>3D Print Shop</Text>
+
+        <Text style={styles.title}>{item.name}</Text>
+
+        <Text style={styles.subtitle}>
+          Szczegóły produktu dostępnego w sklepie z drukarkami 3D.
+        </Text>
+      </View>
+
+      <View style={styles.cartBox}>
+        <View>
+          <Text style={styles.cartTitle}>Koszyk</Text>
+          <Text style={styles.cartText}>
+            Produkty: {totalQuantity} | Wartość: {formatMoney(totalValue)}
           </Text>
-
-          <Text style={styles.subtitle}>
-            Uzupełnij dane produktu sprzedawanego w sklepie z drukarkami 3D.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Dane podstawowe</Text>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Nazwa produktu</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Np. Filament PLA 1.75 mm"
-              placeholderTextColor="#64748b"
-              editable={!submitting}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Opis</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Krótki opis produktu"
-              placeholderTextColor="#64748b"
-              multiline
-              editable={!submitting}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Kod produktu</Text>
-            <TextInput
-              style={styles.input}
-              value={code}
-              onChangeText={setCode}
-              placeholder="Np. FIL-PLA-001"
-              placeholderTextColor="#64748b"
-              autoCapitalize="characters"
-              editable={!submitting}
-            />
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Powiązania</Text>
-
-          <View style={styles.row}>
-            <View style={[styles.formGroup, styles.rowItem]}>
-              <Text style={styles.label}>ID kategorii</Text>
-              <TextInput
-                style={styles.input}
-                value={idCategory}
-                onChangeText={setIdCategory}
-                placeholder="1"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-                editable={!submitting}
-              />
-            </View>
-
-            <View style={[styles.formGroup, styles.rowItem]}>
-              <Text style={styles.label}>ID jednostki</Text>
-              <TextInput
-                style={styles.input}
-                value={idUnitOfMeasurement}
-                onChangeText={setIdUnitOfMeasurement}
-                placeholder="1"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-                editable={!submitting}
-              />
-            </View>
-          </View>
-
-          <Text style={styles.hintText}>
-            ID kategorii i jednostki muszą istnieć po stronie backendu.
-          </Text>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Cena i magazyn</Text>
-
-          <View style={styles.row}>
-            <View style={[styles.formGroup, styles.rowItem]}>
-              <Text style={styles.label}>Cena</Text>
-              <TextInput
-                style={styles.input}
-                value={price}
-                onChangeText={setPrice}
-                placeholder="99.99"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-                editable={!submitting}
-              />
-            </View>
-
-            <View style={[styles.formGroup, styles.rowItem]}>
-              <Text style={styles.label}>Ilość</Text>
-              <TextInput
-                style={styles.input}
-                value={quantity}
-                onChangeText={setQuantity}
-                placeholder="10"
-                placeholderTextColor="#64748b"
-                keyboardType="numeric"
-                editable={!submitting}
-              />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Zdjęcie</Text>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>URL zdjęcia</Text>
-            <TextInput
-              style={styles.input}
-              value={fotoUrl}
-              onChangeText={setFotoUrl}
-              placeholder="Opcjonalnie"
-              placeholderTextColor="#64748b"
-              editable={!submitting}
-            />
-          </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, submitting && styles.disabledButton]}
-          onPress={handleSave}
-          activeOpacity={0.8}
-          disabled={submitting}>
-          <Text style={styles.saveButtonText}>
-            {submitting
-              ? 'Zapisywanie...'
-              : isEditMode
-                ? 'Zapisz zmiany'
-                : 'Dodaj produkt'}
-          </Text>
+          style={styles.cartButton}
+          onPress={() => navigation.navigate('Cart')}
+          activeOpacity={0.8}>
+          <Text style={styles.cartButtonText}>Koszyk</Text>
         </TouchableOpacity>
+      </View>
 
-        <TouchableOpacity
-          style={styles.cancelButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-          disabled={submitting}>
-          <Text style={styles.cancelButtonText}>Anuluj</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Opis produktu</Text>
+
+        <Text style={styles.description}>
+          {item.description ?? 'Brak opisu produktu'}
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Dane produktu</Text>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Kod</Text>
+          <Text style={styles.infoValue}>{item.code ?? 'Brak kodu'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Kategoria</Text>
+          <Text style={styles.infoValue}>
+            {item.categoryName ?? 'Brak kategorii'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Jednostka</Text>
+          <Text style={styles.infoValue}>
+            {item.unitName ?? 'Brak jednostki'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Stan magazynu</Text>
+          <Text style={styles.infoValue}>
+            {item.quantity ?? 0} {item.unitName ?? 'szt'}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Cena</Text>
+          <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Informacje techniczne</Text>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>ID produktu</Text>
+          <Text style={styles.infoValue}>{item.idItem}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>ID kategorii</Text>
+          <Text style={styles.infoValue}>{item.idCategory}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>ID jednostki</Text>
+          <Text style={styles.infoValue}>{item.idUnitOfMeasurement}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Aktywny</Text>
+          <Text style={styles.infoValue}>{item.isActive ? 'Tak' : 'Nie'}</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[
+          styles.addToCartButton,
+          (item.quantity ?? 0) <= 0 && styles.disabledButton,
+        ]}
+        onPress={handleAddToCart}
+        activeOpacity={0.8}
+        disabled={(item.quantity ?? 0) <= 0}>
+        <Text style={styles.addToCartButtonText}>
+          {(item.quantity ?? 0) > 0 ? 'Dodaj do koszyka' : 'Brak na stanie'}
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.goToCartButton}
+        onPress={() => navigation.navigate('Cart')}
+        activeOpacity={0.8}>
+        <Text style={styles.goToCartButtonText}>Przejdź do koszyka</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => navigation.goBack()}
+        activeOpacity={0.8}>
+        <Text style={styles.backButtonText}>Wróć do produktów</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
@@ -378,6 +255,45 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  cartBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  cartTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  cartText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  cartButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  cartButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
   card: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -391,82 +307,84 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
-  formGroup: {
-    marginBottom: 14,
-  },
-
-  label: {
+  description: {
     color: '#cbd5e1',
     fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 6,
+    lineHeight: 20,
   },
 
-  input: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
+  infoRow: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e293b',
+    paddingVertical: 9,
   },
 
-  textArea: {
-    height: 96,
-    textAlignVertical: 'top',
-  },
-
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  rowItem: {
-    flex: 1,
-  },
-
-  hintText: {
+  infoLabel: {
     color: '#94a3b8',
     fontSize: 12,
-    lineHeight: 18,
+    fontWeight: '800',
+    marginBottom: 3,
   },
 
-  saveButton: {
+  infoValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  priceValue: {
+    color: '#f97316',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+
+  addToCartButton: {
     backgroundColor: '#16a34a',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 4,
+    marginBottom: 12,
   },
 
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  saveButtonText: {
+  addToCartButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '900',
   },
 
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
+  goToCartButton: {
+    backgroundColor: '#f97316',
+    paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 12,
+    marginBottom: 12,
   },
 
-  cancelButtonText: {
+  goToCartButtonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  backButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  disabledButton: {
+    opacity: 0.55,
   },
 });
 
-export default ItemFormScreen;
+export default ItemDetailsScreen;
