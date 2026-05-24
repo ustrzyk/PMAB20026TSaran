@@ -1,10 +1,11 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +20,9 @@ import type {RootStackParamList} from '../navigation/types.ts';
 import type {ClientDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Clients'>;
+
+type StatusFilter = 'all' | 'active' | 'inactive';
+type SortMode = 'default' | 'nameAsc' | 'nameDesc';
 
 interface DialogState {
   visible: boolean;
@@ -35,6 +39,10 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [selectedClient, setSelectedClient] = useState<ClientDto | null>(null);
 
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortMode, setSortMode] = useState<SortMode>('default');
+
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
     type: 'success',
@@ -42,6 +50,54 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  const filteredClients = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    let result = clients;
+
+    if (statusFilter === 'active') {
+      result = result.filter(client => client.isActive !== false);
+    }
+
+    if (statusFilter === 'inactive') {
+      result = result.filter(client => client.isActive === false);
+    }
+
+    if (search.length > 0) {
+      result = result.filter(client => {
+        const name = client.name?.toLowerCase() ?? '';
+        const address = client.adress?.toLowerCase() ?? '';
+        const phoneNumber = client.phoneNumber?.toLowerCase() ?? '';
+
+        return (
+          name.includes(search) ||
+          address.includes(search) ||
+          phoneNumber.includes(search)
+        );
+      });
+    }
+
+    const sorted = [...result];
+
+    if (sortMode === 'nameAsc') {
+      sorted.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
+    }
+
+    if (sortMode === 'nameDesc') {
+      sorted.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
+    }
+
+    return sorted;
+  }, [clients, searchText, statusFilter, sortMode]);
+
+  const activeCount = useMemo(() => {
+    return clients.filter(client => client.isActive !== false).length;
+  }, [clients]);
+
+  const inactiveCount = useMemo(() => {
+    return clients.filter(client => client.isActive === false).length;
+  }, [clients]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -141,20 +197,171 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
     closeDialog();
   };
 
+  const clearFilters = (): void => {
+    setSearchText('');
+    setStatusFilter('all');
+    setSortMode('default');
+  };
+
+  const renderStatusButton = (
+    label: string,
+    value: StatusFilter,
+  ): React.JSX.Element => {
+    const selected = statusFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        onPress={() => setStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSortButton = (
+    label: string,
+    value: SortMode,
+  ): React.JSX.Element => {
+    const selected = sortMode === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderListHeader = (): React.JSX.Element => {
+    return (
+      <>
+        <View style={styles.heroBox}>
+          <Text style={styles.shopName}>3D Print Shop</Text>
+          <Text style={styles.heroTitle}>Klienci</Text>
+          <Text style={styles.heroSubtitle}>
+            Klienci sklepu i dane kontaktowe używane przy zamówieniach.
+          </Text>
+        </View>
+
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Klienci</Text>
+            <Text style={styles.subtitle}>
+              Wyświetlane: {filteredClients.length} / {clients.length}
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+            <Text style={styles.refreshButtonText}>Odśwież</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Aktywni</Text>
+            <Text style={styles.summaryActive}>{activeCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Nieaktywni</Text>
+            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => navigation.navigate('CreateClient')}
+          activeOpacity={0.8}>
+          <Text style={styles.createButtonText}>+ Dodaj klienta</Text>
+        </TouchableOpacity>
+
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Szukaj klienta po nazwie, adresie lub telefonie..."
+            placeholderTextColor="#64748b"
+          />
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Status</Text>
+
+          <View style={styles.filterButtons}>
+            {renderStatusButton('Wszyscy', 'all')}
+            {renderStatusButton('Aktywni', 'active')}
+            {renderStatusButton('Nieaktywni', 'inactive')}
+          </View>
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Sortowanie</Text>
+
+          <View style={styles.filterButtons}>
+            {renderSortButton('Domyślnie', 'default')}
+            {renderSortButton('Nazwa A-Z', 'nameAsc')}
+            {renderSortButton('Nazwa Z-A', 'nameDesc')}
+          </View>
+        </View>
+
+        <View style={styles.filterSummaryBox}>
+          <Text style={styles.filterSummaryText}>
+            Filtr:{' '}
+            {searchText.trim().length > 0
+              ? searchText.trim()
+              : 'brak wyszukiwania'}
+          </Text>
+
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
+            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
   const renderItem = ({item}: {item: ClientDto}): React.JSX.Element => {
+    const isActive = item.isActive !== false;
+
     return (
       <View style={styles.clientCard}>
-        <Text style={styles.clientName}>{item.name ?? 'Brak nazwy'}</Text>
+        <View style={styles.cardTopRow}>
+          <View style={styles.cardTitleBox}>
+            <Text style={styles.clientName}>{item.name ?? 'Brak nazwy'}</Text>
+          </View>
 
-        <Text style={styles.clientText}>
-          Adres: {item.adress ?? 'Brak adresu'}
-        </Text>
+          <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
+            {isActive ? 'Aktywny' : 'Nieaktywny'}
+          </Text>
+        </View>
 
-        <Text style={styles.clientText}>
-          Telefon: {item.phoneNumber ?? 'Brak telefonu'}
-        </Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Adres</Text>
+          <Text style={styles.infoValue}>{item.adress ?? 'Brak adresu'}</Text>
+        </View>
 
-        <Text style={styles.clientId}>ID klienta: {item.idClient}</Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Telefon</Text>
+          <Text style={styles.infoValue}>
+            {item.phoneNumber ?? 'Brak telefonu'}
+          </Text>
+        </View>
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -212,42 +419,22 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
         onCancel={closeDialog}
       />
 
-      <View style={styles.heroBox}>
-        <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Klienci</Text>
-        <Text style={styles.heroSubtitle}>
-          Klienci sklepu i dane kontaktowe używane przy zamówieniach.
-        </Text>
-      </View>
-
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Klienci</Text>
-          <Text style={styles.subtitle}>Liczba klientów: {clients.length}</Text>
-        </View>
-
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <Text style={styles.refreshButtonText}>Odśwież</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={() => navigation.navigate('CreateClient')}
-        activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj klienta</Text>
-      </TouchableOpacity>
-
       <FlatList
-        data={clients}
+        data={filteredClients}
         renderItem={renderItem}
         keyExtractor={item => item.idClient.toString()}
+        ListHeaderComponent={renderListHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak klientów w API</Text>
+          <Text style={styles.emptyText}>
+            {searchText.trim().length > 0 || statusFilter !== 'all'
+              ? 'Brak klientów pasujących do filtrów'
+              : 'Brak klientów w API'}
+          </Text>
         }
       />
     </View>
@@ -300,6 +487,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  listContent: {
+    paddingBottom: 30,
   },
 
   heroBox: {
@@ -366,6 +557,41 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  summaryColumn: {
+    flex: 1,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  summaryActive: {
+    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryInactive: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
   createButton: {
     backgroundColor: '#16a34a',
     marginHorizontal: 16,
@@ -381,45 +607,163 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  listContent: {
-    padding: 16,
-    paddingBottom: 30,
+  searchBox: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    backgroundColor: '#0f172a',
+  },
+
+  searchInput: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+  },
+
+  filterSection: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+
+  filterTitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  filterButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  filterButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  filterButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  filterButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  filterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  filterSummaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 12,
+  },
+
+  filterSummaryText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  clearFiltersText: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   clientCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#334155',
+  },
+
+  cardTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+
+  cardTitleBox: {
+    flex: 1,
   },
 
   clientName: {
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
-    marginBottom: 6,
   },
 
-  clientText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 5,
+  activeBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
   },
 
-  clientId: {
-    color: '#f97316',
+  inactiveBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  infoBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+
+  infoLabel: {
+    color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginTop: 4,
+    marginBottom: 3,
+  },
+
+  infoValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '800',
   },
 
   actions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 12,
+    marginTop: 4,
   },
 
   editButton: {
@@ -439,7 +783,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '900',
     textAlign: 'center',
   },
 
@@ -447,6 +791,7 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
     marginTop: 40,
+    marginHorizontal: 16,
     fontSize: 16,
   },
 });
