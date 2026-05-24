@@ -65,6 +65,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const [quantity, setQuantity] = useState(
     editedOrderItem?.quantity?.toString() ?? '1',
   );
+  const [isActive, setIsActive] = useState(editedOrderItem?.isActive ?? true);
 
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -121,7 +122,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
       ]);
 
       setOrders(ordersFromApi);
-      setItems(itemsFromApi);
+      setItems(itemsFromApi.filter(item => item.isActive !== false));
 
       if (!isEditMode) {
         if (idOrderFromRoute) {
@@ -138,8 +139,10 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
           setIdOrder(ordersFromApi[0].idOrder.toString());
         }
 
-        if (itemsFromApi.length > 0) {
-          setIdItem(itemsFromApi[0].idItem.toString());
+        const activeItems = itemsFromApi.filter(item => item.isActive !== false);
+
+        if (activeItems.length > 0) {
+          setIdItem(activeItems[0].idItem.toString());
         }
       }
     } catch (err) {
@@ -218,7 +221,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
           idOrder: Number(idOrder),
           idItem: Number(idItem),
           quantity: parseQuantity(quantity),
-          isActive: editedOrderItem.isActive ?? true,
+          isActive,
         });
 
         showDialog(
@@ -316,7 +319,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
             styles.optionButtonSubtext,
             isSelected && styles.optionButtonSubtextSelected,
           ]}>
-          ID: {item.idItem} | kod: {item.code}
+          Kod: {item.code ?? 'brak kodu'}
         </Text>
       </TouchableOpacity>
     );
@@ -417,6 +420,48 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
             editable={!submitting}
           />
         </View>
+
+        {isEditMode ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Status pozycji</Text>
+
+            <View style={styles.statusButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.statusButton,
+                  isActive && styles.statusButtonActive,
+                ]}
+                onPress={() => setIsActive(true)}
+                activeOpacity={0.8}
+                disabled={submitting}>
+                <Text
+                  style={[
+                    styles.statusButtonText,
+                    isActive && styles.statusButtonTextSelected,
+                  ]}>
+                  Aktywna
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.statusButton,
+                  !isActive && styles.statusButtonInactive,
+                ]}
+                onPress={() => setIsActive(false)}
+                activeOpacity={0.8}
+                disabled={submitting}>
+                <Text
+                  style={[
+                    styles.statusButtonText,
+                    !isActive && styles.statusButtonTextSelected,
+                  ]}>
+                  Nieaktywna
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}
@@ -601,6 +646,41 @@ const styles = StyleSheet.create({
   },
 
   optionButtonSubtextSelected: {
+    color: '#ffffff',
+  },
+
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  statusButtonInactive: {
+    backgroundColor: '#7f1d1d',
+    borderColor: '#7f1d1d',
+  },
+
+  statusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusButtonTextSelected: {
     color: '#ffffff',
   },
 

@@ -16,9 +16,7 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Queries
             var orderItems = await context.OrderItems
                 .AsNoTracking()
                 .Include(orderItem => orderItem.Item)
-                .Where(orderItem =>
-                    orderItem.IdOrder == request.IdOrder &&
-                    orderItem.IsActive)
+                .Where(orderItem => orderItem.IdOrder == request.IdOrder)
                 .OrderByDescending(orderItem => orderItem.IdOrderItem)
                 .Select(orderItem => new OrderItemDto
                 {

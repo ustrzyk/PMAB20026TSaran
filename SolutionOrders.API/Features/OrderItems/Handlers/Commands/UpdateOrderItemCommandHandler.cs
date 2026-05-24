@@ -29,8 +29,7 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Commands
 
             var orderItem = await context.OrderItems
                 .FirstOrDefaultAsync(orderItem =>
-                    orderItem.IdOrderItem == request.IdOrderItem &&
-                    orderItem.IsActive,
+                    orderItem.IdOrderItem == request.IdOrderItem,
                     cancellationToken);
 
             if (orderItem == null)
@@ -53,7 +52,7 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Commands
             var itemExists = await context.Items
                 .AnyAsync(item =>
                     item.IdItem == request.IdItem &&
-                    item.IsActive,
+                    (!request.IsActive || item.IsActive),
                     cancellationToken);
 
             if (!itemExists)

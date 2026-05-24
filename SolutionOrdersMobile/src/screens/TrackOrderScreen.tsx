@@ -57,9 +57,10 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
 
       const foundOrder = await apiService.getOrder(idOrder);
       const foundItems = await apiService.getOrderItemsByOrder(idOrder);
+      const activeItems = foundItems.filter(item => item.isActive !== false);
 
       setOrder(foundOrder);
-      setOrderItems(foundItems);
+      setOrderItems(activeItems);
     } catch (err) {
       setOrder(null);
       setOrderItems([]);
