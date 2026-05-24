@@ -30,6 +30,10 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Queries
                     ItemCode = orderItem.Item.Code,
 
                     Quantity = orderItem.Quantity,
+
+                    ItemPrice = orderItem.Item.Price ?? 0,
+                    LineValue = (orderItem.Quantity ?? 0) * (orderItem.Item.Price ?? 0),
+
                     IsActive = orderItem.IsActive
                 })
                 .ToListAsync(cancellationToken);
