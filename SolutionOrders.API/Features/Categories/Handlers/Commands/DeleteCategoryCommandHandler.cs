@@ -14,14 +14,18 @@ namespace SolutionOrders.API.Features.Categories.Handlers.Commands
         {
             var category = await context.Categories
                 .FirstOrDefaultAsync(category =>
-                        category.IdCategory == request.IdCategory &&
-                        category.IsActive,
+                        category.IdCategory == request.IdCategory,
                     cancellationToken);
 
             if (category == null)
             {
                 throw new KeyNotFoundException(
                     $"Kategoria o ID {request.IdCategory} nie istnieje");
+            }
+
+            if (!category.IsActive)
+            {
+                return Unit.Value;
             }
 
             var hasItems = await context.Items
