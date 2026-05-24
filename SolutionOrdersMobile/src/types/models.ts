@@ -270,6 +270,22 @@ export interface DashboardLatestOrderDto {
   totalValue: number;
 }
 
+// Produkt z niskim stanem magazynowym pokazywany na Dashboardzie.
+export interface DashboardLowStockProductDto {
+  idItem: number;
+
+  name?: string | null;
+  code?: string | null;
+
+  quantity?: number | null;
+
+  unitName?: string | null;
+  categoryName?: string | null;
+
+  price?: number | null;
+  stockValue: number;
+}
+
 // Dane raportowe z GET /api/Dashboard.
 export interface DashboardDto {
   productsCount: number;
@@ -286,6 +302,8 @@ export interface DashboardDto {
   ordersTotalValue: number;
 
   latestOrders: DashboardLatestOrderDto[];
+
+  lowStockProducts: DashboardLowStockProductDto[];
 }
 
 // Model pozycji koszyka po stronie aplikacji mobilnej.

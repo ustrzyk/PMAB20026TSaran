@@ -15,7 +15,11 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import apiService from '../api/apiService.ts';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {DashboardDto, DashboardLatestOrderDto} from '../types/models.ts';
+import type {
+  DashboardDto,
+  DashboardLatestOrderDto,
+  DashboardLowStockProductDto,
+} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
 
@@ -31,6 +35,13 @@ function formatDate(value?: string | null): string {
   }
 
   return value.substring(0, 10);
+}
+
+function formatQuantity(value?: number | null, unitName?: string | null): string {
+  const safeValue = value ?? 0;
+  const safeUnit = unitName ?? '';
+
+  return `${safeValue} ${safeUnit}`.trim();
 }
 
 function DashboardScreen({navigation}: Props): React.JSX.Element {
@@ -125,6 +136,52 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     );
   };
 
+  const renderLowStockProduct = (
+    product: DashboardLowStockProductDto,
+  ): React.JSX.Element => {
+    return (
+      <TouchableOpacity
+        key={product.idItem}
+        style={styles.lowStockCard}
+        onPress={() => navigation.navigate('Items')}
+        activeOpacity={0.8}>
+        <View style={styles.lowStockHeader}>
+          <View style={styles.lowStockTitleBox}>
+            <Text style={styles.lowStockTitle}>
+              {product.name ?? `Produkt ID ${product.idItem}`}
+            </Text>
+
+            <Text style={styles.lowStockCode}>
+              Kod: {product.code ?? 'brak kodu'}
+            </Text>
+          </View>
+
+          <View style={styles.lowStockBadge}>
+            <Text style={styles.lowStockBadgeText}>
+              {formatQuantity(product.quantity, product.unitName)}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.lowStockText}>
+          Kategoria: {product.categoryName ?? 'Brak kategorii'}
+        </Text>
+
+        <Text style={styles.lowStockText}>
+          Cena: {formatMoney(product.price)}
+        </Text>
+
+        <Text style={styles.lowStockValue}>
+          Wartość na stanie: {formatMoney(product.stockValue)}
+        </Text>
+
+        <Text style={styles.lowStockHint}>
+          Kliknij, aby przejść do listy produktów
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.centerContainer}>
@@ -141,9 +198,7 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
           Nie udało się pobrać danych Dashboard
         </Text>
 
-        <Text style={styles.errorText}>
-          {error ?? 'Brak danych z API'}
-        </Text>
+        <Text style={styles.errorText}>{error ?? 'Brak danych z API'}</Text>
 
         <TouchableOpacity style={styles.retryButton} onPress={loadDashboard}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
@@ -235,6 +290,26 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
           'Aktywne pozycje',
         )}
       </View>
+
+      <Text style={styles.sectionTitle}>Produkty z niskim stanem</Text>
+
+      <View style={styles.warningBox}>
+        <Text style={styles.warningTitle}>Próg raportu: 5 sztuk lub mniej</Text>
+        <Text style={styles.warningText}>
+          Ta sekcja pomaga szybko znaleźć produkty, które mogą wymagać
+          uzupełnienia magazynu.
+        </Text>
+      </View>
+
+      {dashboard.lowStockProducts.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>
+            Brak produktów z niskim stanem magazynowym
+          </Text>
+        </View>
+      ) : (
+        dashboard.lowStockProducts.map(renderLowStockProduct)
+      )}
 
       <Text style={styles.sectionTitle}>Najnowsze zamówienia</Text>
 
@@ -415,6 +490,96 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
+  warningBox: {
+    backgroundColor: '#422006',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 12,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  warningText: {
+    color: '#ffedd5',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  lowStockCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 12,
+  },
+
+  lowStockHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 8,
+  },
+
+  lowStockTitleBox: {
+    flex: 1,
+  },
+
+  lowStockTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  lowStockCode: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+
+  lowStockBadge: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    alignSelf: 'flex-start',
+  },
+
+  lowStockBadgeText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  lowStockText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+
+  lowStockValue: {
+    color: '#f97316',
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+
+  lowStockHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
+  },
+
   orderCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -465,6 +630,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#334155',
+    marginBottom: 12,
   },
 
   emptyText: {

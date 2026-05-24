@@ -118,6 +118,31 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                 })
                 .ToListAsync(cancellationToken);
 
+            var categorySales = await context.OrderItems
+                .AsNoTracking()
+                .Where(orderItem => orderItem.IsActive)
+                .GroupBy(orderItem => new
+                {
+                    orderItem.Item.IdCategory,
+                    CategoryName = orderItem.Item.Category != null
+                        ? orderItem.Item.Category.Name
+                        : "Brak kategorii"
+                })
+                .Select(group => new DashboardCategorySalesDto
+                {
+                    IdCategory = group.Key.IdCategory,
+                    CategoryName = group.Key.CategoryName,
+
+                    TotalQuantity = group.Sum(orderItem =>
+                        orderItem.Quantity ?? 0),
+
+                    TotalValue = group.Sum(orderItem =>
+                        (orderItem.Quantity ?? 0) *
+                        (orderItem.Item.Price ?? 0))
+                })
+                .OrderByDescending(category => category.TotalValue)
+                .ToListAsync(cancellationToken);
+
             var dashboard = new DashboardDto
             {
                 ProductsCount = productsCount,
@@ -134,7 +159,8 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                 OrdersTotalValue = ordersTotalValue,
 
                 LatestOrders = latestOrders,
-                LowStockProducts = lowStockProducts
+                LowStockProducts = lowStockProducts,
+                CategorySales = categorySales
             };
 
             return dashboard;
