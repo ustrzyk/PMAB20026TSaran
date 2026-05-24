@@ -17,46 +17,45 @@ namespace SolutionOrders.API.Features.Items.Providers
             bool asNoTracking = true,
             CancellationToken cancellationToken = default)
         {
-            // Bazowe zapytanie o aktywne produkty
+            // Pobieramy wszystkie produkty, także nieaktywne.
+            // aktywne / nieaktywne / wszystkie.
             var query = _context.Items
-                .Include(i => i.Category)              // Dołączenie kategorii
-                .Include(i => i.UnitOfMeasurement)     // Dołączenie jednostki miary
-                .Where(i => i.IsActive);               // Tylko aktywne produkty
+                .Include(i => i.Category)
+                .Include(i => i.UnitOfMeasurement)
+                .AsQueryable();
 
-            // Wyłączenie śledzenia zmian dla samego odczytu
             if (asNoTracking)
             {
                 query = query.AsNoTracking();
             }
 
-            // Sortowanie i wykonanie zapytania
             return await query
                 .OrderBy(item => item.Name)
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<Item> GetItemByIdAsync(int id, bool asNoTracking = true,
+        public async Task<Item> GetItemByIdAsync(
+            int id,
+            bool asNoTracking = true,
             CancellationToken cancellationToken = default)
         {
-            // Bazowe zapytanie o aktywne produkty
+            // Pobieramy produkt po ID bez filtrowania po IsActive.
             var query = _context.Items
-                .Include(i => i.Category)              // Dołączenie kategorii
-                .Include(i => i.UnitOfMeasurement)     // Dołączenie jednostki miary
-                .Where(i => i.IsActive);               // Tylko aktywne produkty
+                .Include(i => i.Category)
+                .Include(i => i.UnitOfMeasurement)
+                .AsQueryable();
 
-            // Wyłączenie śledzenia zmian dla samego odczytu
             if (asNoTracking)
             {
                 query = query.AsNoTracking();
             }
 
-            // Pobranie produktu po ID
             var item = await query
-                .FirstOrDefaultAsync(
-                    i => i.IdItem == id && i.IsActive, cancellationToken);
+                .FirstOrDefaultAsync(i => i.IdItem == id, cancellationToken);
 
-            // Jeśli nie znaleziono produktu, zwracamy błąd
-            return item ?? throw new KeyNotFoundException($"Produkt o ID {id} nie istnieje");
+            return item ?? throw new KeyNotFoundException(
+                $"Produkt o ID {id} nie istnieje"
+            );
         }
     }
 }
