@@ -83,29 +83,23 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
   };
 
   const maxCategoryValue =
-    dashboard?.categorySales.reduce(
-      (maxValue, category) =>
-        category.totalValue > maxValue ? category.totalValue : maxValue,
-      0,
-    ) ?? 0;
+    dashboard?.categorySales.reduce((maxValue, category) => {
+      return category.totalValue > maxValue ? category.totalValue : maxValue;
+    }, 0) ?? 0;
 
   const maxTopProductValue =
-    dashboard?.topProducts.reduce(
-      (maxValue, product) =>
-        product.totalValue > maxValue ? product.totalValue : maxValue,
-      0,
-    ) ?? 0;
+    dashboard?.topProducts.reduce((maxValue, product) => {
+      return product.totalValue > maxValue ? product.totalValue : maxValue;
+    }, 0) ?? 0;
 
   const renderMetricCard = (
     title: string,
     value: string | number,
-    description: string,
   ): React.JSX.Element => {
     return (
       <View style={styles.metricCard}>
         <Text style={styles.metricTitle}>{title}</Text>
         <Text style={styles.metricValue}>{value}</Text>
-        <Text style={styles.metricDescription}>{description}</Text>
       </View>
     );
   };
@@ -122,7 +116,7 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
       <View key={category.idCategory} style={styles.categorySaleCard}>
         <View style={styles.categorySaleHeader}>
           <Text style={styles.categorySaleTitle}>
-            {category.categoryName ?? `Kategoria ID ${category.idCategory}`}
+            {category.categoryName ?? `Kategoria ${category.idCategory}`}
           </Text>
 
           <Text style={styles.categorySaleValue}>
@@ -154,7 +148,7 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
       <TouchableOpacity
         key={product.idItem}
         style={styles.topProductCard}
-        onPress={() => navigation.navigate('Items')}
+        onPress={() => navigation.navigate('AdminItems')}
         activeOpacity={0.8}>
         <View style={styles.topProductHeader}>
           <View style={styles.rankBadge}>
@@ -163,7 +157,7 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
 
           <View style={styles.topProductTitleBox}>
             <Text style={styles.topProductTitle}>
-              {product.name ?? `Produkt ID ${product.idItem}`}
+              {product.name ?? `Produkt ${product.idItem}`}
             </Text>
 
             <Text style={styles.topProductCode}>
@@ -187,10 +181,6 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.topProductBarBackground}>
           <View style={[styles.topProductBarFill, {width: `${percentage}%`}]} />
         </View>
-
-        <Text style={styles.topProductHint}>
-          Kliknij, aby przejść do listy produktów
-        </Text>
       </TouchableOpacity>
     );
   };
@@ -203,9 +193,8 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         key={order.idOrder}
         style={styles.orderCard}
         onPress={() =>
-          navigation.navigate('OrderItems', {
+          navigation.navigate('TrackOrder', {
             idOrder: order.idOrder,
-            orderTitle: `Zamówienie nr ${order.idOrder}`,
           })
         }
         activeOpacity={0.8}>
@@ -222,17 +211,9 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
           Pracownik: {order.workerName ?? 'Brak pracownika'}
         </Text>
 
-        <Text style={styles.orderText}>
-          Data: {formatDate(order.dataOrder)}
-        </Text>
+        <Text style={styles.orderText}>Data: {formatDate(order.dataOrder)}</Text>
 
-        <Text style={styles.orderText}>
-          Pozycje: {order.orderItemsCount}
-        </Text>
-
-        <Text style={styles.orderHint}>
-          Kliknij, aby zobaczyć pozycje tego zamówienia
-        </Text>
+        <Text style={styles.orderText}>Pozycje: {order.orderItemsCount}</Text>
       </TouchableOpacity>
     );
   };
@@ -244,12 +225,12 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
       <TouchableOpacity
         key={product.idItem}
         style={styles.lowStockCard}
-        onPress={() => navigation.navigate('Items')}
+        onPress={() => navigation.navigate('AdminItems')}
         activeOpacity={0.8}>
         <View style={styles.lowStockHeader}>
           <View style={styles.lowStockTitleBox}>
             <Text style={styles.lowStockTitle}>
-              {product.name ?? `Produkt ID ${product.idItem}`}
+              {product.name ?? `Produkt ${product.idItem}`}
             </Text>
 
             <Text style={styles.lowStockCode}>
@@ -274,10 +255,6 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
 
         <Text style={styles.lowStockValue}>
           Wartość na stanie: {formatMoney(product.stockValue)}
-        </Text>
-
-        <Text style={styles.lowStockHint}>
-          Kliknij, aby przejść do listy produktów
         </Text>
       </TouchableOpacity>
     );
@@ -320,92 +297,43 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.title}>Dashboard</Text>
 
         <Text style={styles.subtitle}>
-          Podsumowanie danych sklepu, zamówień, produktów i wartości sprzedaży.
+          Podsumowanie sprzedaży, zamówień, magazynu i produktów.
         </Text>
       </View>
 
-      <View style={styles.mainSummaryBox}>
-        <Text style={styles.summaryLabel}>Łączna wartość zamówień</Text>
-        <Text style={styles.summaryValue}>
-          {formatMoney(dashboard.ordersTotalValue)}
-        </Text>
+      <View style={styles.summaryRow}>
+        <View style={styles.mainSummaryBox}>
+          <Text style={styles.summaryLabel}>Wartość zamówień</Text>
+          <Text style={styles.summaryValue}>
+            {formatMoney(dashboard.ordersTotalValue)}
+          </Text>
+        </View>
 
-        <Text style={styles.summaryDescription}>
-          Suma wartości aktywnych pozycji zamówień.
-        </Text>
+        <View style={styles.mainSummaryBox}>
+          <Text style={styles.summaryLabel}>Wartość magazynu</Text>
+          <Text style={styles.summaryValue}>
+            {formatMoney(dashboard.productsStockValue)}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.mainSummaryBox}>
-        <Text style={styles.summaryLabel}>Wartość magazynu</Text>
-        <Text style={styles.summaryValue}>
-          {formatMoney(dashboard.productsStockValue)}
-        </Text>
-
-        <Text style={styles.summaryDescription}>
-          Suma: cena produktu razy ilość w magazynie.
-        </Text>
-      </View>
-
-      <Text style={styles.sectionTitle}>Podstawowe liczniki</Text>
+      <Text style={styles.sectionTitle}>Liczniki</Text>
 
       <View style={styles.metricsGrid}>
-        {renderMetricCard(
-          'Produkty',
-          dashboard.productsCount,
-          'Aktywne produkty',
-        )}
-
-        {renderMetricCard(
-          'Kategorie',
-          dashboard.categoriesCount,
-          'Aktywne kategorie',
-        )}
-
-        {renderMetricCard(
-          'Jednostki',
-          dashboard.unitsCount,
-          'Jednostki miary',
-        )}
-
-        {renderMetricCard(
-          'Klienci',
-          dashboard.clientsCount,
-          'Aktywni klienci',
-        )}
-
-        {renderMetricCard(
-          'Pracownicy',
-          dashboard.workersCount,
-          'Aktywni pracownicy',
-        )}
-
-        {renderMetricCard(
-          'Zamówienia',
-          dashboard.ordersCount,
-          'Wszystkie zamówienia',
-        )}
-
-        {renderMetricCard(
-          'Pozycje',
-          dashboard.orderItemsCount,
-          'Aktywne pozycje',
-        )}
+        {renderMetricCard('Produkty', dashboard.productsCount)}
+        {renderMetricCard('Kategorie', dashboard.categoriesCount)}
+        {renderMetricCard('Jednostki', dashboard.unitsCount)}
+        {renderMetricCard('Klienci', dashboard.clientsCount)}
+        {renderMetricCard('Pracownicy', dashboard.workersCount)}
+        {renderMetricCard('Zamówienia', dashboard.ordersCount)}
+        {renderMetricCard('Pozycje', dashboard.orderItemsCount)}
       </View>
 
-      <Text style={styles.sectionTitle}>Najlepiej sprzedające się produkty</Text>
-
-      <View style={styles.reportInfoBox}>
-        <Text style={styles.reportInfoTitle}>TOP produkty</Text>
-        <Text style={styles.reportInfoText}>
-          Ranking produktów liczony według wartości aktywnych pozycji zamówień.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>TOP produkty</Text>
 
       {dashboard.topProducts.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>
-            Brak danych dla najlepiej sprzedających się produktów
-          </Text>
+          <Text style={styles.emptyText}>Brak danych</Text>
         </View>
       ) : (
         dashboard.topProducts.map(renderTopProduct)
@@ -413,39 +341,19 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
 
       <Text style={styles.sectionTitle}>Sprzedaż według kategorii</Text>
 
-      <View style={styles.reportInfoBox}>
-        <Text style={styles.reportInfoTitle}>Raport kategorii</Text>
-        <Text style={styles.reportInfoText}>
-          Dane są liczone na podstawie aktywnych pozycji zamówień oraz kategorii
-          przypisanej do produktu.
-        </Text>
-      </View>
-
       {dashboard.categorySales.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>
-            Brak danych sprzedaży według kategorii
-          </Text>
+          <Text style={styles.emptyText}>Brak danych</Text>
         </View>
       ) : (
         dashboard.categorySales.map(renderCategorySale)
       )}
 
-      <Text style={styles.sectionTitle}>Produkty z niskim stanem</Text>
-
-      <View style={styles.warningBox}>
-        <Text style={styles.warningTitle}>Próg raportu: 5 sztuk lub mniej</Text>
-        <Text style={styles.warningText}>
-          Ta sekcja pomaga szybko znaleźć produkty, które mogą wymagać
-          uzupełnienia magazynu.
-        </Text>
-      </View>
+      <Text style={styles.sectionTitle}>Niski stan magazynowy</Text>
 
       {dashboard.lowStockProducts.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>
-            Brak produktów z niskim stanem magazynowym
-          </Text>
+          <Text style={styles.emptyText}>Brak produktów z niskim stanem</Text>
         </View>
       ) : (
         dashboard.lowStockProducts.map(renderLowStockProduct)
@@ -455,20 +363,27 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
 
       {dashboard.latestOrders.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Brak zamówień do wyświetlenia</Text>
+          <Text style={styles.emptyText}>Brak zamówień</Text>
         </View>
       ) : (
         dashboard.latestOrders.map(renderLatestOrder)
       )}
 
-      <TouchableOpacity
-        style={styles.goToOrdersButton}
-        onPress={() => navigation.navigate('Orders')}
-        activeOpacity={0.8}>
-        <Text style={styles.goToOrdersButtonText}>
-          Przejdź do wszystkich zamówień
-        </Text>
-      </TouchableOpacity>
+      <View style={styles.actions}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => navigation.navigate('Orders')}
+          activeOpacity={0.8}>
+          <Text style={styles.primaryButtonText}>Wszystkie zamówienia</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('AdminItems')}
+          activeOpacity={0.8}>
+          <Text style={styles.secondaryButtonText}>Produkty admin</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -557,40 +472,39 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
+  summaryRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 8,
+  },
+
   mainSummaryBox: {
+    flex: 1,
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginBottom: 12,
   },
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
-    marginBottom: 4,
+    marginBottom: 5,
   },
 
   summaryValue: {
     color: '#f97316',
-    fontSize: 26,
+    fontSize: 19,
     fontWeight: '900',
-  },
-
-  summaryDescription: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 5,
   },
 
   sectionTitle: {
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
-    marginTop: 8,
+    marginTop: 12,
     marginBottom: 12,
   },
 
@@ -598,7 +512,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 10,
+    marginBottom: 4,
   },
 
   metricCard: {
@@ -621,35 +535,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 24,
     fontWeight: '900',
-  },
-
-  metricDescription: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    lineHeight: 15,
-    marginTop: 4,
-  },
-
-  reportInfoBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-  },
-
-  reportInfoTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  reportInfoText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    lineHeight: 17,
   },
 
   topProductCard: {
@@ -728,13 +613,6 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
 
-  topProductHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-
   categorySaleCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -782,28 +660,6 @@ const styles = StyleSheet.create({
     height: 8,
     backgroundColor: '#f97316',
     borderRadius: 999,
-  },
-
-  warningBox: {
-    backgroundColor: '#422006',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 12,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  warningText: {
-    color: '#ffedd5',
-    fontSize: 12,
-    lineHeight: 17,
   },
 
   lowStockCard: {
@@ -867,13 +723,6 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  lowStockHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-
   orderCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -911,13 +760,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  orderHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 6,
-  },
-
   emptyBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -933,17 +775,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  goToOrdersButton: {
+  actions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+
+  primaryButton: {
+    flex: 1,
     backgroundColor: '#f97316',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
   },
 
-  goToOrdersButtonText: {
+  primaryButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
   },
 });
