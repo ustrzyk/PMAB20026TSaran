@@ -16,6 +16,7 @@ import apiService from '../api/apiService.ts';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 import type {
+  DashboardCategorySalesDto,
   DashboardDto,
   DashboardLatestOrderDto,
   DashboardLowStockProductDto,
@@ -80,6 +81,13 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     await loadDashboard();
   };
 
+  const maxCategoryValue =
+    dashboard?.categorySales.reduce(
+      (maxValue, category) =>
+        category.totalValue > maxValue ? category.totalValue : maxValue,
+      0,
+    ) ?? 0;
+
   const renderMetricCard = (
     title: string,
     value: string | number,
@@ -90,6 +98,37 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.metricTitle}>{title}</Text>
         <Text style={styles.metricValue}>{value}</Text>
         <Text style={styles.metricDescription}>{description}</Text>
+      </View>
+    );
+  };
+
+  const renderCategorySale = (
+    category: DashboardCategorySalesDto,
+  ): React.JSX.Element => {
+    const percentage =
+      maxCategoryValue > 0
+        ? Math.max((category.totalValue / maxCategoryValue) * 100, 5)
+        : 0;
+
+    return (
+      <View key={category.idCategory} style={styles.categorySaleCard}>
+        <View style={styles.categorySaleHeader}>
+          <Text style={styles.categorySaleTitle}>
+            {category.categoryName ?? `Kategoria ID ${category.idCategory}`}
+          </Text>
+
+          <Text style={styles.categorySaleValue}>
+            {formatMoney(category.totalValue)}
+          </Text>
+        </View>
+
+        <Text style={styles.categorySaleText}>
+          Sprzedana ilość: {category.totalQuantity}
+        </Text>
+
+        <View style={styles.categoryBarBackground}>
+          <View style={[styles.categoryBarFill, {width: `${percentage}%`}]} />
+        </View>
       </View>
     );
   };
@@ -291,6 +330,26 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         )}
       </View>
 
+      <Text style={styles.sectionTitle}>Sprzedaż według kategorii</Text>
+
+      <View style={styles.reportInfoBox}>
+        <Text style={styles.reportInfoTitle}>Raport kategorii</Text>
+        <Text style={styles.reportInfoText}>
+          Dane są liczone na podstawie aktywnych pozycji zamówień oraz kategorii
+          przypisanej do produktu.
+        </Text>
+      </View>
+
+      {dashboard.categorySales.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>
+            Brak danych sprzedaży według kategorii
+          </Text>
+        </View>
+      ) : (
+        dashboard.categorySales.map(renderCategorySale)
+      )}
+
       <Text style={styles.sectionTitle}>Produkty z niskim stanem</Text>
 
       <View style={styles.warningBox}>
@@ -488,6 +547,77 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     marginTop: 4,
+  },
+
+  reportInfoBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 12,
+  },
+
+  reportInfoTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  reportInfoText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  categorySaleCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 12,
+  },
+
+  categorySaleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 6,
+  },
+
+  categorySaleTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    flex: 1,
+  },
+
+  categorySaleValue: {
+    color: '#f97316',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  categorySaleText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+
+  categoryBarBackground: {
+    height: 8,
+    backgroundColor: '#0f172a',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+
+  categoryBarFill: {
+    height: 8,
+    backgroundColor: '#f97316',
+    borderRadius: 999,
   },
 
   warningBox: {
