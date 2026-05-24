@@ -15,9 +15,7 @@ namespace SolutionOrders.API.Features.Categories.Handlers.Queries
         {
             var category = await context.Categories
                 .AsNoTracking()
-                .Where(category =>
-                    category.IdCategory == request.Id &&
-                    category.IsActive)
+                .Where(category => category.IdCategory == request.Id)
                 .Select(category => new CategoryDto
                 {
                     IdCategory = category.IdCategory,

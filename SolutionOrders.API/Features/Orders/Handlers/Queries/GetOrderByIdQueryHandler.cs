@@ -42,7 +42,9 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Queries
                         .Where(orderItem => orderItem.IsActive)
                         .Sum(orderItem =>
                             (orderItem.Quantity ?? 0) *
-                            (orderItem.Item.Price ?? 0))
+                            (orderItem.Item.Price ?? 0)),
+
+                    IsActive = order.IsActive
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 

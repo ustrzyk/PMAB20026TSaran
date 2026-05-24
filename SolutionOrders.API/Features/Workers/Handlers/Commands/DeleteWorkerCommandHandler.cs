@@ -14,14 +14,18 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
         {
             var worker = await context.Workers
                 .FirstOrDefaultAsync(worker =>
-                        worker.IdWorker == request.IdWorker &&
-                        worker.IsActive,
+                        worker.IdWorker == request.IdWorker,
                     cancellationToken);
 
             if (worker == null)
             {
                 throw new KeyNotFoundException(
                     $"Pracownik o ID {request.IdWorker} nie istnieje");
+            }
+
+            if (!worker.IsActive)
+            {
+                return Unit.Value;
             }
 
             var hasOrders = await context.Orders

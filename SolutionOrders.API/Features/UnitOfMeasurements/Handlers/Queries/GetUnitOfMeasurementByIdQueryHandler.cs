@@ -15,9 +15,7 @@ namespace SolutionOrders.API.Features.UnitOfMeasurements.Handlers.Queries
         {
             var unit = await context.UnitOfMeasurements
                 .AsNoTracking()
-                .Where(unit =>
-                    unit.IdUnitOfMeasurement == request.Id &&
-                    unit.IsActive)
+                .Where(unit => unit.IdUnitOfMeasurement == request.Id)
                 .Select(unit => new UnitOfMeasurementDto
                 {
                     IdUnitOfMeasurement = unit.IdUnitOfMeasurement,

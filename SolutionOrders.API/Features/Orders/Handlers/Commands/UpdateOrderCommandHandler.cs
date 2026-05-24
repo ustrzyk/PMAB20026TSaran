@@ -35,26 +35,24 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
 
             var clientExists = await context.Clients
                 .AnyAsync(client =>
-                    client.IdClient == request.IdClient &&
-                    client.IsActive,
+                    client.IdClient == request.IdClient,
                     cancellationToken);
 
             if (!clientExists)
             {
                 throw new ArgumentException(
-                    $"Klient o ID {request.IdClient} nie istnieje albo jest nieaktywny");
+                    $"Klient o ID {request.IdClient} nie istnieje");
             }
 
             var workerExists = await context.Workers
                 .AnyAsync(worker =>
-                    worker.IdWorker == request.IdWorker &&
-                    worker.IsActive,
+                    worker.IdWorker == request.IdWorker,
                     cancellationToken);
 
             if (!workerExists)
             {
                 throw new ArgumentException(
-                    $"Pracownik o ID {request.IdWorker} nie istnieje albo jest nieaktywny");
+                    $"Pracownik o ID {request.IdWorker} nie istnieje");
             }
 
             order.DataOrder = request.DataOrder ?? order.DataOrder ?? DateTime.Now;
@@ -62,6 +60,7 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
             order.IdWorker = request.IdWorker;
             order.Notes = request.Notes;
             order.DeliveryDate = request.DeliveryDate;
+            order.IsActive = request.IsActive;
 
             await context.SaveChangesAsync(cancellationToken);
 

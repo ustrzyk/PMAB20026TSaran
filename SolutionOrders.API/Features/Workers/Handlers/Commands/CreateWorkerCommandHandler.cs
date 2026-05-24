@@ -33,7 +33,7 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
                 LastName = request.LastName,
                 Login = request.Login,
                 Password = request.Password,
-                IsActive = true
+                IsActive = request.IsActive
             };
 
             context.Workers.Add(worker);

@@ -1,10 +1,11 @@
-import React, {useCallback, useState} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -19,6 +20,9 @@ import type {RootStackParamList} from '../navigation/types.ts';
 import type {OrderDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Orders'>;
+
+type SortMode = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc' | 'itemsDesc';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 interface DialogState {
   visible: boolean;
@@ -42,12 +46,24 @@ function formatMoney(value?: number | null): string {
   return `${safeValue.toFixed(2)} zł`;
 }
 
+function getDateTime(value?: string | null): number {
+  if (!value) {
+    return 0;
+  }
+
+  return new Date(value).getTime();
+}
+
 function OrdersScreen({navigation}: Props): React.JSX.Element {
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderDto | null>(null);
+
+  const [searchText, setSearchText] = useState('');
+  const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -56,6 +72,68 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  const filteredOrders = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    let result = orders;
+
+    if (statusFilter === 'active') {
+      result = result.filter(order => order.isActive !== false);
+    }
+
+    if (statusFilter === 'inactive') {
+      result = result.filter(order => order.isActive === false);
+    }
+
+    if (search.length > 0) {
+      result = result.filter(order => {
+        const idOrder = order.idOrder.toString();
+        const clientName = order.clientName?.toLowerCase() ?? '';
+        const workerName = order.workerName?.toLowerCase() ?? '';
+        const notes = order.notes?.toLowerCase() ?? '';
+
+        return (
+          idOrder.includes(search) ||
+          clientName.includes(search) ||
+          workerName.includes(search) ||
+          notes.includes(search)
+        );
+      });
+    }
+
+    const sorted = [...result];
+
+    if (sortMode === 'newest') {
+      sorted.sort((a, b) => getDateTime(b.dataOrder) - getDateTime(a.dataOrder));
+    }
+
+    if (sortMode === 'oldest') {
+      sorted.sort((a, b) => getDateTime(a.dataOrder) - getDateTime(b.dataOrder));
+    }
+
+    if (sortMode === 'valueDesc') {
+      sorted.sort((a, b) => (b.totalValue ?? 0) - (a.totalValue ?? 0));
+    }
+
+    if (sortMode === 'valueAsc') {
+      sorted.sort((a, b) => (a.totalValue ?? 0) - (b.totalValue ?? 0));
+    }
+
+    if (sortMode === 'itemsDesc') {
+      sorted.sort((a, b) => (b.orderItemsCount ?? 0) - (a.orderItemsCount ?? 0));
+    }
+
+    return sorted;
+  }, [orders, searchText, sortMode, statusFilter]);
+
+  const activeCount = useMemo(() => {
+    return orders.filter(order => order.isActive !== false).length;
+  }, [orders]);
+
+  const inactiveCount = useMemo(() => {
+    return orders.filter(order => order.isActive === false).length;
+  }, [orders]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -102,7 +180,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Usuwanie zamówienia',
-      message: `Czy na pewno chcesz usunąć zamówienie nr ${order.idOrder}?`,
+      message: `Czy na pewno chcesz oznaczyć zamówienie nr ${order.idOrder} jako nieaktywne?`,
       loading: false,
     });
   };
@@ -121,7 +199,16 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       await apiService.deleteOrder(selectedOrder.idOrder);
 
       setOrders(previousOrders =>
-        previousOrders.filter(item => item.idOrder !== selectedOrder.idOrder),
+        previousOrders.map(order => {
+          if (order.idOrder === selectedOrder.idOrder) {
+            return {
+              ...order,
+              isActive: false,
+            };
+          }
+
+          return order;
+        }),
       );
 
       setSelectedOrder(null);
@@ -129,8 +216,8 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Zamówienie usunięte',
-        message: 'Zamówienie zostało poprawnie usunięte z listy.',
+        title: 'Zamówienie oznaczone jako nieaktywne',
+        message: 'Zamówienie zostało przeniesione do nieaktywnych.',
         loading: false,
       });
     } catch (err) {
@@ -160,48 +247,231 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     });
   };
 
+  const clearFilters = (): void => {
+    setSearchText('');
+    setStatusFilter('active');
+    setSortMode('newest');
+  };
+
+  const renderStatusButton = (
+    label: string,
+    value: StatusFilter,
+  ): React.JSX.Element => {
+    const selected = statusFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        onPress={() => setStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            selected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSortButton = (
+    label: string,
+    value: SortMode,
+  ): React.JSX.Element => {
+    const selected = sortMode === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            selected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderListHeader = (): React.JSX.Element => {
+    return (
+      <>
+        <View style={styles.heroBox}>
+          <Text style={styles.shopName}>3D Print Shop</Text>
+          <Text style={styles.heroTitle}>Zamówienia</Text>
+          <Text style={styles.heroSubtitle}>
+            Obsługa zamówień klientów, pozycji zamówienia i wartości sprzedaży.
+          </Text>
+        </View>
+
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Zamówienia</Text>
+            <Text style={styles.subtitle}>
+              Wyświetlane: {filteredOrders.length} / {orders.length}
+            </Text>
+          </View>
+
+          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
+            <Text style={styles.refreshButtonText}>Odśwież</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Aktywne</Text>
+            <Text style={styles.summaryActive}>{activeCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Nieaktywne</Text>
+            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+          </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.createButton}
+          onPress={() => navigation.navigate('CreateOrder')}
+          activeOpacity={0.8}>
+          <Text style={styles.createButtonText}>+ Dodaj zamówienie</Text>
+        </TouchableOpacity>
+
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Szukaj po numerze, kliencie, pracowniku lub notatce..."
+            placeholderTextColor="#64748b"
+          />
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.sortTitle}>Status</Text>
+
+          <View style={styles.sortButtons}>
+            {renderStatusButton('Wszystkie', 'all')}
+            {renderStatusButton('Aktywne', 'active')}
+            {renderStatusButton('Nieaktywne', 'inactive')}
+          </View>
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.sortTitle}>Sortowanie</Text>
+
+          <View style={styles.sortButtons}>
+            {renderSortButton('Najnowsze', 'newest')}
+            {renderSortButton('Najstarsze', 'oldest')}
+            {renderSortButton('Wartość ↓', 'valueDesc')}
+            {renderSortButton('Wartość ↑', 'valueAsc')}
+            {renderSortButton('Pozycje ↓', 'itemsDesc')}
+          </View>
+        </View>
+
+        <View style={styles.filterSummaryBox}>
+          <Text style={styles.filterSummaryText}>
+            Filtr:{' '}
+            {searchText.trim().length > 0
+              ? searchText.trim()
+              : 'brak wyszukiwania'}
+          </Text>
+
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
+            <Text style={styles.clearFiltersText}>Wyczyść</Text>
+          </TouchableOpacity>
+        </View>
+      </>
+    );
+  };
+
   const renderItem = ({item}: {item: OrderDto}): React.JSX.Element => {
+    const isActive = item.isActive !== false;
+
     return (
       <View style={styles.orderCard}>
-        <Text style={styles.orderTitle}>Zamówienie nr {item.idOrder}</Text>
+        <View style={styles.orderTopRow}>
+          <View style={styles.orderTitleBox}>
+            <Text style={styles.orderTitle}>Zamówienie nr {item.idOrder}</Text>
+            <Text style={styles.orderDate}>
+              Data: {formatDate(item.dataOrder)}
+            </Text>
+          </View>
 
-        <Text style={styles.orderText}>
-          Klient: {item.clientName ?? `ID ${item.idClient ?? '-'}`}
-        </Text>
+          <View style={styles.badgesBox}>
+            <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
+              {isActive ? 'Aktywne' : 'Nieaktywne'}
+            </Text>
 
-        <Text style={styles.orderText}>
-          Pracownik: {item.workerName ?? `ID ${item.idWorker ?? '-'}`}
-        </Text>
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>
+                {item.orderItemsCount > 0 ? 'Z pozycjami' : 'Puste'}
+              </Text>
+            </View>
+          </View>
+        </View>
 
-        <Text style={styles.orderText}>
-          Data zamówienia: {formatDate(item.dataOrder)}
-        </Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Klient</Text>
+          <Text style={styles.infoValue}>
+            {item.clientName ?? `ID ${item.idClient ?? '-'}`}
+          </Text>
+        </View>
 
-        <Text style={styles.orderText}>
-          Data dostawy: {formatDate(item.deliveryDate)}
-        </Text>
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Pracownik</Text>
+          <Text style={styles.infoValue}>
+            {item.workerName ?? `ID ${item.idWorker ?? '-'}`}
+          </Text>
+        </View>
 
-        <Text style={styles.orderText}>
-          Pozycje: {item.orderItemsCount}
-        </Text>
+        <View style={styles.rowBox}>
+          <View style={styles.smallInfoBox}>
+            <Text style={styles.infoLabel}>Dostawa</Text>
+            <Text style={styles.infoValue}>{formatDate(item.deliveryDate)}</Text>
+          </View>
+
+          <View style={styles.smallInfoBox}>
+            <Text style={styles.infoLabel}>Pozycje</Text>
+            <Text style={styles.infoValue}>{item.orderItemsCount}</Text>
+          </View>
+        </View>
 
         <View style={styles.totalBox}>
-          <Text style={styles.totalLabel}>Wartość zamówienia</Text>
+          <Text style={styles.totalLabel}>Wartość produktów</Text>
           <Text style={styles.totalValue}>{formatMoney(item.totalValue)}</Text>
         </View>
 
-        <Text style={styles.orderNotes}>
-          {item.notes ?? 'Brak notatek'}
-        </Text>
+        {item.notes ? (
+          <Text style={styles.orderNotes} numberOfLines={4}>
+            {item.notes}
+          </Text>
+        ) : null}
 
         <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.previewButton}
+            onPress={() =>
+              navigation.navigate('TrackOrder', {
+                idOrder: item.idOrder,
+              })
+            }
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Podgląd</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.itemsButton}
             onPress={() => openOrderItems(item)}
             activeOpacity={0.8}>
             <Text style={styles.buttonText}>Pozycje</Text>
           </TouchableOpacity>
+        </View>
 
+        <View style={styles.actions}>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditOrder', {order: item})}
@@ -257,44 +527,22 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         onCancel={closeDialog}
       />
 
-      <View style={styles.heroBox}>
-        <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Zamówienia</Text>
-        <Text style={styles.heroSubtitle}>
-          Zamówienia klientów z przypisanym klientem, pracownikiem i wartością.
-        </Text>
-      </View>
-
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>Zamówienia</Text>
-          <Text style={styles.subtitle}>
-            Liczba zamówień: {orders.length}
-          </Text>
-        </View>
-
-        <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-          <Text style={styles.refreshButtonText}>Odśwież</Text>
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={() => navigation.navigate('CreateOrder')}
-        activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj zamówienie</Text>
-      </TouchableOpacity>
-
       <FlatList
-        data={orders}
+        data={filteredOrders}
         renderItem={renderItem}
         keyExtractor={item => item.idOrder.toString()}
+        ListHeaderComponent={renderListHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
+        keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak zamówień w API</Text>
+          <Text style={styles.emptyText}>
+            {searchText.trim().length > 0 || statusFilter !== 'active'
+              ? 'Brak zamówień pasujących do filtrów'
+              : 'Brak aktywnych zamówień w API'}
+          </Text>
         }
       />
     </View>
@@ -347,6 +595,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  listContent: {
+    paddingBottom: 30,
   },
 
   heroBox: {
@@ -413,6 +665,41 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  summaryColumn: {
+    flex: 1,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  summaryActive: {
+    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryInactive: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
   createButton: {
     backgroundColor: '#16a34a',
     marginHorizontal: 16,
@@ -428,32 +715,197 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  listContent: {
-    padding: 16,
-    paddingBottom: 30,
+  searchBox: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    backgroundColor: '#0f172a',
+  },
+
+  searchInput: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+  },
+
+  sortBox: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+  },
+
+  sortTitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  sortButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  sortButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  filterSummaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+    padding: 12,
+  },
+
+  filterSummaryText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  clearFiltersText: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   orderCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
-    marginBottom: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: '#334155',
+  },
+
+  orderTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  orderTitleBox: {
+    flex: 1,
   },
 
   orderTitle: {
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  orderDate: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  badgesBox: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+
+  activeBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  inactiveBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  statusBadge: {
+    backgroundColor: '#1e293b',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+
+  statusBadgeText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+
+  infoBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 12,
+    padding: 10,
     marginBottom: 8,
   },
 
-  orderText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 5,
+  rowBox: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  smallInfoBox: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    borderRadius: 12,
+    padding: 10,
+  },
+
+  infoLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  infoValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '800',
   },
 
   totalBox: {
@@ -462,7 +914,7 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     borderRadius: 12,
     padding: 10,
-    marginTop: 8,
+    marginTop: 2,
     marginBottom: 8,
   },
 
@@ -475,7 +927,7 @@ const styles = StyleSheet.create({
 
   totalValue: {
     color: '#f97316',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
   },
 
@@ -489,7 +941,14 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
+    marginTop: 10,
+  },
+
+  previewButton: {
+    flex: 1,
+    backgroundColor: '#38bdf8',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 
   itemsButton: {
@@ -516,7 +975,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
     textAlign: 'center',
   },
 
@@ -524,6 +983,7 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     textAlign: 'center',
     marginTop: 40,
+    marginHorizontal: 16,
     fontSize: 16,
   },
 });

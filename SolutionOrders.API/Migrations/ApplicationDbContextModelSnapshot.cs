@@ -373,6 +373,9 @@ namespace SolutionOrders.API.Migrations
                     b.Property<int?>("IdWorker")
                         .HasColumnType("int");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Notes")
                         .HasColumnType("nvarchar(max)");
 

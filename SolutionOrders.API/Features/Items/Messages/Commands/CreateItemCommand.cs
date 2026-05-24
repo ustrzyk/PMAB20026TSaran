@@ -2,8 +2,6 @@
 
 namespace SolutionOrders.API.Features.Items.Messages.Commands
 {
-    // Command = Request który ZMIENIA stan (CREATE)
-    // Zwraca ID utworzonego rekordu
     public class CreateItemCommand : IRequest<int>
     {
         public string Name { get; set; } = string.Empty;
@@ -14,5 +12,6 @@ namespace SolutionOrders.API.Features.Items.Messages.Commands
         public string? FotoUrl { get; set; }
         public int? IdUnitOfMeasurement { get; set; }
         public string? Code { get; set; }
+        public bool IsActive { get; set; } = true;
     }
 }

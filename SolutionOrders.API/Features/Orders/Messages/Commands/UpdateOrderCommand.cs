@@ -10,5 +10,6 @@ namespace SolutionOrders.API.Features.Orders.Messages.Commands
         public int? IdWorker { get; set; }
         public string? Notes { get; set; }
         public DateTime? DeliveryDate { get; set; }
+        public bool IsActive { get; set; }
     }
 }

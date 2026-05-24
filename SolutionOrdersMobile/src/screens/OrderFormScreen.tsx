@@ -60,6 +60,12 @@ function isDateValid(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value.trim());
 }
 
+function getWorkerName(worker: WorkerDto): string {
+  const name = `${worker.firstName ?? ''} ${worker.lastName ?? ''}`.trim();
+
+  return name.length > 0 ? name : worker.login ?? 'Brak nazwy';
+}
+
 function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditOrder';
   const editedOrder = isEditMode ? route.params.order : undefined;
@@ -78,6 +84,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     dateToInputValue(editedOrder?.deliveryDate),
   );
   const [notes, setNotes] = useState(editedOrder?.notes ?? '');
+  const [isActive, setIsActive] = useState(editedOrder?.isActive ?? true);
 
   const [clients, setClients] = useState<ClientDto[]>([]);
   const [workers, setWorkers] = useState<WorkerDto[]>([]);
@@ -133,16 +140,34 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
         apiService.getWorkers(),
       ]);
 
-      setClients(clientsFromApi);
-      setWorkers(workersFromApi);
+      const visibleClients = isEditMode
+        ? clientsFromApi.filter(client => {
+            return (
+              client.isActive !== false ||
+              client.idClient === editedOrder?.idClient
+            );
+          })
+        : clientsFromApi.filter(client => client.isActive !== false);
+
+      const visibleWorkers = isEditMode
+        ? workersFromApi.filter(worker => {
+            return (
+              worker.isActive !== false ||
+              worker.idWorker === editedOrder?.idWorker
+            );
+          })
+        : workersFromApi.filter(worker => worker.isActive !== false);
+
+      setClients(visibleClients);
+      setWorkers(visibleWorkers);
 
       if (!isEditMode) {
-        if (clientsFromApi.length > 0) {
-          setIdClient(clientsFromApi[0].idClient.toString());
+        if (visibleClients.length > 0) {
+          setIdClient(visibleClients[0].idClient.toString());
         }
 
-        if (workersFromApi.length > 0) {
-          setIdWorker(workersFromApi[0].idWorker.toString());
+        if (visibleWorkers.length > 0) {
+          setIdWorker(visibleWorkers[0].idWorker.toString());
         }
       }
     } catch (err) {
@@ -154,7 +179,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     } finally {
       setDictionaryLoading(false);
     }
-  }, [isEditMode]);
+  }, [editedOrder?.idClient, editedOrder?.idWorker, isEditMode]);
 
   useEffect(() => {
     loadDictionaries();
@@ -224,6 +249,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           idWorker: Number(idWorker),
           notes: notes.trim().length > 0 ? notes.trim() : null,
           deliveryDate: inputDateToApiValue(deliveryDate),
+          isActive,
         });
 
         showDialog(
@@ -239,6 +265,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           idWorker: Number(idWorker),
           notes: notes.trim().length > 0 ? notes.trim() : null,
           deliveryDate: inputDateToApiValue(deliveryDate),
+          isActive,
         });
 
         showDialog(
@@ -266,6 +293,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const renderClientButton = (client: ClientDto): React.JSX.Element => {
     const isSelected = Number(idClient) === client.idClient;
+    const isClientActive = client.isActive !== false;
 
     return (
       <TouchableOpacity
@@ -273,6 +301,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
         style={[
           styles.optionButton,
           isSelected && styles.optionButtonSelected,
+          !isClientActive && styles.inactiveOptionButton,
         ]}
         onPress={() => setIdClient(client.idClient.toString())}
         activeOpacity={0.8}
@@ -290,7 +319,8 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
             styles.optionButtonSubtext,
             isSelected && styles.optionButtonSubtextSelected,
           ]}>
-          ID: {client.idClient}
+          {client.adress ?? 'Brak adresu'}
+          {!isClientActive ? ' | klient nieaktywny' : ''}
         </Text>
       </TouchableOpacity>
     );
@@ -298,9 +328,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const renderWorkerButton = (worker: WorkerDto): React.JSX.Element => {
     const isSelected = Number(idWorker) === worker.idWorker;
-    const workerName = `${worker.firstName ?? ''} ${
-      worker.lastName ?? ''
-    }`.trim();
+    const isWorkerActive = worker.isActive !== false;
 
     return (
       <TouchableOpacity
@@ -308,6 +336,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
         style={[
           styles.optionButton,
           isSelected && styles.optionButtonSelected,
+          !isWorkerActive && styles.inactiveOptionButton,
         ]}
         onPress={() => setIdWorker(worker.idWorker.toString())}
         activeOpacity={0.8}
@@ -317,7 +346,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
             styles.optionButtonText,
             isSelected && styles.optionButtonTextSelected,
           ]}>
-          {workerName.length > 0 ? workerName : worker.login}
+          {getWorkerName(worker)}
         </Text>
 
         <Text
@@ -325,7 +354,8 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
             styles.optionButtonSubtext,
             isSelected && styles.optionButtonSubtextSelected,
           ]}>
-          ID: {worker.idWorker}
+          Login: {worker.login ?? 'brak loginu'}
+          {!isWorkerActive ? ' | pracownik nieaktywny' : ''}
         </Text>
       </TouchableOpacity>
     );
@@ -394,9 +424,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
               <Text style={styles.selectedText}>
                 Wybrano:{' '}
                 {selectedWorker
-                  ? `${selectedWorker.firstName ?? ''} ${
-                      selectedWorker.lastName ?? ''
-                    }`.trim() || selectedWorker.login
+                  ? getWorkerName(selectedWorker)
                   : `ID ${idWorker || '-'}`}
               </Text>
 
@@ -443,6 +471,46 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
             multiline
             editable={!submitting}
           />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Status zamówienia</Text>
+
+          <View style={styles.statusButtons}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                isActive && styles.statusButtonActive,
+              ]}
+              onPress={() => setIsActive(true)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  isActive && styles.statusButtonTextSelected,
+                ]}>
+                Aktywne
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                !isActive && styles.statusButtonInactive,
+              ]}
+              onPress={() => setIsActive(false)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  !isActive && styles.statusButtonTextSelected,
+                ]}>
+                Nieaktywne
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -598,6 +666,10 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
+  inactiveOptionButton: {
+    borderColor: '#7f1d1d',
+  },
+
   optionButtonText: {
     color: '#cbd5e1',
     fontSize: 13,
@@ -616,6 +688,41 @@ const styles = StyleSheet.create({
   },
 
   optionButtonSubtextSelected: {
+    color: '#ffffff',
+  },
+
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  statusButtonInactive: {
+    backgroundColor: '#7f1d1d',
+    borderColor: '#7f1d1d',
+  },
+
+  statusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusButtonTextSelected: {
     color: '#ffffff',
   },
 

@@ -29,8 +29,7 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Commands
 
             var orderItem = await context.OrderItems
                 .FirstOrDefaultAsync(orderItem =>
-                    orderItem.IdOrderItem == request.IdOrderItem &&
-                    orderItem.IsActive,
+                    orderItem.IdOrderItem == request.IdOrderItem,
                     cancellationToken);
 
             if (orderItem == null)
@@ -52,14 +51,13 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Commands
 
             var itemExists = await context.Items
                 .AnyAsync(item =>
-                    item.IdItem == request.IdItem &&
-                    item.IsActive,
+                    item.IdItem == request.IdItem,
                     cancellationToken);
 
             if (!itemExists)
             {
                 throw new ArgumentException(
-                    $"Produkt o ID {request.IdItem} nie istnieje albo jest nieaktywny");
+                    $"Produkt o ID {request.IdItem} nie istnieje");
             }
 
             orderItem.IdOrder = request.IdOrder;

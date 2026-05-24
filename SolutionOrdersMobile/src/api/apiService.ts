@@ -2,9 +2,11 @@ import {API_BASE_URL} from './config.ts';
 
 import type {
   CategoryDto,
+  CheckoutOrderResponseDto,
   ClientDto,
   CreateCategoryCommand,
   CreateCategoryResponse,
+  CreateCheckoutOrderCommand,
   CreateClientCommand,
   CreateClientResponse,
   CreateItemCommand,
@@ -17,6 +19,7 @@ import type {
   CreateUnitOfMeasurementResponse,
   CreateWorkerCommand,
   CreateWorkerResponse,
+  DashboardDto,
   Item,
   OrderDto,
   OrderItemDto,
@@ -80,6 +83,23 @@ class ApiService {
       console.error('API Error:', error);
       throw error;
     }
+  }
+
+  // ========== CHECKOUT / KOSZYK ==========
+
+  async createCheckoutOrder(
+    data: CreateCheckoutOrderCommand,
+  ): Promise<CheckoutOrderResponseDto> {
+    return this.request<CheckoutOrderResponseDto>('/Checkout', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // ========== DASHBOARD / RAPORTY ==========
+
+  async getDashboard(): Promise<DashboardDto> {
+    return this.request<DashboardDto>('/Dashboard');
   }
 
   // ========== PRODUKTY / ITEMS ==========

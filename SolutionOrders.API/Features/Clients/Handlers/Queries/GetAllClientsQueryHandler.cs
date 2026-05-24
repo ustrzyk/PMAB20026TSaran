@@ -15,7 +15,6 @@ namespace SolutionOrders.API.Features.Clients.Handlers.Queries
         {
             var clients = await context.Clients
                 .AsNoTracking()
-                .Where(client => client.IsActive)
                 .OrderBy(client => client.Name)
                 .Select(client => new ClientDto
                 {

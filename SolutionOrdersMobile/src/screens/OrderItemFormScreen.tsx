@@ -65,6 +65,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const [quantity, setQuantity] = useState(
     editedOrderItem?.quantity?.toString() ?? '1',
   );
+  const [isActive, setIsActive] = useState(editedOrderItem?.isActive ?? true);
 
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -120,8 +121,16 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         apiService.getItems(),
       ]);
 
+      const visibleItems = isEditMode
+        ? itemsFromApi.filter(item => {
+            return (
+              item.isActive !== false || item.idItem === editedOrderItem?.idItem
+            );
+          })
+        : itemsFromApi.filter(item => item.isActive !== false);
+
       setOrders(ordersFromApi);
-      setItems(itemsFromApi);
+      setItems(visibleItems);
 
       if (!isEditMode) {
         if (idOrderFromRoute) {
@@ -138,8 +147,10 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
           setIdOrder(ordersFromApi[0].idOrder.toString());
         }
 
-        if (itemsFromApi.length > 0) {
-          setIdItem(itemsFromApi[0].idItem.toString());
+        const activeItems = itemsFromApi.filter(item => item.isActive !== false);
+
+        if (activeItems.length > 0) {
+          setIdItem(activeItems[0].idItem.toString());
         }
       }
     } catch (err) {
@@ -151,7 +162,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
     } finally {
       setDictionaryLoading(false);
     }
-  }, [idOrderFromRoute, isEditMode]);
+  }, [editedOrderItem?.idItem, idOrderFromRoute, isEditMode]);
 
   useEffect(() => {
     loadDictionaries();
@@ -218,7 +229,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
           idOrder: Number(idOrder),
           idItem: Number(idItem),
           quantity: parseQuantity(quantity),
-          isActive: editedOrderItem.isActive ?? true,
+          isActive,
         });
 
         showDialog(
@@ -292,6 +303,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const renderItemButton = (item: Item): React.JSX.Element => {
     const isSelected = Number(idItem) === item.idItem;
+    const isItemActive = item.isActive !== false;
 
     return (
       <TouchableOpacity
@@ -299,6 +311,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         style={[
           styles.optionButton,
           isSelected && styles.optionButtonSelected,
+          !isItemActive && styles.inactiveOptionButton,
         ]}
         onPress={() => setIdItem(item.idItem.toString())}
         activeOpacity={0.8}
@@ -316,7 +329,8 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
             styles.optionButtonSubtext,
             isSelected && styles.optionButtonSubtextSelected,
           ]}>
-          ID: {item.idItem} | kod: {item.code}
+          Kod: {item.code ?? 'brak kodu'}
+          {!isItemActive ? ' | produkt nieaktywny' : ''}
         </Text>
       </TouchableOpacity>
     );
@@ -417,6 +431,48 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
             editable={!submitting}
           />
         </View>
+
+        {isEditMode ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Status pozycji</Text>
+
+            <View style={styles.statusButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.statusButton,
+                  isActive && styles.statusButtonActive,
+                ]}
+                onPress={() => setIsActive(true)}
+                activeOpacity={0.8}
+                disabled={submitting}>
+                <Text
+                  style={[
+                    styles.statusButtonText,
+                    isActive && styles.statusButtonTextSelected,
+                  ]}>
+                  Aktywna
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.statusButton,
+                  !isActive && styles.statusButtonInactive,
+                ]}
+                onPress={() => setIsActive(false)}
+                activeOpacity={0.8}
+                disabled={submitting}>
+                <Text
+                  style={[
+                    styles.statusButtonText,
+                    !isActive && styles.statusButtonTextSelected,
+                  ]}>
+                  Nieaktywna
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
 
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}
@@ -583,6 +639,10 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
 
+  inactiveOptionButton: {
+    borderColor: '#7f1d1d',
+  },
+
   optionButtonText: {
     color: '#cbd5e1',
     fontSize: 13,
@@ -601,6 +661,41 @@ const styles = StyleSheet.create({
   },
 
   optionButtonSubtextSelected: {
+    color: '#ffffff',
+  },
+
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  statusButtonInactive: {
+    backgroundColor: '#7f1d1d',
+    borderColor: '#7f1d1d',
+  },
+
+  statusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusButtonTextSelected: {
     color: '#ffffff',
   },
 

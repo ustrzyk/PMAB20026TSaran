@@ -7,6 +7,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  View,
 } from 'react-native';
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
@@ -37,6 +38,8 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
   const [description, setDescription] = useState(
     editedCategory?.description ?? '',
   );
+  const [isActive, setIsActive] = useState(editedCategory?.isActive ?? true);
+
   const [submitting, setSubmitting] = useState(false);
   const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
@@ -124,7 +127,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           name: name.trim(),
           description:
             description.trim().length > 0 ? description.trim() : null,
-          isActive: editedCategory.isActive ?? true,
+          isActive,
         });
 
         showDialog(
@@ -138,6 +141,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           name: name.trim(),
           description:
             description.trim().length > 0 ? description.trim() : null,
+          isActive,
         });
 
         showDialog(
@@ -186,36 +190,82 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
       />
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.appName}>3D Print Shop</Text>
+        <View style={styles.heroBox}>
+          <Text style={styles.appName}>3D Print Shop</Text>
 
-        <Text style={styles.title}>
-          {isEditMode ? 'Edytuj kategorię' : 'Dodaj kategorię'}
-        </Text>
+          <Text style={styles.title}>
+            {isEditMode ? 'Edytuj kategorię' : 'Dodaj kategorię'}
+          </Text>
 
-        <Text style={styles.subtitle}>
-          Kategorie pomagają uporządkować produkty sklepu.
-        </Text>
+          <Text style={styles.subtitle}>
+            Kategorie pomagają uporządkować produkty sklepu.
+          </Text>
+        </View>
 
-        <Text style={styles.label}>Nazwa kategorii</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="Np. Drukarki 3D"
-          placeholderTextColor="#64748b"
-          editable={!submitting}
-        />
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Dane kategorii</Text>
 
-        <Text style={styles.label}>Opis</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          value={description}
-          onChangeText={setDescription}
-          placeholder="Krótki opis kategorii"
-          placeholderTextColor="#64748b"
-          multiline
-          editable={!submitting}
-        />
+          <Text style={styles.label}>Nazwa kategorii</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Np. Drukarki 3D"
+            placeholderTextColor="#64748b"
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>Opis</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Krótki opis kategorii"
+            placeholderTextColor="#64748b"
+            multiline
+            editable={!submitting}
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Status kategorii</Text>
+
+          <View style={styles.statusButtons}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                isActive && styles.statusButtonActive,
+              ]}
+              onPress={() => setIsActive(true)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  isActive && styles.statusButtonTextSelected,
+                ]}>
+                Aktywna
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                !isActive && styles.statusButtonInactive,
+              ]}
+              onPress={() => setIsActive(false)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  !isActive && styles.statusButtonTextSelected,
+                ]}>
+                Nieaktywna
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}
@@ -254,6 +304,15 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
+  heroBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
   appName: {
     color: '#f97316',
     fontSize: 13,
@@ -274,7 +333,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
-    marginBottom: 20,
+  },
+
+  card: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  sectionTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 12,
   },
 
   label: {
@@ -285,7 +359,7 @@ const styles = StyleSheet.create({
   },
 
   input: {
-    backgroundColor: '#111827',
+    backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
@@ -301,12 +375,47 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  statusButtonInactive: {
+    backgroundColor: '#7f1d1d',
+    borderColor: '#7f1d1d',
+  },
+
+  statusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusButtonTextSelected: {
+    color: '#ffffff',
+  },
+
   saveButton: {
     backgroundColor: '#16a34a',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 4,
   },
 
   disabledButton: {

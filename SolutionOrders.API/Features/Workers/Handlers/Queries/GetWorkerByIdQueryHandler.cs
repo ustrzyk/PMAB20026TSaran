@@ -15,9 +15,7 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Queries
         {
             var worker = await context.Workers
                 .AsNoTracking()
-                .Where(worker =>
-                    worker.IdWorker == request.Id &&
-                    worker.IsActive)
+                .Where(worker => worker.IdWorker == request.Id)
                 .Select(worker => new WorkerDto
                 {
                     IdWorker = worker.IdWorker,

@@ -13,9 +13,8 @@ namespace SolutionOrders.API.Features.Categories.Handlers.Queries
             GetAllCategoriesQuery request,
             CancellationToken cancellationToken)
         {
-            var categories = await context.Categories
+           var categories = await context.Categories
                 .AsNoTracking()
-                .Where(category => category.IsActive)
                 .OrderBy(category => category.Name)
                 .Select(category => new CategoryDto
                 {

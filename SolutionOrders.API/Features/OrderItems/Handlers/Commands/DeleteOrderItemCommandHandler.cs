@@ -14,14 +14,18 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Commands
         {
             var orderItem = await context.OrderItems
                 .FirstOrDefaultAsync(orderItem =>
-                        orderItem.IdOrderItem == request.IdOrderItem &&
-                        orderItem.IsActive,
+                        orderItem.IdOrderItem == request.IdOrderItem,
                     cancellationToken);
 
             if (orderItem == null)
             {
                 throw new KeyNotFoundException(
                     $"Pozycja zamówienia o ID {request.IdOrderItem} nie istnieje");
+            }
+
+            if (!orderItem.IsActive)
+            {
+                return Unit.Value;
             }
 
             orderItem.IsActive = false;

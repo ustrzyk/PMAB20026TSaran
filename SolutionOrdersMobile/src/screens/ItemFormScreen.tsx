@@ -53,6 +53,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     editedItem?.idUnitOfMeasurement?.toString() ?? '1',
   );
   const [code, setCode] = useState(editedItem?.code ?? '');
+  const [isActive, setIsActive] = useState(editedItem?.isActive ?? true);
 
   const [categories, setCategories] = useState<CategoryDto[]>([]);
   const [units, setUnits] = useState<UnitOfMeasurementDto[]>([]);
@@ -249,7 +250,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           fotoUrl: fotoUrl.trim().length > 0 ? fotoUrl.trim() : null,
           idUnitOfMeasurement: Number(idUnitOfMeasurement),
           code: code.trim(),
-          isActive: editedItem.isActive,
+          isActive,
         });
 
         showDialog(
@@ -268,6 +269,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           fotoUrl: fotoUrl.trim().length > 0 ? fotoUrl.trim() : null,
           idUnitOfMeasurement: Number(idUnitOfMeasurement),
           code: code.trim(),
+          isActive,
         });
 
         showDialog(
@@ -315,14 +317,6 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           ]}>
           {category.name}
         </Text>
-
-        <Text
-          style={[
-            styles.optionButtonSubtext,
-            isSelected && styles.optionButtonSubtextSelected,
-          ]}>
-          ID: {category.idCategory}
-        </Text>
       </TouchableOpacity>
     );
   };
@@ -350,15 +344,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
             styles.optionButtonText,
             isSelected && styles.optionButtonTextSelected,
           ]}>
-          {unit.name}
-        </Text>
-
-        <Text
-          style={[
-            styles.optionButtonSubtext,
-            isSelected && styles.optionButtonSubtextSelected,
-          ]}>
-          ID: {unit.idUnitOfMeasurement}
+          {unit.shortcut ? `${unit.name} (${unit.shortcut})` : unit.name}
         </Text>
       </TouchableOpacity>
     );
@@ -395,7 +381,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Uzupełnij dane produktu sprzedawanego w sklepie z drukarkami 3D.
+            Uzupełnij dane produktu sprzedawanego w sklepie.
           </Text>
         </View>
 
@@ -442,7 +428,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Powiązania</Text>
+          <Text style={styles.sectionTitle}>Kategoria i jednostka</Text>
 
           {dictionaryLoading ? (
             <View style={styles.dictionaryLoadingBox}>
@@ -454,11 +440,10 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           ) : (
             <>
               <Text style={styles.label}>Kategoria</Text>
+
               <Text style={styles.selectedText}>
                 Wybrano:{' '}
-                {selectedCategory
-                  ? selectedCategory.name
-                  : `ID ${idCategory}`}
+                {selectedCategory ? selectedCategory.name : 'Brak kategorii'}
               </Text>
 
               <View style={styles.optionsContainer}>
@@ -466,6 +451,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
               </View>
 
               <Text style={styles.label}>Jednostka miary</Text>
+
               <Text style={styles.selectedText}>
                 Wybrano:{' '}
                 {selectedUnit
@@ -474,7 +460,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
                         ? ` (${selectedUnit.shortcut})`
                         : ''
                     }`
-                  : `ID ${idUnitOfMeasurement}`}
+                  : 'Brak jednostki'}
               </Text>
 
               <View style={styles.optionsContainer}>
@@ -482,11 +468,6 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
               </View>
             </>
           )}
-
-          <Text style={styles.hintText}>
-            Kategoria i jednostka są pobierane z backendu, żeby uniknąć
-            wpisania nieistniejącego ID.
-          </Text>
         </View>
 
         <View style={styles.card}>
@@ -518,6 +499,46 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
                 editable={!submitting}
               />
             </View>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Status produktu</Text>
+
+          <View style={styles.statusButtons}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                isActive && styles.statusButtonActive,
+              ]}
+              onPress={() => setIsActive(true)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  isActive && styles.statusButtonTextSelected,
+                ]}>
+                Aktywny
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                !isActive && styles.statusButtonInactive,
+              ]}
+              onPress={() => setIsActive(false)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  !isActive && styles.statusButtonTextSelected,
+                ]}>
+                Nieaktywny
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -712,21 +733,39 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  optionButtonSubtext: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 10,
   },
 
-  optionButtonSubtextSelected: {
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  statusButtonInactive: {
+    backgroundColor: '#7f1d1d',
+    borderColor: '#7f1d1d',
+  },
+
+  statusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusButtonTextSelected: {
     color: '#ffffff',
-  },
-
-  hintText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 18,
   },
 
   saveButton: {

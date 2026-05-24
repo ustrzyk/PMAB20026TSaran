@@ -53,7 +53,8 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
                 IdClient = request.IdClient,
                 IdWorker = request.IdWorker,
                 Notes = request.Notes,
-                DeliveryDate = request.DeliveryDate
+                DeliveryDate = request.DeliveryDate,
+                IsActive = request.IsActive
             };
 
             context.Orders.Add(order);

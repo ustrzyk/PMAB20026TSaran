@@ -16,9 +16,7 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Queries
             var orderItem = await context.OrderItems
                 .AsNoTracking()
                 .Include(orderItem => orderItem.Item)
-                .Where(orderItem =>
-                    orderItem.IdOrderItem == request.Id &&
-                    orderItem.IsActive)
+                .Where(orderItem => orderItem.IdOrderItem == request.Id)
                 .Select(orderItem => new OrderItemDto
                 {
                     IdOrderItem = orderItem.IdOrderItem,
