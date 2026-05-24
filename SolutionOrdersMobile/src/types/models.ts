@@ -226,6 +226,13 @@ export interface OrderItemDto {
   itemCode?: string | null;
 
   quantity?: number | null;
+
+  // Cena produktu pobrana z backendu.
+  itemPrice: number;
+
+  // Wartość pozycji: quantity * itemPrice.
+  lineValue: number;
+
   isActive?: boolean;
 }
 

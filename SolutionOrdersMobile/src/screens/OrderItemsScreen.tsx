@@ -28,6 +28,12 @@ interface DialogState {
   loading: boolean;
 }
 
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
+
+  return `${safeValue.toFixed(2)} zł`;
+}
+
 function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
   const idOrderFromRoute = route.params?.idOrder;
   const orderTitleFromRoute = route.params?.orderTitle;
@@ -48,6 +54,11 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  const visibleTotalValue = orderItems.reduce(
+    (sum, item) => sum + (item.lineValue ?? 0),
+    0,
+  );
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -191,9 +202,23 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
           ID produktu: {item.idItem}
         </Text>
 
-        <Text style={styles.orderItemQuantity}>
+        <Text style={styles.orderItemText}>
           Ilość: {item.quantity ?? 0}
         </Text>
+
+        <View style={styles.priceBox}>
+          <View style={styles.priceColumn}>
+            <Text style={styles.priceLabel}>Cena produktu</Text>
+            <Text style={styles.priceValue}>{formatMoney(item.itemPrice)}</Text>
+          </View>
+
+          <View style={styles.priceColumn}>
+            <Text style={styles.priceLabel}>Wartość pozycji</Text>
+            <Text style={styles.lineValue}>
+              {formatMoney(item.lineValue)}
+            </Text>
+          </View>
+        </View>
 
         <Text style={styles.orderItemId}>
           ID pozycji: {item.idOrderItem}
@@ -280,6 +305,18 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.summaryBox}>
+        <Text style={styles.summaryLabel}>
+          {isOrderFiltered
+            ? 'Suma pozycji tego zamówienia'
+            : 'Suma widocznych pozycji'}
+        </Text>
+
+        <Text style={styles.summaryValue}>
+          {formatMoney(visibleTotalValue)}
+        </Text>
       </View>
 
       {isOrderFiltered && (
@@ -429,6 +466,29 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  summaryValue: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
   filterBox: {
     backgroundColor: '#312e81',
     borderWidth: 1,
@@ -488,11 +548,39 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
 
-  orderItemQuantity: {
-    color: '#f97316',
-    fontSize: 14,
+  priceBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+
+  priceColumn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  priceLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  priceValue: {
+    color: '#cbd5e1',
+    fontSize: 13,
     fontWeight: '900',
-    marginTop: 4,
+  },
+
+  lineValue: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   orderItemId: {
