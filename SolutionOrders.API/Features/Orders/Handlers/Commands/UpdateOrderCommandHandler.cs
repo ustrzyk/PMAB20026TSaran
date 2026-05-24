@@ -60,6 +60,7 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
             order.IdWorker = request.IdWorker;
             order.Notes = request.Notes;
             order.DeliveryDate = request.DeliveryDate;
+            order.IsActive = request.IsActive;
 
             await context.SaveChangesAsync(cancellationToken);
 

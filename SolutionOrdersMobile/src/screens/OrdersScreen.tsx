@@ -22,6 +22,7 @@ import type {OrderDto} from '../types/models.ts';
 type Props = NativeStackScreenProps<RootStackParamList, 'Orders'>;
 
 type SortMode = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc' | 'itemsDesc';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 interface DialogState {
   visible: boolean;
@@ -62,6 +63,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -75,6 +77,14 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     const search = searchText.trim().toLowerCase();
 
     let result = orders;
+
+    if (statusFilter === 'active') {
+      result = result.filter(order => order.isActive !== false);
+    }
+
+    if (statusFilter === 'inactive') {
+      result = result.filter(order => order.isActive === false);
+    }
 
     if (search.length > 0) {
       result = result.filter(order => {
@@ -115,7 +125,15 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [orders, searchText, sortMode]);
+  }, [orders, searchText, sortMode, statusFilter]);
+
+  const activeCount = useMemo(() => {
+    return orders.filter(order => order.isActive !== false).length;
+  }, [orders]);
+
+  const inactiveCount = useMemo(() => {
+    return orders.filter(order => order.isActive === false).length;
+  }, [orders]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -162,7 +180,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Usuwanie zamówienia',
-      message: `Czy na pewno chcesz usunąć zamówienie nr ${order.idOrder}?`,
+      message: `Czy na pewno chcesz oznaczyć zamówienie nr ${order.idOrder} jako nieaktywne?`,
       loading: false,
     });
   };
@@ -181,7 +199,16 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       await apiService.deleteOrder(selectedOrder.idOrder);
 
       setOrders(previousOrders =>
-        previousOrders.filter(item => item.idOrder !== selectedOrder.idOrder),
+        previousOrders.map(order => {
+          if (order.idOrder === selectedOrder.idOrder) {
+            return {
+              ...order,
+              isActive: false,
+            };
+          }
+
+          return order;
+        }),
       );
 
       setSelectedOrder(null);
@@ -189,8 +216,8 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Zamówienie usunięte',
-        message: 'Zamówienie zostało poprawnie usunięte z listy.',
+        title: 'Zamówienie oznaczone jako nieaktywne',
+        message: 'Zamówienie zostało przeniesione do nieaktywnych.',
         loading: false,
       });
     } catch (err) {
@@ -222,7 +249,30 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const clearFilters = (): void => {
     setSearchText('');
+    setStatusFilter('active');
     setSortMode('newest');
+  };
+
+  const renderStatusButton = (
+    label: string,
+    value: StatusFilter,
+  ): React.JSX.Element => {
+    const selected = statusFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        onPress={() => setStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            selected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   const renderSortButton = (
@@ -271,6 +321,18 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Aktywne</Text>
+            <Text style={styles.summaryActive}>{activeCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Nieaktywne</Text>
+            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={styles.createButton}
           onPress={() => navigation.navigate('CreateOrder')}
@@ -286,6 +348,16 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             placeholder="Szukaj po numerze, kliencie, pracowniku lub notatce..."
             placeholderTextColor="#64748b"
           />
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.sortTitle}>Status</Text>
+
+          <View style={styles.sortButtons}>
+            {renderStatusButton('Wszystkie', 'all')}
+            {renderStatusButton('Aktywne', 'active')}
+            {renderStatusButton('Nieaktywne', 'inactive')}
+          </View>
         </View>
 
         <View style={styles.sortBox}>
@@ -317,6 +389,8 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
   };
 
   const renderItem = ({item}: {item: OrderDto}): React.JSX.Element => {
+    const isActive = item.isActive !== false;
+
     return (
       <View style={styles.orderCard}>
         <View style={styles.orderTopRow}>
@@ -327,10 +401,16 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             </Text>
           </View>
 
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusBadgeText}>
-              {item.orderItemsCount > 0 ? 'Z pozycjami' : 'Puste'}
+          <View style={styles.badgesBox}>
+            <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
+              {isActive ? 'Aktywne' : 'Nieaktywne'}
             </Text>
+
+            <View style={styles.statusBadge}>
+              <Text style={styles.statusBadgeText}>
+                {item.orderItemsCount > 0 ? 'Z pozycjami' : 'Puste'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -459,9 +539,9 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText.trim().length > 0
-              ? 'Brak zamówień pasujących do wyszukiwania'
-              : 'Brak zamówień w API'}
+            {searchText.trim().length > 0 || statusFilter !== 'active'
+              ? 'Brak zamówień pasujących do filtrów'
+              : 'Brak aktywnych zamówień w API'}
           </Text>
         }
       />
@@ -583,6 +663,41 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '800',
+  },
+
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 12,
+  },
+
+  summaryColumn: {
+    flex: 1,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  summaryActive: {
+    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryInactive: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
   },
 
   createButton: {
@@ -714,6 +829,31 @@ const styles = StyleSheet.create({
   orderDate: {
     color: '#94a3b8',
     fontSize: 12,
+    fontWeight: '800',
+  },
+
+  badgesBox: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+
+  activeBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  inactiveBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
     fontWeight: '800',
   },
 

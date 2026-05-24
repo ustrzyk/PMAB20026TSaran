@@ -109,7 +109,8 @@ namespace SolutionOrders.API.Features.Checkout.Handlers.Commands
                     IdClient = client.IdClient,
                     IdWorker = worker.IdWorker,
                     Notes = request.Notes,
-                    DeliveryDate = request.DeliveryDate ?? DateTime.Now.AddDays(3)
+                    DeliveryDate = request.DeliveryDate ?? DateTime.Now.AddDays(3),
+                    IsActive = true
                 };
 
                 context.Orders.Add(order);

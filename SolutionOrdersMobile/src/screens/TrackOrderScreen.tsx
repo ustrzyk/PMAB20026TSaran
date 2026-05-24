@@ -56,6 +56,11 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
       setError(null);
 
       const foundOrder = await apiService.getOrder(idOrder);
+
+      if (foundOrder.isActive === false) {
+        throw new Error('Zamówienie jest nieaktywne');
+      }
+
       const foundItems = await apiService.getOrderItemsByOrder(idOrder);
       const activeItems = foundItems.filter(item => item.isActive !== false);
 
@@ -65,7 +70,7 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
       setOrder(null);
       setOrderItems([]);
       setError(
-        'Nie znaleziono zamówienia albo wystąpił błąd pobierania danych.',
+        'Nie znaleziono aktywnego zamówienia albo wystąpił błąd pobierania danych.',
       );
     } finally {
       setLoading(false);

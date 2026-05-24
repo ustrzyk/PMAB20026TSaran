@@ -84,6 +84,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     dateToInputValue(editedOrder?.deliveryDate),
   );
   const [notes, setNotes] = useState(editedOrder?.notes ?? '');
+  const [isActive, setIsActive] = useState(editedOrder?.isActive ?? true);
 
   const [clients, setClients] = useState<ClientDto[]>([]);
   const [workers, setWorkers] = useState<WorkerDto[]>([]);
@@ -248,6 +249,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           idWorker: Number(idWorker),
           notes: notes.trim().length > 0 ? notes.trim() : null,
           deliveryDate: inputDateToApiValue(deliveryDate),
+          isActive,
         });
 
         showDialog(
@@ -263,6 +265,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           idWorker: Number(idWorker),
           notes: notes.trim().length > 0 ? notes.trim() : null,
           deliveryDate: inputDateToApiValue(deliveryDate),
+          isActive,
         });
 
         showDialog(
@@ -470,6 +473,46 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           />
         </View>
 
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Status zamówienia</Text>
+
+          <View style={styles.statusButtons}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                isActive && styles.statusButtonActive,
+              ]}
+              onPress={() => setIsActive(true)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  isActive && styles.statusButtonTextSelected,
+                ]}>
+                Aktywne
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                !isActive && styles.statusButtonInactive,
+              ]}
+              onPress={() => setIsActive(false)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  !isActive && styles.statusButtonTextSelected,
+                ]}>
+                Nieaktywne
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}
           onPress={handleSavePress}
@@ -645,6 +688,41 @@ const styles = StyleSheet.create({
   },
 
   optionButtonSubtextSelected: {
+    color: '#ffffff',
+  },
+
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonActive: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  statusButtonInactive: {
+    backgroundColor: '#7f1d1d',
+    borderColor: '#7f1d1d',
+  },
+
+  statusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusButtonTextSelected: {
     color: '#ffffff',
   },
 

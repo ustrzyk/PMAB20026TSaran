@@ -169,6 +169,8 @@ export interface OrderDto {
 
   orderItemsCount: number;
   totalValue: number;
+
+  isActive?: boolean;
 }
 
 export interface CreateOrderCommand {
@@ -177,6 +179,7 @@ export interface CreateOrderCommand {
   idWorker?: number | null;
   notes?: string | null;
   deliveryDate?: string | null;
+  isActive?: boolean;
 }
 
 export interface UpdateOrderCommand {
@@ -186,6 +189,7 @@ export interface UpdateOrderCommand {
   idWorker?: number | null;
   notes?: string | null;
   deliveryDate?: string | null;
+  isActive?: boolean;
 }
 
 export interface CreateOrderResponse {

@@ -35,11 +35,14 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
             var ordersCount = await context.Orders
                 .AsNoTracking()
-                .CountAsync(cancellationToken);
+                .CountAsync(order => order.IsActive, cancellationToken);
 
             var orderItemsCount = await context.OrderItems
                 .AsNoTracking()
-                .CountAsync(orderItem => orderItem.IsActive, cancellationToken);
+                .CountAsync(orderItem =>
+                    orderItem.IsActive &&
+                    orderItem.Order.IsActive,
+                    cancellationToken);
 
             var productsStockValue = await context.Items
                 .AsNoTracking()
@@ -50,7 +53,9 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
             var ordersTotalValue = await context.OrderItems
                 .AsNoTracking()
-                .Where(orderItem => orderItem.IsActive)
+                .Where(orderItem =>
+                    orderItem.IsActive &&
+                    orderItem.Order.IsActive)
                 .SumAsync(orderItem =>
                     (orderItem.Quantity ?? 0) *
                     (orderItem.Item.Price ?? 0),
@@ -62,6 +67,7 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                 .Include(order => order.Worker)
                 .Include(order => order.OrderItems)
                     .ThenInclude(orderItem => orderItem.Item)
+                .Where(order => order.IsActive)
                 .OrderByDescending(order => order.DataOrder)
                 .Take(5)
                 .Select(order => new DashboardLatestOrderDto
@@ -120,7 +126,9 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
             var categorySales = await context.OrderItems
                 .AsNoTracking()
-                .Where(orderItem => orderItem.IsActive)
+                .Where(orderItem =>
+                    orderItem.IsActive &&
+                    orderItem.Order.IsActive)
                 .GroupBy(orderItem => new
                 {
                     orderItem.Item.IdCategory,
@@ -145,7 +153,9 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
             var topProducts = await context.OrderItems
                 .AsNoTracking()
-                .Where(orderItem => orderItem.IsActive)
+                .Where(orderItem =>
+                    orderItem.IsActive &&
+                    orderItem.Order.IsActive)
                 .GroupBy(orderItem => new
                 {
                     orderItem.Item.IdItem,

@@ -23,19 +23,12 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
                     $"Zamówienie o ID {request.IdOrder} nie istnieje");
             }
 
-            var hasActiveOrderItems = await context.OrderItems
-                .AnyAsync(orderItem =>
-                        orderItem.IdOrder == request.IdOrder &&
-                        orderItem.IsActive,
-                    cancellationToken);
-
-            if (hasActiveOrderItems)
+            if (!order.IsActive)
             {
-                throw new InvalidOperationException(
-                    "Nie można usunąć zamówienia, ponieważ ma przypisane pozycje");
+                return Unit.Value;
             }
 
-            context.Orders.Remove(order);
+            order.IsActive = false;
 
             await context.SaveChangesAsync(cancellationToken);
 
