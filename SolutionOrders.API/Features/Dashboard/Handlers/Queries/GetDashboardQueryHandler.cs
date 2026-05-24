@@ -145,9 +145,7 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
             var topProducts = await context.OrderItems
                 .AsNoTracking()
-                .Where(orderItem =>
-                    orderItem.IsActive &&
-                    orderItem.Item.IsActive)
+                .Where(orderItem => orderItem.IsActive)
                 .GroupBy(orderItem => new
                 {
                     orderItem.Item.IdItem,

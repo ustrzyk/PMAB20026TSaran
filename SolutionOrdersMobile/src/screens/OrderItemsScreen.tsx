@@ -22,6 +22,7 @@ import type {OrderItemDto} from '../types/models.ts';
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderItems'>;
 
 type SortMode = 'default' | 'name' | 'quantityDesc' | 'valueDesc' | 'valueAsc';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 interface DialogState {
   visible: boolean;
@@ -52,6 +53,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -65,6 +67,14 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     const search = searchText.trim().toLowerCase();
 
     let result = orderItems;
+
+    if (statusFilter === 'active') {
+      result = result.filter(item => item.isActive !== false);
+    }
+
+    if (statusFilter === 'inactive') {
+      result = result.filter(item => item.isActive === false);
+    }
 
     if (search.length > 0) {
       result = result.filter(item => {
@@ -101,7 +111,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [orderItems, searchText, sortMode]);
+  }, [orderItems, searchText, sortMode, statusFilter]);
 
   const visibleTotalValue = useMemo(() => {
     return filteredItems.reduce((sum, item) => {
@@ -114,6 +124,14 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
       return sum + (item.quantity ?? 0);
     }, 0);
   }, [filteredItems]);
+
+  const activeCount = useMemo(() => {
+    return orderItems.filter(item => item.isActive !== false).length;
+  }, [orderItems]);
+
+  const inactiveCount = useMemo(() => {
+    return orderItems.filter(item => item.isActive === false).length;
+  }, [orderItems]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -184,9 +202,16 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
       await apiService.deleteOrderItem(selectedOrderItem.idOrderItem);
 
       setOrderItems(previousItems =>
-        previousItems.filter(
-          item => item.idOrderItem !== selectedOrderItem.idOrderItem,
-        ),
+        previousItems.map(item => {
+          if (item.idOrderItem === selectedOrderItem.idOrderItem) {
+            return {
+              ...item,
+              isActive: false,
+            };
+          }
+
+          return item;
+        }),
       );
 
       setSelectedOrderItem(null);
@@ -195,7 +220,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         visible: true,
         type: 'success',
         title: 'Pozycja usunięta',
-        message: 'Pozycja zamówienia została poprawnie usunięta.',
+        message: 'Pozycja zamówienia została oznaczona jako nieaktywna.',
         loading: false,
       });
     } catch (err) {
@@ -232,6 +257,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
 
   const clearFilters = (): void => {
     setSearchText('');
+    setStatusFilter('active');
     setSortMode('default');
   };
 
@@ -243,6 +269,28 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     ? `Produkty w zamówieniu nr ${idOrderFromRoute}`
     : 'Produkty przypisane do zamówień.';
 
+  const renderStatusButton = (
+    label: string,
+    value: StatusFilter,
+  ): React.JSX.Element => {
+    const selected = statusFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        onPress={() => setStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   const renderSortButton = (
     label: string,
     value: SortMode,
@@ -251,13 +299,13 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.8}>
         <Text
           style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -303,6 +351,18 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
           </View>
         </View>
 
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Aktywne</Text>
+            <Text style={styles.summaryActive}>{activeCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Nieaktywne</Text>
+            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+          </View>
+        </View>
+
         <TouchableOpacity
           style={styles.createButton}
           onPress={openCreateOrderItem}
@@ -320,10 +380,20 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
           />
         </View>
 
-        <View style={styles.sortBox}>
-          <Text style={styles.sortTitle}>Sortowanie</Text>
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Status</Text>
 
-          <View style={styles.sortButtons}>
+          <View style={styles.filterButtons}>
+            {renderStatusButton('Wszystkie', 'all')}
+            {renderStatusButton('Aktywne', 'active')}
+            {renderStatusButton('Nieaktywne', 'inactive')}
+          </View>
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Sortowanie</Text>
+
+          <View style={styles.filterButtons}>
             {renderSortButton('Domyślnie', 'default')}
             {renderSortButton('Nazwa', 'name')}
             {renderSortButton('Ilość ↓', 'quantityDesc')}
@@ -341,7 +411,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
-            <Text style={styles.clearFiltersText}>Wyczyść</Text>
+            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -349,6 +419,8 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const renderItem = ({item}: {item: OrderItemDto}): React.JSX.Element => {
+    const isActive = item.isActive !== false;
+
     return (
       <View style={styles.orderItemCard}>
         <View style={styles.topRow}>
@@ -362,8 +434,14 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
             </Text>
           </View>
 
-          <View style={styles.orderBadge}>
-            <Text style={styles.orderBadgeText}>Zam. {item.idOrder}</Text>
+          <View style={styles.badgesBox}>
+            <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
+              {isActive ? 'Aktywna' : 'Nieaktywna'}
+            </Text>
+
+            <View style={styles.orderBadge}>
+              <Text style={styles.orderBadgeText}>Zam. {item.idOrder}</Text>
+            </View>
           </View>
         </View>
 
@@ -458,11 +536,11 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText.trim().length > 0
-              ? 'Brak pozycji pasujących do wyszukiwania'
+            {searchText.trim().length > 0 || statusFilter !== 'active'
+              ? 'Brak pozycji pasujących do filtrów'
               : isOrderFiltered
-                ? 'Brak pozycji dla tego zamówienia'
-                : 'Brak pozycji zamówienia w API'}
+                ? 'Brak aktywnych pozycji dla tego zamówienia'
+                : 'Brak aktywnych pozycji zamówienia w API'}
           </Text>
         }
       />
@@ -621,6 +699,18 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  summaryActive: {
+    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryInactive: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
   createButton: {
     backgroundColor: '#16a34a',
     marginHorizontal: 16,
@@ -653,25 +743,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  sortBox: {
+  filterSection: {
     paddingHorizontal: 16,
     paddingTop: 12,
   },
 
-  sortTitle: {
+  filterTitle: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '900',
     marginBottom: 8,
   },
 
-  sortButtons: {
+  filterButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
 
-  sortButton: {
+  filterButton: {
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
@@ -680,18 +770,18 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
 
-  sortButtonSelected: {
+  filterButtonSelected: {
     backgroundColor: '#f97316',
     borderColor: '#f97316',
   },
 
-  sortButtonText: {
+  filterButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '800',
   },
 
-  sortButtonTextSelected: {
+  filterButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -753,12 +843,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  badgesBox: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+
+  activeBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
+  inactiveBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+
   orderBadge: {
     backgroundColor: '#1e293b',
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    alignSelf: 'flex-start',
+    alignSelf: 'flex-end',
   },
 
   orderBadgeText: {

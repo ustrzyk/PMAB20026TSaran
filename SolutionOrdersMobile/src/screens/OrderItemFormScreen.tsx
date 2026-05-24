@@ -121,8 +121,16 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         apiService.getItems(),
       ]);
 
+      const visibleItems = isEditMode
+        ? itemsFromApi.filter(item => {
+            return (
+              item.isActive !== false || item.idItem === editedOrderItem?.idItem
+            );
+          })
+        : itemsFromApi.filter(item => item.isActive !== false);
+
       setOrders(ordersFromApi);
-      setItems(itemsFromApi.filter(item => item.isActive !== false));
+      setItems(visibleItems);
 
       if (!isEditMode) {
         if (idOrderFromRoute) {
@@ -154,7 +162,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
     } finally {
       setDictionaryLoading(false);
     }
-  }, [idOrderFromRoute, isEditMode]);
+  }, [editedOrderItem?.idItem, idOrderFromRoute, isEditMode]);
 
   useEffect(() => {
     loadDictionaries();
@@ -295,6 +303,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const renderItemButton = (item: Item): React.JSX.Element => {
     const isSelected = Number(idItem) === item.idItem;
+    const isItemActive = item.isActive !== false;
 
     return (
       <TouchableOpacity
@@ -302,6 +311,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         style={[
           styles.optionButton,
           isSelected && styles.optionButtonSelected,
+          !isItemActive && styles.inactiveOptionButton,
         ]}
         onPress={() => setIdItem(item.idItem.toString())}
         activeOpacity={0.8}
@@ -320,6 +330,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
             isSelected && styles.optionButtonSubtextSelected,
           ]}>
           Kod: {item.code ?? 'brak kodu'}
+          {!isItemActive ? ' | produkt nieaktywny' : ''}
         </Text>
       </TouchableOpacity>
     );
@@ -626,6 +637,10 @@ const styles = StyleSheet.create({
 
   optionButtonDisabled: {
     opacity: 0.45,
+  },
+
+  inactiveOptionButton: {
+    borderColor: '#7f1d1d',
   },
 
   optionButtonText: {

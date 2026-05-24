@@ -51,14 +51,13 @@ namespace SolutionOrders.API.Features.OrderItems.Handlers.Commands
 
             var itemExists = await context.Items
                 .AnyAsync(item =>
-                    item.IdItem == request.IdItem &&
-                    (!request.IsActive || item.IsActive),
+                    item.IdItem == request.IdItem,
                     cancellationToken);
 
             if (!itemExists)
             {
                 throw new ArgumentException(
-                    $"Produkt o ID {request.IdItem} nie istnieje albo jest nieaktywny");
+                    $"Produkt o ID {request.IdItem} nie istnieje");
             }
 
             orderItem.IdOrder = request.IdOrder;
