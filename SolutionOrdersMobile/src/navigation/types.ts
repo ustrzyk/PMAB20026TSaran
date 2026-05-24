@@ -12,6 +12,7 @@ export type RootStackParamList = {
   Home: undefined;
 
   Dashboard: undefined;
+  AdminPanel: undefined;
 
   Items: undefined;
   AdminItems: undefined;
@@ -25,6 +26,11 @@ export type RootStackParamList = {
   };
 
   Cart: undefined;
+  OrderSuccess: {
+    idOrder: number;
+    totalValue: number;
+    message?: string | null;
+  };
 
   Categories: undefined;
   CreateCategory: undefined;

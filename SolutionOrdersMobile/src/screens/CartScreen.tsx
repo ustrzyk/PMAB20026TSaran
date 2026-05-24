@@ -152,8 +152,6 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         notes: notes.trim().length > 0 ? notes.trim() : null,
       });
 
-      setLastOrder(result);
-
       clearCart();
 
       await refreshItems();
@@ -163,14 +161,16 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       setClientPhone('');
       setNotes('');
 
-      setDialog({
-        visible: true,
-        type: 'success',
-        title: 'Zamówienie złożone',
-        message: `Utworzono zamówienie nr ${result.idOrder}. Wartość: ${formatMoney(
-          result.totalValue,
-        )}`,
+      setDialog(previous => ({
+        ...previous,
+        visible: false,
         loading: false,
+      }));
+
+      navigation.navigate('OrderSuccess', {
+        idOrder: result.idOrder,
+        totalValue: result.totalValue,
+        message: result.message,
       });
     } catch (err) {
       setDialog({

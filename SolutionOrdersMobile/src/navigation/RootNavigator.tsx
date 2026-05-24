@@ -3,6 +3,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
 import AdminItemsScreen from '../screens/AdminItemsScreen.tsx';
+import AdminPanelScreen from '../screens/AdminPanelScreen.tsx';
 import CartScreen from '../screens/CartScreen.tsx';
 import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
@@ -17,6 +18,7 @@ import OrderFormScreen from '../screens/OrderFormScreen.tsx';
 import OrderItemFormScreen from '../screens/OrderItemFormScreen.tsx';
 import OrderItemsScreen from '../screens/OrderItemsScreen.tsx';
 import OrdersScreen from '../screens/OrdersScreen.tsx';
+import OrderSuccessScreen from '../screens/OrderSuccessScreen.tsx';
 import UnitFormScreen from '../screens/UnitFormScreen.tsx';
 import UnitsScreen from '../screens/UnitsScreen.tsx';
 import WorkerFormScreen from '../screens/WorkerFormScreen.tsx';
@@ -56,21 +58,33 @@ function RootNavigator(): React.JSX.Element {
         />
 
         <Stack.Screen
-          name="AdminItems"
-          component={AdminItemsScreen}
-          options={{title: 'Produkty - administracja'}}
-        />
-
-        <Stack.Screen
           name="Cart"
           component={CartScreen}
           options={{title: 'Koszyk'}}
         />
 
         <Stack.Screen
+          name="OrderSuccess"
+          component={OrderSuccessScreen}
+          options={{title: 'Potwierdzenie zamówienia'}}
+        />
+
+        <Stack.Screen
           name="ItemDetails"
           component={ItemDetailsScreen}
           options={{title: 'Szczegóły produktu'}}
+        />
+
+        <Stack.Screen
+          name="AdminPanel"
+          component={AdminPanelScreen}
+          options={{title: 'Panel administracyjny'}}
+        />
+
+        <Stack.Screen
+          name="AdminItems"
+          component={AdminItemsScreen}
+          options={{title: 'Produkty - administracja'}}
         />
 
         <Stack.Screen

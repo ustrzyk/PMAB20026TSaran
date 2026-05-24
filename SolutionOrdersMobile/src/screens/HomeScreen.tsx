@@ -84,117 +84,17 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>Panel administracyjny</Text>
+      <Text style={styles.sectionTitle}>Administracja</Text>
 
       <TouchableOpacity
-        style={[styles.menuCard, styles.dashboardCard]}
-        onPress={() => navigation.navigate('Dashboard')}
+        style={[styles.menuCard, styles.adminCard]}
+        onPress={() => navigation.navigate('AdminPanel')}
         activeOpacity={0.8}>
         <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Dashboard</Text>
+          <Text style={styles.menuTitle}>Panel administracyjny</Text>
           <Text style={styles.menuDescription}>
-            Raporty sklepu: sprzedaż, TOP produkty, niskie stany magazynowe i
-            najnowsze zamówienia.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.menuCard, styles.adminProductsCard]}
-        onPress={() => navigation.navigate('AdminItems')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Produkty - administracja</Text>
-          <Text style={styles.menuDescription}>
-            Dodawanie, edycja i usuwanie produktów oraz kontrola stanów
-            magazynowych.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Categories')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Kategorie</Text>
-          <Text style={styles.menuDescription}>
-            Zarządzanie kategoriami asortymentu sklepu.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Units')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Jednostki miary</Text>
-          <Text style={styles.menuDescription}>
-            Jednostki używane przy produktach i stanach magazynowych.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Clients')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Klienci</Text>
-          <Text style={styles.menuDescription}>
-            Klienci utworzeni ręcznie lub automatycznie podczas składania
-            zamówienia.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Workers')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Pracownicy</Text>
-          <Text style={styles.menuDescription}>
-            Pracownicy obsługujący zamówienia w sklepie.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Orders')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Zamówienia</Text>
-          <Text style={styles.menuDescription}>
-            Lista zamówień z klientem, pracownikiem, pozycjami i wartością.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('OrderItems')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Pozycje zamówienia</Text>
-          <Text style={styles.menuDescription}>
-            Produkty przypisane do zamówień przez relację wiele do wiele.
+            Zarządzanie produktami, kategoriami, klientami, pracownikami,
+            zamówieniami i raportami sprzedaży.
           </Text>
         </View>
 
@@ -205,9 +105,9 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.infoTitle}>Logika aplikacji</Text>
 
         <Text style={styles.infoText}>
-          Część sklepowa pozwala klientowi dodać produkty do koszyka i złożyć
-          zamówienie. Część administracyjna pozwala zarządzać danymi i
-          analizować sprzedaż.
+          Ekran główny pokazuje prostą część sklepową dla klienta. Wszystkie
+          funkcje zarządzania sklepem są przeniesione do osobnego panelu
+          administracyjnego.
         </Text>
       </View>
     </ScrollView>
@@ -322,12 +222,8 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
-  dashboardCard: {
+  adminCard: {
     borderColor: '#38bdf8',
-  },
-
-  adminProductsCard: {
-    borderColor: '#a855f7',
   },
 
   menuTextBox: {
