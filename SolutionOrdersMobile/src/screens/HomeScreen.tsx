@@ -102,6 +102,21 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
       </TouchableOpacity>
 
       <TouchableOpacity
+        style={[styles.menuCard, styles.adminProductsCard]}
+        onPress={() => navigation.navigate('AdminItems')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Produkty - administracja</Text>
+          <Text style={styles.menuDescription}>
+            Dodawanie, edycja i usuwanie produktów oraz kontrola stanów
+            magazynowych.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
         style={styles.menuCard}
         onPress={() => navigation.navigate('Categories')}
         activeOpacity={0.8}>
@@ -309,6 +324,10 @@ const styles = StyleSheet.create({
 
   dashboardCard: {
     borderColor: '#38bdf8',
+  },
+
+  adminProductsCard: {
+    borderColor: '#a855f7',
   },
 
   menuTextBox: {

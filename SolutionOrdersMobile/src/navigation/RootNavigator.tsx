@@ -2,6 +2,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import AdminItemsScreen from '../screens/AdminItemsScreen.tsx';
 import CartScreen from '../screens/CartScreen.tsx';
 import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
@@ -52,6 +53,12 @@ function RootNavigator(): React.JSX.Element {
           name="Items"
           component={ItemsScreen}
           options={{title: 'Sklep'}}
+        />
+
+        <Stack.Screen
+          name="AdminItems"
+          component={AdminItemsScreen}
+          options={{title: 'Produkty - administracja'}}
         />
 
         <Stack.Screen
