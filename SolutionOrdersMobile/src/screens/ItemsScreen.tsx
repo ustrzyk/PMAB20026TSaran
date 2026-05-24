@@ -38,12 +38,11 @@ function formatMoney(value?: number | null): string {
 }
 
 function ItemsScreen({navigation}: Props): React.JSX.Element {
-  const {items, loading, error, refreshItems, deleteItem} = useItems();
+  const {items, loading, error, refreshItems} = useItems();
   const {addToCart, totalQuantity, totalValue} = useCart();
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -56,7 +55,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
-    let result = items;
+    let result = items.filter(item => item.isActive);
 
     if (search.length > 0) {
       result = result.filter(item => {
@@ -101,62 +100,6 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       visible: false,
       loading: false,
     }));
-  };
-
-  const handleDelete = (item: Item): void => {
-    setSelectedItem(item);
-
-    setDialog({
-      visible: true,
-      type: 'confirm',
-      title: 'Usuwanie produktu',
-      message: `Czy na pewno chcesz usunąć produkt "${
-        item.name ?? 'produkt'
-      }"?`,
-      loading: false,
-    });
-  };
-
-  const confirmDelete = async (): Promise<void> => {
-    if (!selectedItem) {
-      return;
-    }
-
-    try {
-      setDialog(previous => ({
-        ...previous,
-        loading: true,
-      }));
-
-      await deleteItem(selectedItem.idItem);
-
-      setSelectedItem(null);
-
-      setDialog({
-        visible: true,
-        type: 'success',
-        title: 'Produkt usunięty',
-        message: 'Produkt został poprawnie usunięty z listy.',
-        loading: false,
-      });
-    } catch (err) {
-      setDialog({
-        visible: true,
-        type: 'error',
-        title: 'Błąd usuwania',
-        message: (err as Error).message,
-        loading: false,
-      });
-    }
-  };
-
-  const handleDialogConfirm = (): void => {
-    if (dialog.type === 'confirm') {
-      confirmDelete();
-      return;
-    }
-
-    closeDialog();
   };
 
   const handleAddToCart = (item: Item): void => {
@@ -257,22 +200,6 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.buttonText}>Szczegóły</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.adminActions}>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={() => navigation.navigate('EditItem', {item})}
-            activeOpacity={0.8}>
-            <Text style={styles.adminButtonText}>Edytuj</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDelete(item)}
-            activeOpacity={0.8}>
-            <Text style={styles.adminButtonText}>Usuń</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     );
   };
@@ -305,10 +232,10 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         type={dialog.type}
         title={dialog.title}
         message={dialog.message}
-        confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
+        confirmText="OK"
         cancelText="Anuluj"
         loading={dialog.loading}
-        onConfirm={handleDialogConfirm}
+        onConfirm={closeDialog}
         onCancel={closeDialog}
       />
 
@@ -316,7 +243,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.shopName}>3D Print Shop</Text>
         <Text style={styles.heroTitle}>Sklep z drukarkami 3D</Text>
         <Text style={styles.heroSubtitle}>
-          Wybierz produkt, dodaj go do koszyka i złóż zamówienie.
+          Wybierz produkt, dodaj go do koszyka i złóż zamówienie z dostawą.
         </Text>
       </View>
 
@@ -379,13 +306,6 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           {renderSortButton('Stan', 'quantity')}
         </View>
       </View>
-
-      <TouchableOpacity
-        style={styles.createButton}
-        onPress={() => navigation.navigate('CreateItem')}
-        activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj produkt do bazy</Text>
-      </TouchableOpacity>
 
       <FlatList
         data={filteredItems}
@@ -616,21 +536,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  createButton: {
-    backgroundColor: '#334155',
-    marginHorizontal: 16,
-    marginTop: 14,
-    paddingVertical: 11,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-
-  createButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
   listContent: {
     padding: 16,
     paddingBottom: 30,
@@ -705,12 +610,6 @@ const styles = StyleSheet.create({
   shopActions: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 8,
-  },
-
-  adminActions: {
-    flexDirection: 'row',
-    gap: 8,
   },
 
   addToCartButton: {
@@ -727,20 +626,6 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  editButton: {
-    flex: 1,
-    backgroundColor: '#475569',
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-
-  deleteButton: {
-    flex: 1,
-    backgroundColor: '#7f1d1d',
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-
   disabledButton: {
     opacity: 0.55,
   },
@@ -749,13 +634,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900',
-    textAlign: 'center',
-  },
-
-  adminButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800',
     textAlign: 'center',
   },
 
