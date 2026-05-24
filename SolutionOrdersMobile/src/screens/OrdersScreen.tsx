@@ -36,6 +36,12 @@ function formatDate(value?: string | null): string {
   return value.substring(0, 10);
 }
 
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
+
+  return `${safeValue.toFixed(2)} zł`;
+}
+
 function OrdersScreen({navigation}: Props): React.JSX.Element {
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -179,6 +185,11 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
           Pozycje: {item.orderItemsCount}
         </Text>
 
+        <View style={styles.totalBox}>
+          <Text style={styles.totalLabel}>Wartość zamówienia</Text>
+          <Text style={styles.totalValue}>{formatMoney(item.totalValue)}</Text>
+        </View>
+
         <Text style={styles.orderNotes}>
           {item.notes ?? 'Brak notatek'}
         </Text>
@@ -250,7 +261,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.shopName}>3D Print Shop</Text>
         <Text style={styles.heroTitle}>Zamówienia</Text>
         <Text style={styles.heroSubtitle}>
-          Zamówienia klientów z przypisanym klientem i pracownikiem.
+          Zamówienia klientów z przypisanym klientem, pracownikiem i wartością.
         </Text>
       </View>
 
@@ -443,6 +454,29 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 5,
+  },
+
+  totalBox: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 10,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+
+  totalLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  totalValue: {
+    color: '#f97316',
+    fontSize: 18,
+    fontWeight: '900',
   },
 
   orderNotes: {
