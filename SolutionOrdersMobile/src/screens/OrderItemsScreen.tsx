@@ -28,7 +28,12 @@ interface DialogState {
   loading: boolean;
 }
 
-function OrderItemsScreen({navigation}: Props): React.JSX.Element {
+function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
+  const idOrderFromRoute = route.params?.idOrder;
+  const orderTitleFromRoute = route.params?.orderTitle;
+
+  const isOrderFiltered = typeof idOrderFromRoute === 'number';
+
   const [orderItems, setOrderItems] = useState<OrderItemDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -56,7 +61,10 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
     try {
       setError(null);
 
-      const data = await apiService.getOrderItems();
+      const data =
+        isOrderFiltered && idOrderFromRoute
+          ? await apiService.getOrderItemsByOrder(idOrderFromRoute)
+          : await apiService.getOrderItems();
 
       setOrderItems(data);
     } catch (err) {
@@ -68,7 +76,7 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [idOrderFromRoute, isOrderFiltered]);
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +97,9 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Usuwanie pozycji',
-      message: `Czy na pewno chcesz usunąć pozycję "${orderItem.itemName}" z zamówienia nr ${orderItem.idOrder}?`,
+      message: `Czy na pewno chcesz usunąć pozycję "${
+        orderItem.itemName ?? 'produkt'
+      }" z zamówienia nr ${orderItem.idOrder}?`,
       loading: false,
     });
   };
@@ -141,6 +151,14 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
 
     closeDialog();
   };
+
+  const screenTitle = isOrderFiltered
+    ? orderTitleFromRoute ?? `Zamówienie nr ${idOrderFromRoute}`
+    : 'Pozycje zamówienia';
+
+  const screenSubtitle = isOrderFiltered
+    ? `Pozycje tylko dla zamówienia nr ${idOrderFromRoute}`
+    : 'Produkty przypisane do wszystkich zamówień wraz z ilością.';
 
   const renderItem = ({item}: {item: OrderItemDto}): React.JSX.Element => {
     return (
@@ -233,15 +251,15 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
 
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Pozycje zamówienia</Text>
-        <Text style={styles.heroSubtitle}>
-          Produkty przypisane do zamówień wraz z ilością.
-        </Text>
+        <Text style={styles.heroTitle}>{screenTitle}</Text>
+        <Text style={styles.heroSubtitle}>{screenSubtitle}</Text>
       </View>
 
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Pozycje</Text>
+          <Text style={styles.title}>
+            {isOrderFiltered ? 'Pozycje zamówienia' : 'Pozycje'}
+          </Text>
           <Text style={styles.subtitle}>
             Liczba pozycji: {orderItems.length}
           </Text>
@@ -251,6 +269,14 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
       </View>
+
+      {isOrderFiltered && (
+        <View style={styles.filterBox}>
+          <Text style={styles.filterText}>
+            Widok filtrowany: zamówienie nr {idOrderFromRoute}
+          </Text>
+        </View>
+      )}
 
       <TouchableOpacity
         style={styles.createButton}
@@ -268,7 +294,11 @@ function OrderItemsScreen({navigation}: Props): React.JSX.Element {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         ListEmptyComponent={
-          <Text style={styles.emptyText}>Brak pozycji zamówienia w API</Text>
+          <Text style={styles.emptyText}>
+            {isOrderFiltered
+              ? 'Brak pozycji dla tego zamówienia'
+              : 'Brak pozycji zamówienia w API'}
+          </Text>
         }
       />
     </View>
@@ -383,6 +413,22 @@ const styles = StyleSheet.create({
 
   refreshButtonText: {
     color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  filterBox: {
+    backgroundColor: '#312e81',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 12,
+    borderRadius: 12,
+  },
+
+  filterText: {
+    color: '#e0e7ff',
     fontSize: 13,
     fontWeight: '800',
   },

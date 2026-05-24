@@ -50,7 +50,12 @@ export type RootStackParamList = {
     order: OrderDto;
   };
 
-  OrderItems: undefined;
+  OrderItems:
+    | {
+        idOrder?: number;
+        orderTitle?: string;
+      }
+    | undefined;
   CreateOrderItem: undefined;
   EditOrderItem: {
     orderItem: OrderItemDto;

@@ -147,6 +147,13 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     closeDialog();
   };
 
+  const openOrderItems = (order: OrderDto): void => {
+    navigation.navigate('OrderItems', {
+      idOrder: order.idOrder,
+      orderTitle: `Zamówienie nr ${order.idOrder}`,
+    });
+  };
+
   const renderItem = ({item}: {item: OrderDto}): React.JSX.Element => {
     return (
       <View style={styles.orderCard}>
@@ -177,6 +184,13 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         </Text>
 
         <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.itemsButton}
+            onPress={() => openOrderItems(item)}
+            activeOpacity={0.8}>
+            <Text style={styles.buttonText}>Pozycje</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditOrder', {order: item})}
@@ -440,8 +454,15 @@ const styles = StyleSheet.create({
 
   actions: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginTop: 12,
+  },
+
+  itemsButton: {
+    flex: 1,
+    backgroundColor: '#9333ea',
+    paddingVertical: 10,
+    borderRadius: 10,
   },
 
   editButton: {
@@ -460,7 +481,7 @@ const styles = StyleSheet.create({
 
   buttonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     textAlign: 'center',
   },
