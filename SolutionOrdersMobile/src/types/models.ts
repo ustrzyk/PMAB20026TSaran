@@ -296,6 +296,19 @@ export interface DashboardCategorySalesDto {
   totalValue: number;
 }
 
+// Najlepiej sprzedający się produkt na Dashboardzie.
+export interface DashboardTopProductDto {
+  idItem: number;
+
+  name?: string | null;
+  code?: string | null;
+
+  categoryName?: string | null;
+
+  totalQuantity: number;
+  totalValue: number;
+}
+
 // Dane raportowe z GET /api/Dashboard.
 export interface DashboardDto {
   productsCount: number;
@@ -316,6 +329,8 @@ export interface DashboardDto {
   lowStockProducts: DashboardLowStockProductDto[];
 
   categorySales: DashboardCategorySalesDto[];
+
+  topProducts: DashboardTopProductDto[];
 }
 
 // Model pozycji koszyka po stronie aplikacji mobilnej.

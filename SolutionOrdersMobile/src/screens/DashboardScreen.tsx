@@ -20,6 +20,7 @@ import type {
   DashboardDto,
   DashboardLatestOrderDto,
   DashboardLowStockProductDto,
+  DashboardTopProductDto,
 } from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Dashboard'>;
@@ -88,6 +89,13 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
       0,
     ) ?? 0;
 
+  const maxTopProductValue =
+    dashboard?.topProducts.reduce(
+      (maxValue, product) =>
+        product.totalValue > maxValue ? product.totalValue : maxValue,
+      0,
+    ) ?? 0;
+
   const renderMetricCard = (
     title: string,
     value: string | number,
@@ -130,6 +138,60 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
           <View style={[styles.categoryBarFill, {width: `${percentage}%`}]} />
         </View>
       </View>
+    );
+  };
+
+  const renderTopProduct = (
+    product: DashboardTopProductDto,
+    index: number,
+  ): React.JSX.Element => {
+    const percentage =
+      maxTopProductValue > 0
+        ? Math.max((product.totalValue / maxTopProductValue) * 100, 5)
+        : 0;
+
+    return (
+      <TouchableOpacity
+        key={product.idItem}
+        style={styles.topProductCard}
+        onPress={() => navigation.navigate('Items')}
+        activeOpacity={0.8}>
+        <View style={styles.topProductHeader}>
+          <View style={styles.rankBadge}>
+            <Text style={styles.rankBadgeText}>{index + 1}</Text>
+          </View>
+
+          <View style={styles.topProductTitleBox}>
+            <Text style={styles.topProductTitle}>
+              {product.name ?? `Produkt ID ${product.idItem}`}
+            </Text>
+
+            <Text style={styles.topProductCode}>
+              Kod: {product.code ?? 'brak kodu'}
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.topProductText}>
+          Kategoria: {product.categoryName ?? 'Brak kategorii'}
+        </Text>
+
+        <Text style={styles.topProductText}>
+          Sprzedana ilość: {product.totalQuantity}
+        </Text>
+
+        <Text style={styles.topProductValue}>
+          Wartość sprzedaży: {formatMoney(product.totalValue)}
+        </Text>
+
+        <View style={styles.topProductBarBackground}>
+          <View style={[styles.topProductBarFill, {width: `${percentage}%`}]} />
+        </View>
+
+        <Text style={styles.topProductHint}>
+          Kliknij, aby przejść do listy produktów
+        </Text>
+      </TouchableOpacity>
     );
   };
 
@@ -329,6 +391,25 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
           'Aktywne pozycje',
         )}
       </View>
+
+      <Text style={styles.sectionTitle}>Najlepiej sprzedające się produkty</Text>
+
+      <View style={styles.reportInfoBox}>
+        <Text style={styles.reportInfoTitle}>TOP produkty</Text>
+        <Text style={styles.reportInfoText}>
+          Ranking produktów liczony według wartości aktywnych pozycji zamówień.
+        </Text>
+      </View>
+
+      {dashboard.topProducts.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>
+            Brak danych dla najlepiej sprzedających się produktów
+          </Text>
+        </View>
+      ) : (
+        dashboard.topProducts.map(renderTopProduct)
+      )}
 
       <Text style={styles.sectionTitle}>Sprzedaż według kategorii</Text>
 
@@ -569,6 +650,89 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 12,
     lineHeight: 17,
+  },
+
+  topProductCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 12,
+  },
+
+  topProductHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+
+  rankBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    backgroundColor: '#f97316',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  rankBadgeText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  topProductTitleBox: {
+    flex: 1,
+  },
+
+  topProductTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  topProductCode: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+
+  topProductText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+
+  topProductValue: {
+    color: '#f97316',
+    fontSize: 14,
+    fontWeight: '900',
+    marginTop: 4,
+    marginBottom: 8,
+  },
+
+  topProductBarBackground: {
+    height: 8,
+    backgroundColor: '#0f172a',
+    borderRadius: 999,
+    overflow: 'hidden',
+  },
+
+  topProductBarFill: {
+    height: 8,
+    backgroundColor: '#f97316',
+    borderRadius: 999,
+  },
+
+  topProductHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 6,
   },
 
   categorySaleCard: {
