@@ -19,6 +19,7 @@ import OrderItemFormScreen from '../screens/OrderItemFormScreen.tsx';
 import OrderItemsScreen from '../screens/OrderItemsScreen.tsx';
 import OrdersScreen from '../screens/OrdersScreen.tsx';
 import OrderSuccessScreen from '../screens/OrderSuccessScreen.tsx';
+import TrackOrderScreen from '../screens/TrackOrderScreen.tsx';
 import UnitFormScreen from '../screens/UnitFormScreen.tsx';
 import UnitsScreen from '../screens/UnitsScreen.tsx';
 import WorkerFormScreen from '../screens/WorkerFormScreen.tsx';
@@ -67,6 +68,12 @@ function RootNavigator(): React.JSX.Element {
           name="OrderSuccess"
           component={OrderSuccessScreen}
           options={{title: 'Potwierdzenie zamówienia'}}
+        />
+
+        <Stack.Screen
+          name="TrackOrder"
+          component={TrackOrderScreen}
+          options={{title: 'Sprawdź zamówienie'}}
         />
 
         <Stack.Screen

@@ -84,6 +84,20 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.menuArrow}>{'>'}</Text>
       </TouchableOpacity>
 
+      <TouchableOpacity
+        style={[styles.menuCard, styles.trackCard]}
+        onPress={() => navigation.navigate('TrackOrder')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Sprawdź zamówienie</Text>
+          <Text style={styles.menuDescription}>
+            Wpisz numer zamówienia i zobacz jego szczegóły oraz produkty.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
       <Text style={styles.sectionTitle}>Administracja</Text>
 
       <TouchableOpacity
@@ -105,9 +119,9 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.infoTitle}>Logika aplikacji</Text>
 
         <Text style={styles.infoText}>
-          Ekran główny pokazuje prostą część sklepową dla klienta. Wszystkie
-          funkcje zarządzania sklepem są przeniesione do osobnego panelu
-          administracyjnego.
+          Klient może przeglądać produkty, dodać je do koszyka, złożyć
+          zamówienie i później sprawdzić jego szczegóły po numerze zamówienia.
+          Panel administracyjny jest osobną częścią dla obsługi sklepu.
         </Text>
       </View>
     </ScrollView>
@@ -222,8 +236,12 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
-  adminCard: {
+  trackCard: {
     borderColor: '#38bdf8',
+  },
+
+  adminCard: {
+    borderColor: '#a855f7',
   },
 
   menuTextBox: {

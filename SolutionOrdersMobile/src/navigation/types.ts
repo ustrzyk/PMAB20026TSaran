@@ -16,6 +16,7 @@ export type RootStackParamList = {
 
   Items: undefined;
   AdminItems: undefined;
+  TrackOrder: undefined;
 
   ItemDetails: {
     item: Item;
