@@ -21,7 +21,7 @@ namespace SolutionOrders.API.Features.Categories.Handlers.Commands
             {
                 Name = request.Name,
                 Description = request.Description,
-                IsActive = true
+                IsActive = request.IsActive
             };
 
             context.Categories.Add(category);

@@ -21,7 +21,7 @@ namespace SolutionOrders.API.Features.UnitOfMeasurements.Handlers.Commands
             {
                 Name = request.Name,
                 Description = request.Description,
-                IsActive = true
+                IsActive = request.IsActive
             };
 
             context.UnitOfMeasurements.Add(unitOfMeasurement);

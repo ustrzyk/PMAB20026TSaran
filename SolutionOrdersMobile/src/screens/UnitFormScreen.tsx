@@ -141,6 +141,7 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
           name: name.trim(),
           description:
             description.trim().length > 0 ? description.trim() : null,
+          isActive,
         });
 
         showDialog(
@@ -227,47 +228,45 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
           />
         </View>
 
-        {isEditMode ? (
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Status jednostki</Text>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Status jednostki</Text>
 
-            <View style={styles.statusButtons}>
-              <TouchableOpacity
+          <View style={styles.statusButtons}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                isActive && styles.statusButtonActive,
+              ]}
+              onPress={() => setIsActive(true)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
                 style={[
-                  styles.statusButton,
-                  isActive && styles.statusButtonActive,
-                ]}
-                onPress={() => setIsActive(true)}
-                activeOpacity={0.8}
-                disabled={submitting}>
-                <Text
-                  style={[
-                    styles.statusButtonText,
-                    isActive && styles.statusButtonTextSelected,
-                  ]}>
-                  Aktywna
-                </Text>
-              </TouchableOpacity>
+                  styles.statusButtonText,
+                  isActive && styles.statusButtonTextSelected,
+                ]}>
+                Aktywna
+              </Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                !isActive && styles.statusButtonInactive,
+              ]}
+              onPress={() => setIsActive(false)}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
                 style={[
-                  styles.statusButton,
-                  !isActive && styles.statusButtonInactive,
-                ]}
-                onPress={() => setIsActive(false)}
-                activeOpacity={0.8}
-                disabled={submitting}>
-                <Text
-                  style={[
-                    styles.statusButtonText,
-                    !isActive && styles.statusButtonTextSelected,
-                  ]}>
-                  Nieaktywna
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  styles.statusButtonText,
+                  !isActive && styles.statusButtonTextSelected,
+                ]}>
+                Nieaktywna
+              </Text>
+            </TouchableOpacity>
           </View>
-        ) : null}
+        </View>
 
         <TouchableOpacity
           style={[styles.saveButton, submitting && styles.disabledButton]}

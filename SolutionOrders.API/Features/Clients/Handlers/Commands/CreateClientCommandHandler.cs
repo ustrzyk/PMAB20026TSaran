@@ -22,7 +22,7 @@ namespace SolutionOrders.API.Features.Clients.Handlers.Commands
                 Name = request.Name,
                 Adress = request.Adress,
                 PhoneNumber = request.PhoneNumber,
-                IsActive = true
+                IsActive = request.IsActive
             };
 
             context.Clients.Add(client);
