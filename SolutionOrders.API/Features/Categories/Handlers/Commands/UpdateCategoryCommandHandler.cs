@@ -19,8 +19,7 @@ namespace SolutionOrders.API.Features.Categories.Handlers.Commands
 
             var category = await context.Categories
                 .FirstOrDefaultAsync(category =>
-                        category.IdCategory == request.IdCategory &&
-                        category.IsActive,
+                        category.IdCategory == request.IdCategory,
                     cancellationToken);
 
             if (category == null)

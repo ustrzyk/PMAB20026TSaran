@@ -19,8 +19,7 @@ namespace SolutionOrders.API.Features.Clients.Handlers.Commands
 
             var client = await context.Clients
                 .FirstOrDefaultAsync(client =>
-                        client.IdClient == request.IdClient &&
-                        client.IsActive,
+                        client.IdClient == request.IdClient,
                     cancellationToken);
 
             if (client == null)

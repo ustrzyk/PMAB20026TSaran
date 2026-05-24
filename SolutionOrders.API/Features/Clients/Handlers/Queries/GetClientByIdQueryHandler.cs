@@ -15,9 +15,7 @@ namespace SolutionOrders.API.Features.Clients.Handlers.Queries
         {
             var client = await context.Clients
                 .AsNoTracking()
-                .Where(client =>
-                    client.IdClient == request.Id &&
-                    client.IsActive)
+                .Where(client => client.IdClient == request.Id)
                 .Select(client => new ClientDto
                 {
                     IdClient = client.IdClient,

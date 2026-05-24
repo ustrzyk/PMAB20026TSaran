@@ -19,8 +19,7 @@ namespace SolutionOrders.API.Features.UnitOfMeasurements.Handlers.Commands
 
             var unitOfMeasurement = await context.UnitOfMeasurements
                 .FirstOrDefaultAsync(unit =>
-                        unit.IdUnitOfMeasurement == request.IdUnitOfMeasurement &&
-                        unit.IsActive,
+                        unit.IdUnitOfMeasurement == request.IdUnitOfMeasurement,
                     cancellationToken);
 
             if (unitOfMeasurement == null)

@@ -15,7 +15,6 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Queries
         {
             var workers = await context.Workers
                 .AsNoTracking()
-                .Where(worker => worker.IsActive)
                 .OrderBy(worker => worker.LastName)
                 .ThenBy(worker => worker.FirstName)
                 .Select(worker => new WorkerDto
