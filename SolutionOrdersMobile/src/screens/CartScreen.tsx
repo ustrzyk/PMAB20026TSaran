@@ -18,9 +18,12 @@ import {useCart} from '../context/CartContext.tsx';
 import {useItems} from '../context/ItemsContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {CartItemModel, CheckoutOrderResponseDto} from '../types/models.ts';
+import type {CartItemModel} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Cart'>;
+
+type DeliveryMethod = 'courier' | 'parcelLocker' | 'pickup';
+type PaymentMethod = 'blik' | 'card' | 'transfer' | 'cashOnDelivery';
 
 interface DialogState {
   visible: boolean;
@@ -34,6 +37,64 @@ function formatMoney(value?: number | null): string {
   const safeValue = value ?? 0;
 
   return `${safeValue.toFixed(2)} zł`;
+}
+
+function getDeliveryMethodLabel(method: DeliveryMethod): string {
+  if (method === 'courier') {
+    return 'Kurier';
+  }
+
+  if (method === 'parcelLocker') {
+    return 'Paczkomat';
+  }
+
+  return 'Odbiór osobisty';
+}
+
+function getPaymentMethodLabel(method: PaymentMethod): string {
+  if (method === 'blik') {
+    return 'BLIK';
+  }
+
+  if (method === 'card') {
+    return 'Karta płatnicza';
+  }
+
+  if (method === 'transfer') {
+    return 'Przelew bankowy';
+  }
+
+  return 'Płatność przy odbiorze';
+}
+
+function getDeliveryPrice(method: DeliveryMethod): number {
+  if (method === 'courier') {
+    return 19.99;
+  }
+
+  if (method === 'parcelLocker') {
+    return 14.99;
+  }
+
+  return 0;
+}
+
+function getEstimatedDeliveryDate(method: DeliveryMethod): string {
+  const date = new Date();
+
+  if (method === 'pickup') {
+    date.setDate(date.getDate() + 1);
+  } else if (method === 'parcelLocker') {
+    date.setDate(date.getDate() + 2);
+  } else {
+    date.setDate(date.getDate() + 3);
+  }
+
+  return date.toISOString();
+}
+
+function formatDate(value: string): string {
+  return value.substring(0, 10);
 }
 
 function CartScreen({navigation}: Props): React.JSX.Element {
@@ -53,10 +114,12 @@ function CartScreen({navigation}: Props): React.JSX.Element {
   const [clientPhone, setClientPhone] = useState('');
   const [notes, setNotes] = useState('');
 
+  const [deliveryMethod, setDeliveryMethod] =
+    useState<DeliveryMethod>('courier');
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('blik');
+
   const [submitting, setSubmitting] = useState(false);
-  const [lastOrder, setLastOrder] = useState<CheckoutOrderResponseDto | null>(
-    null,
-  );
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -65,6 +128,10 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  const deliveryPrice = getDeliveryPrice(deliveryMethod);
+  const finalValue = totalValue + deliveryPrice;
+  const estimatedDeliveryDate = getEstimatedDeliveryDate(deliveryMethod);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -106,6 +173,20 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     return null;
   };
 
+  const buildCheckoutNotes = (): string => {
+    const userNotes = notes.trim();
+
+    const noteParts = [
+      `Metoda dostawy: ${getDeliveryMethodLabel(deliveryMethod)}`,
+      `Koszt dostawy: ${formatMoney(deliveryPrice)}`,
+      `Metoda płatności: ${getPaymentMethodLabel(paymentMethod)}`,
+      `Przewidywana data dostawy: ${formatDate(estimatedDeliveryDate)}`,
+      userNotes.length > 0 ? `Notatka klienta: ${userNotes}` : null,
+    ];
+
+    return noteParts.filter(Boolean).join('\n');
+  };
+
   const handleCheckoutPress = (): void => {
     const validationError = validateCheckout();
 
@@ -125,7 +206,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Potwierdzenie zamówienia',
-      message: `Czy złożyć zamówienie na kwotę ${formatMoney(totalValue)}?`,
+      message: `Czy złożyć zamówienie na kwotę ${formatMoney(finalValue)}?`,
       loading: false,
     });
   };
@@ -149,7 +230,8 @@ function CartScreen({navigation}: Props): React.JSX.Element {
           idItem: cartItem.item.idItem,
           quantity: cartItem.quantity,
         })),
-        notes: notes.trim().length > 0 ? notes.trim() : null,
+        notes: buildCheckoutNotes(),
+        deliveryDate: estimatedDeliveryDate,
       });
 
       clearCart();
@@ -160,6 +242,8 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       setClientAddress('');
       setClientPhone('');
       setNotes('');
+      setDeliveryMethod('courier');
+      setPaymentMethod('blik');
 
       setDialog(previous => ({
         ...previous,
@@ -192,6 +276,50 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     }
 
     closeDialog();
+  };
+
+  const renderDeliveryOption = (
+    method: DeliveryMethod,
+    title: string,
+    description: string,
+  ): React.JSX.Element => {
+    const selected = deliveryMethod === method;
+
+    return (
+      <TouchableOpacity
+        style={[styles.optionButton, selected && styles.optionButtonSelected]}
+        onPress={() => setDeliveryMethod(method)}
+        activeOpacity={0.8}
+        disabled={submitting}>
+        <View style={styles.optionHeader}>
+          <Text style={styles.optionTitle}>{title}</Text>
+          <Text style={styles.optionPrice}>
+            {formatMoney(getDeliveryPrice(method))}
+          </Text>
+        </View>
+
+        <Text style={styles.optionDescription}>{description}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderPaymentOption = (
+    method: PaymentMethod,
+    title: string,
+    description: string,
+  ): React.JSX.Element => {
+    const selected = paymentMethod === method;
+
+    return (
+      <TouchableOpacity
+        style={[styles.optionButton, selected && styles.optionButtonSelected]}
+        onPress={() => setPaymentMethod(method)}
+        activeOpacity={0.8}
+        disabled={submitting}>
+        <Text style={styles.optionTitle}>{title}</Text>
+        <Text style={styles.optionDescription}>{description}</Text>
+      </TouchableOpacity>
+    );
   };
 
   const renderCartItem = (cartItem: CartItemModel): React.JSX.Element => {
@@ -280,28 +408,22 @@ function CartScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.title}>Koszyk</Text>
 
           <Text style={styles.subtitle}>
-            Sprawdź produkty, uzupełnij dane dostawy i złóż zamówienie.
+            Sprawdź produkty, wybierz dostawę, płatność i złóż zamówienie.
           </Text>
         </View>
-
-        {lastOrder && (
-          <View style={styles.successBox}>
-            <Text style={styles.successTitle}>
-              Ostatnie zamówienie: nr {lastOrder.idOrder}
-            </Text>
-
-            <Text style={styles.successText}>
-              Wartość: {formatMoney(lastOrder.totalValue)}
-            </Text>
-          </View>
-        )}
 
         <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>Liczba produktów w koszyku</Text>
           <Text style={styles.summaryValue}>{totalQuantity}</Text>
 
-          <Text style={styles.summaryLabel}>Razem do zapłaty</Text>
+          <Text style={styles.summaryLabel}>Produkty</Text>
           <Text style={styles.summaryMoney}>{formatMoney(totalValue)}</Text>
+
+          <Text style={styles.summaryLabel}>Dostawa</Text>
+          <Text style={styles.summaryDelivery}>{formatMoney(deliveryPrice)}</Text>
+
+          <Text style={styles.summaryLabel}>Razem do zapłaty</Text>
+          <Text style={styles.summaryFinal}>{formatMoney(finalValue)}</Text>
         </View>
 
         {cartItems.length === 0 ? (
@@ -335,6 +457,60 @@ function CartScreen({navigation}: Props): React.JSX.Element {
             </TouchableOpacity>
           </>
         )}
+
+        <Text style={styles.sectionTitle}>Metoda dostawy</Text>
+
+        <View style={styles.formCard}>
+          {renderDeliveryOption(
+            'courier',
+            'Kurier',
+            'Dostawa pod wskazany adres. Przewidywany czas: 2-3 dni.',
+          )}
+
+          {renderDeliveryOption(
+            'parcelLocker',
+            'Paczkomat',
+            'Dostawa do paczkomatu. Przewidywany czas: 1-2 dni.',
+          )}
+
+          {renderDeliveryOption(
+            'pickup',
+            'Odbiór osobisty',
+            'Odbiór w punkcie sklepu. Bez kosztu dostawy.',
+          )}
+
+          <Text style={styles.deliveryDateText}>
+            Przewidywana data dostawy: {formatDate(estimatedDeliveryDate)}
+          </Text>
+        </View>
+
+        <Text style={styles.sectionTitle}>Metoda płatności</Text>
+
+        <View style={styles.formCard}>
+          {renderPaymentOption(
+            'blik',
+            'BLIK',
+            'Szybka płatność kodem BLIK.',
+          )}
+
+          {renderPaymentOption(
+            'card',
+            'Karta płatnicza',
+            'Płatność kartą online.',
+          )}
+
+          {renderPaymentOption(
+            'transfer',
+            'Przelew bankowy',
+            'Dane do przelewu zostaną przekazane po złożeniu zamówienia.',
+          )}
+
+          {renderPaymentOption(
+            'cashOnDelivery',
+            'Płatność przy odbiorze',
+            'Płatność kurierowi albo przy odbiorze osobistym.',
+          )}
+        </View>
 
         <Text style={styles.sectionTitle}>Dane dostawy</Text>
 
@@ -462,28 +638,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  successBox: {
-    backgroundColor: '#052e16',
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
-  },
-
-  successTitle: {
-    color: '#dcfce7',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  successText: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
   summaryBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -509,7 +663,21 @@ const styles = StyleSheet.create({
 
   summaryMoney: {
     color: '#f97316',
-    fontSize: 26,
+    fontSize: 22,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  summaryDelivery: {
+    color: '#38bdf8',
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  summaryFinal: {
+    color: '#16a34a',
+    fontSize: 28,
     fontWeight: '900',
   },
 
@@ -687,6 +855,53 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
+  },
+
+  optionButton: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+  },
+
+  optionButtonSelected: {
+    borderColor: '#f97316',
+    backgroundColor: '#1e293b',
+  },
+
+  optionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    marginBottom: 4,
+  },
+
+  optionTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  optionPrice: {
+    color: '#f97316',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  optionDescription: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+  },
+
+  deliveryDateText: {
+    color: '#38bdf8',
+    fontSize: 13,
+    fontWeight: '900',
+    marginTop: 4,
   },
 
   formGroup: {
