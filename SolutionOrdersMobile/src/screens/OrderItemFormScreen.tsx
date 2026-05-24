@@ -16,8 +16,8 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
-import type {Item, OrderDto} from '../types/models.ts';
 import type {RootStackParamList} from '../navigation/types.ts';
+import type {Item, OrderDto} from '../types/models.ts';
 
 type CreateProps = NativeStackScreenProps<
   RootStackParamList,
@@ -53,8 +53,11 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditOrderItem';
   const editedOrderItem = isEditMode ? route.params.orderItem : undefined;
 
+  const idOrderFromRoute =
+    route.name === 'CreateOrderItem' ? route.params?.idOrder : undefined;
+
   const [idOrder, setIdOrder] = useState(
-    editedOrderItem?.idOrder?.toString() ?? '',
+    editedOrderItem?.idOrder?.toString() ?? idOrderFromRoute?.toString() ?? '',
   );
   const [idItem, setIdItem] = useState(
     editedOrderItem?.idItem?.toString() ?? '',
@@ -121,7 +124,17 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
       setItems(itemsFromApi);
 
       if (!isEditMode) {
-        if (ordersFromApi.length > 0) {
+        if (idOrderFromRoute) {
+          const orderExists = ordersFromApi.some(
+            order => order.idOrder === idOrderFromRoute,
+          );
+
+          if (orderExists) {
+            setIdOrder(idOrderFromRoute.toString());
+          } else if (ordersFromApi.length > 0) {
+            setIdOrder(ordersFromApi[0].idOrder.toString());
+          }
+        } else if (ordersFromApi.length > 0) {
           setIdOrder(ordersFromApi[0].idOrder.toString());
         }
 
@@ -138,7 +151,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
     } finally {
       setDictionaryLoading(false);
     }
-  }, [isEditMode]);
+  }, [idOrderFromRoute, isEditMode]);
 
   useEffect(() => {
     loadDictionaries();
@@ -149,6 +162,9 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
   );
 
   const selectedItem = items.find(item => item.idItem === Number(idItem));
+
+  const orderSelectionLocked =
+    !isEditMode && typeof idOrderFromRoute === 'number' && !!selectedOrder;
 
   const validateForm = (): string | null => {
     if (!idOrder || Number.isNaN(Number(idOrder)) || Number(idOrder) <= 0) {
@@ -182,7 +198,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
       title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
       message: isEditMode
         ? `Czy zapisać zmiany pozycji nr ${editedOrderItem?.idOrderItem}?`
-        : 'Czy dodać nową pozycję zamówienia?',
+        : `Czy dodać nową pozycję do zamówienia nr ${idOrder}?`,
       loading: false,
     });
   };
@@ -250,10 +266,11 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         style={[
           styles.optionButton,
           isSelected && styles.optionButtonSelected,
+          orderSelectionLocked && !isSelected && styles.optionButtonDisabled,
         ]}
         onPress={() => setIdOrder(order.idOrder.toString())}
         activeOpacity={0.8}
-        disabled={submitting}>
+        disabled={submitting || orderSelectionLocked}>
         <Text
           style={[
             styles.optionButtonText,
@@ -353,6 +370,16 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
           ) : (
             <>
               <Text style={styles.label}>Zamówienie</Text>
+
+              {orderSelectionLocked && (
+                <View style={styles.lockedBox}>
+                  <Text style={styles.lockedText}>
+                    Zamówienie zostało wybrane automatycznie z poprzedniego
+                    ekranu.
+                  </Text>
+                </View>
+              )}
+
               <Text style={styles.selectedText}>
                 Wybrano:{' '}
                 {selectedOrder
@@ -367,9 +394,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
               <Text style={styles.label}>Produkt</Text>
               <Text style={styles.selectedText}>
                 Wybrano:{' '}
-                {selectedItem
-                  ? selectedItem.name
-                  : `ID ${idItem || '-'}`}
+                {selectedItem ? selectedItem.name : `ID ${idItem || '-'}`}
               </Text>
 
               <View style={styles.optionsContainer}>
@@ -513,6 +538,22 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  lockedBox: {
+    backgroundColor: '#312e81',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
+  },
+
+  lockedText: {
+    color: '#e0e7ff',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+
   selectedText: {
     color: '#94a3b8',
     fontSize: 13,
@@ -536,6 +577,10 @@ const styles = StyleSheet.create({
   optionButtonSelected: {
     backgroundColor: '#f97316',
     borderColor: '#f97316',
+  },
+
+  optionButtonDisabled: {
+    opacity: 0.45,
   },
 
   optionButtonText: {

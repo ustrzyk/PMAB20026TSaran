@@ -152,6 +152,18 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     closeDialog();
   };
 
+  const openCreateOrderItem = (): void => {
+    if (isOrderFiltered && idOrderFromRoute) {
+      navigation.navigate('CreateOrderItem', {
+        idOrder: idOrderFromRoute,
+      });
+
+      return;
+    }
+
+    navigation.navigate('CreateOrderItem');
+  };
+
   const screenTitle = isOrderFiltered
     ? orderTitleFromRoute ?? `Zamówienie nr ${idOrderFromRoute}`
     : 'Pozycje zamówienia';
@@ -280,7 +292,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
 
       <TouchableOpacity
         style={styles.createButton}
-        onPress={() => navigation.navigate('CreateOrderItem')}
+        onPress={openCreateOrderItem}
         activeOpacity={0.8}>
         <Text style={styles.createButtonText}>+ Dodaj pozycję</Text>
       </TouchableOpacity>
