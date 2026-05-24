@@ -6,6 +6,7 @@ import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
 import ClientFormScreen from '../screens/ClientFormScreen.tsx';
 import ClientsScreen from '../screens/ClientsScreen.tsx';
+import DashboardScreen from '../screens/DashboardScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
 import ItemFormScreen from '../screens/ItemFormScreen.tsx';
@@ -44,6 +45,12 @@ function RootNavigator(): React.JSX.Element {
           name="Home"
           component={HomeScreen}
           options={{title: '3D Print Shop'}}
+        />
+
+        <Stack.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{title: 'Dashboard'}}
         />
 
         <Stack.Screen

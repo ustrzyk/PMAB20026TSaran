@@ -17,6 +17,7 @@ import type {
   CreateUnitOfMeasurementResponse,
   CreateWorkerCommand,
   CreateWorkerResponse,
+  DashboardDto,
   Item,
   OrderDto,
   OrderItemDto,
@@ -80,6 +81,12 @@ class ApiService {
       console.error('API Error:', error);
       throw error;
     }
+  }
+
+  // ========== DASHBOARD / RAPORTY ==========
+
+  async getDashboard(): Promise<DashboardDto> {
+    return this.request<DashboardDto>('/Dashboard');
   }
 
   // ========== PRODUKTY / ITEMS ==========

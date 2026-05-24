@@ -11,6 +11,8 @@ import type {
 export type RootStackParamList = {
   Home: undefined;
 
+  Dashboard: undefined;
+
   Items: undefined;
   ItemDetails: {
     item: Item;

@@ -258,6 +258,36 @@ export interface CreateOrderItemResponse {
   message?: string;
 }
 
+// Najnowsze zamówienie pokazywane na Dashboardzie.
+export interface DashboardLatestOrderDto {
+  idOrder: number;
+  dataOrder?: string | null;
+
+  clientName?: string | null;
+  workerName?: string | null;
+
+  orderItemsCount: number;
+  totalValue: number;
+}
+
+// Dane raportowe z GET /api/Dashboard.
+export interface DashboardDto {
+  productsCount: number;
+  categoriesCount: number;
+  unitsCount: number;
+
+  clientsCount: number;
+  workersCount: number;
+
+  ordersCount: number;
+  orderItemsCount: number;
+
+  productsStockValue: number;
+  ordersTotalValue: number;
+
+  latestOrders: DashboardLatestOrderDto[];
+}
+
 // Model pozycji koszyka po stronie aplikacji mobilnej.
 export interface CartItemModel {
   item: ItemDto;

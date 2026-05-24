@@ -23,7 +23,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
         <Text style={styles.subtitle}>
           Mobilny panel sklepu do obsługi produktów, drukarek 3D, filamentów,
-          części zamiennych i akcesoriów.
+          części zamiennych, zamówień i raportów.
         </Text>
       </View>
 
@@ -38,6 +38,23 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.statLabel}>połączenie z backendem</Text>
         </View>
       </View>
+
+      <Text style={styles.sectionTitle}>Raporty</Text>
+
+      <TouchableOpacity
+        style={[styles.menuCard, styles.dashboardCard]}
+        onPress={() => navigation.navigate('Dashboard')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Dashboard</Text>
+          <Text style={styles.menuDescription}>
+            Podsumowanie sklepu: produkty, klienci, zamówienia, wartość
+            magazynu i wartość zamówień.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
 
       <Text style={styles.sectionTitle}>Menu główne</Text>
 
@@ -132,7 +149,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Pozycje zamówienia</Text>
           <Text style={styles.menuDescription}>
-            Produkty dodane do zamówień wraz z ilościami.
+            Produkty dodane do zamówień wraz z ilościami i wartościami.
           </Text>
         </View>
 
@@ -144,7 +161,8 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
         <Text style={styles.infoText}>
           Aplikacja służy do zarządzania asortymentem sklepu związanego z
-          drukiem 3D. Dane są pobierane z API.
+          drukiem 3D. Dane są pobierane z API, a Dashboard pokazuje dodatkowe
+          raporty biznesowe.
         </Text>
       </View>
     </ScrollView>
@@ -237,6 +255,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+
+  dashboardCard: {
+    borderColor: '#f97316',
   },
 
   menuTextBox: {
