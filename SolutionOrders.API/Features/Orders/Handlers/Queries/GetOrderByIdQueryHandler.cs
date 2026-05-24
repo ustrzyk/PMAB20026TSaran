@@ -18,6 +18,7 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Queries
                 .Include(order => order.Client)
                 .Include(order => order.Worker)
                 .Include(order => order.OrderItems)
+                .ThenInclude(orderItem => orderItem.Item)
                 .Where(order => order.IdOrder == request.Id)
                 .Select(order => new OrderDto
                 {
@@ -35,7 +36,13 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Queries
                     Notes = order.Notes,
                     DeliveryDate = order.DeliveryDate,
 
-                    OrderItemsCount = order.OrderItems.Count(orderItem => orderItem.IsActive)
+                    OrderItemsCount = order.OrderItems.Count(orderItem => orderItem.IsActive),
+
+                    TotalValue = order.OrderItems
+                        .Where(orderItem => orderItem.IsActive)
+                        .Sum(orderItem =>
+                            (orderItem.Quantity ?? 0) *
+                            (orderItem.Item.Price ?? 0))
                 })
                 .FirstOrDefaultAsync(cancellationToken);
 
