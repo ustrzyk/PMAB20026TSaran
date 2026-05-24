@@ -86,6 +86,38 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                 })
                 .ToListAsync(cancellationToken);
 
+            var lowStockProducts = await context.Items
+                .AsNoTracking()
+                .Include(item => item.Category)
+                .Include(item => item.UnitOfMeasurement)
+                .Where(item =>
+                    item.IsActive &&
+                    (item.Quantity ?? 0) <= 5)
+                .OrderBy(item => item.Quantity)
+                .ThenBy(item => item.Name)
+                .Take(10)
+                .Select(item => new DashboardLowStockProductDto
+                {
+                    IdItem = item.IdItem,
+
+                    Name = item.Name,
+                    Code = item.Code,
+
+                    Quantity = item.Quantity,
+
+                    UnitName = item.UnitOfMeasurement != null
+                        ? item.UnitOfMeasurement.Name
+                        : null,
+
+                    CategoryName = item.Category != null
+                        ? item.Category.Name
+                        : null,
+
+                    Price = item.Price,
+                    StockValue = (item.Price ?? 0) * (item.Quantity ?? 0)
+                })
+                .ToListAsync(cancellationToken);
+
             var dashboard = new DashboardDto
             {
                 ProductsCount = productsCount,
@@ -101,7 +133,8 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                 ProductsStockValue = productsStockValue,
                 OrdersTotalValue = ordersTotalValue,
 
-                LatestOrders = latestOrders
+                LatestOrders = latestOrders,
+                LowStockProducts = lowStockProducts
             };
 
             return dashboard;

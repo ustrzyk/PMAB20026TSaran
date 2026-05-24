@@ -18,5 +18,8 @@
 
         public IEnumerable<DashboardLatestOrderDto> LatestOrders { get; set; }
             = new List<DashboardLatestOrderDto>();
+
+        public IEnumerable<DashboardLowStockProductDto> LowStockProducts { get; set; }
+            = new List<DashboardLowStockProductDto>();
     }
 }
