@@ -24,5 +24,8 @@
 
         public IEnumerable<DashboardCategorySalesDto> CategorySales { get; set; }
             = new List<DashboardCategorySalesDto>();
+
+        public IEnumerable<DashboardTopProductDto> TopProducts { get; set; }
+            = new List<DashboardTopProductDto>();
     }
 }
