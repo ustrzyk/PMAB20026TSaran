@@ -9,11 +9,21 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import {useCart} from '../context/CartContext.tsx';
+
 import type {RootStackParamList} from '../navigation/types.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
+
+  return `${safeValue.toFixed(2)} zł`;
+}
+
 function HomeScreen({navigation}: Props): React.JSX.Element {
+  const {totalQuantity, totalValue} = useCart();
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
@@ -22,24 +32,59 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.title}>Sklep z drukarkami 3D</Text>
 
         <Text style={styles.subtitle}>
-          Mobilny panel sklepu do obsługi produktów, drukarek 3D, filamentów,
-          części zamiennych, zamówień i raportów.
+          Kup drukarki 3D, filamenty, dysze, części zamienne i akcesoria.
+          Wybierz produkt, dodaj go do koszyka i złóż zamówienie z dostawą.
         </Text>
       </View>
 
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>3D</Text>
-          <Text style={styles.statLabel}>drukarki i akcesoria</Text>
+      <View style={styles.cartSummaryBox}>
+        <View>
+          <Text style={styles.cartSummaryTitle}>Twój koszyk</Text>
+          <Text style={styles.cartSummaryText}>
+            Produkty: {totalQuantity} | Wartość: {formatMoney(totalValue)}
+          </Text>
         </View>
 
-        <View style={styles.statCard}>
-          <Text style={styles.statValue}>API</Text>
-          <Text style={styles.statLabel}>połączenie z backendem</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.cartButton}
+          onPress={() => navigation.navigate('Cart')}
+          activeOpacity={0.8}>
+          <Text style={styles.cartButtonText}>Koszyk</Text>
+        </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Raporty</Text>
+      <Text style={styles.sectionTitle}>Sklep internetowy</Text>
+
+      <TouchableOpacity
+        style={[styles.menuCard, styles.shopCard]}
+        onPress={() => navigation.navigate('Items')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Przeglądaj produkty</Text>
+          <Text style={styles.menuDescription}>
+            Lista produktów sklepu: drukarki 3D, filamenty, stoły robocze,
+            części, dysze i narzędzia.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.menuCard, styles.cartCard]}
+        onPress={() => navigation.navigate('Cart')}
+        activeOpacity={0.8}>
+        <View style={styles.menuTextBox}>
+          <Text style={styles.menuTitle}>Koszyk i zamówienie</Text>
+          <Text style={styles.menuDescription}>
+            Sprawdź wybrane produkty, wpisz dane klienta i złóż zamówienie.
+          </Text>
+        </View>
+
+        <Text style={styles.menuArrow}>{'>'}</Text>
+      </TouchableOpacity>
+
+      <Text style={styles.sectionTitle}>Panel administracyjny</Text>
 
       <TouchableOpacity
         style={[styles.menuCard, styles.dashboardCard]}
@@ -48,24 +93,8 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Dashboard</Text>
           <Text style={styles.menuDescription}>
-            Podsumowanie sklepu: produkty, klienci, zamówienia, wartość
-            magazynu i wartość zamówień.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Menu główne</Text>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Items')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Produkty</Text>
-          <Text style={styles.menuDescription}>
-            Lista produktów sklepu: drukarki 3D, filamenty, części i akcesoria.
+            Raporty sklepu: sprzedaż, TOP produkty, niskie stany magazynowe i
+            najnowsze zamówienia.
           </Text>
         </View>
 
@@ -79,7 +108,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Kategorie</Text>
           <Text style={styles.menuDescription}>
-            Kategorie asortymentu sklepu z drukarkami 3D.
+            Zarządzanie kategoriami asortymentu sklepu.
           </Text>
         </View>
 
@@ -107,7 +136,8 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Klienci</Text>
           <Text style={styles.menuDescription}>
-            Lista klientów sklepu i dane kontaktowe do zamówień.
+            Klienci utworzeni ręcznie lub automatycznie podczas składania
+            zamówienia.
           </Text>
         </View>
 
@@ -121,7 +151,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Pracownicy</Text>
           <Text style={styles.menuDescription}>
-            Pracownicy obsługujący zamówienia i panel sklepu.
+            Pracownicy obsługujący zamówienia w sklepie.
           </Text>
         </View>
 
@@ -135,7 +165,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Zamówienia</Text>
           <Text style={styles.menuDescription}>
-            Zamówienia klientów z przypisanym klientem i pracownikiem.
+            Lista zamówień z klientem, pracownikiem, pozycjami i wartością.
           </Text>
         </View>
 
@@ -149,7 +179,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.menuTextBox}>
           <Text style={styles.menuTitle}>Pozycje zamówienia</Text>
           <Text style={styles.menuDescription}>
-            Produkty dodane do zamówień wraz z ilościami i wartościami.
+            Produkty przypisane do zamówień przez relację wiele do wiele.
           </Text>
         </View>
 
@@ -157,12 +187,12 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
       </TouchableOpacity>
 
       <View style={styles.infoBox}>
-        <Text style={styles.infoTitle}>Informacje</Text>
+        <Text style={styles.infoTitle}>Logika aplikacji</Text>
 
         <Text style={styles.infoText}>
-          Aplikacja służy do zarządzania asortymentem sklepu związanego z
-          drukiem 3D. Dane są pobierane z API, a Dashboard pokazuje dodatkowe
-          raporty biznesowe.
+          Część sklepowa pozwala klientowi dodać produkty do koszyka i złożyć
+          zamówienie. Część administracyjna pozwala zarządzać danymi i
+          analizować sprzedaż.
         </Text>
       </View>
     </ScrollView>
@@ -211,31 +241,43 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
 
-  statsRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 18,
-  },
-
-  statCard: {
-    flex: 1,
+  cartSummaryBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#f97316',
+    marginBottom: 18,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
   },
 
-  statValue: {
-    color: '#f97316',
-    fontSize: 28,
+  cartSummaryTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
     fontWeight: '900',
+    marginBottom: 4,
   },
 
-  statLabel: {
+  cartSummaryText: {
     color: '#cbd5e1',
     fontSize: 13,
-    marginTop: 4,
+    fontWeight: '700',
+  },
+
+  cartButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  cartButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
   },
 
   sectionTitle: {
@@ -257,8 +299,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
-  dashboardCard: {
+  shopCard: {
+    borderColor: '#16a34a',
+  },
+
+  cartCard: {
     borderColor: '#f97316',
+  },
+
+  dashboardCard: {
+    borderColor: '#38bdf8',
   },
 
   menuTextBox: {

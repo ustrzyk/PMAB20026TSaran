@@ -2,6 +2,7 @@ import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 
+import CartScreen from '../screens/CartScreen.tsx';
 import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
 import ClientFormScreen from '../screens/ClientFormScreen.tsx';
@@ -48,21 +49,27 @@ function RootNavigator(): React.JSX.Element {
         />
 
         <Stack.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-          options={{title: 'Dashboard'}}
+          name="Items"
+          component={ItemsScreen}
+          options={{title: 'Sklep'}}
         />
 
         <Stack.Screen
-          name="Items"
-          component={ItemsScreen}
-          options={{title: 'Produkty'}}
+          name="Cart"
+          component={CartScreen}
+          options={{title: 'Koszyk'}}
         />
 
         <Stack.Screen
           name="ItemDetails"
           component={ItemDetailsScreen}
           options={{title: 'Szczegóły produktu'}}
+        />
+
+        <Stack.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{title: 'Dashboard'}}
         />
 
         <Stack.Screen

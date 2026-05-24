@@ -258,6 +258,35 @@ export interface CreateOrderItemResponse {
   message?: string;
 }
 
+// Dane klienta wpisywane przy finalizacji koszyka.
+export interface CheckoutClientDto {
+  name: string;
+  address: string;
+  phoneNumber: string;
+}
+
+// Jedna pozycja koszyka wysyłana do backendu.
+export interface CheckoutItemDto {
+  idItem: number;
+  quantity: number;
+}
+
+// Dane wysyłane do POST /api/Checkout.
+export interface CreateCheckoutOrderCommand {
+  client: CheckoutClientDto;
+  items: CheckoutItemDto[];
+  notes?: string | null;
+  deliveryDate?: string | null;
+}
+
+// Odpowiedź z POST /api/Checkout.
+export interface CheckoutOrderResponseDto {
+  idOrder: number;
+  idClient: number;
+  totalValue: number;
+  message: string;
+}
+
 // Najnowsze zamówienie pokazywane na Dashboardzie.
 export interface DashboardLatestOrderDto {
   idOrder: number;

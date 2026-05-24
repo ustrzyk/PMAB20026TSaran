@@ -22,6 +22,8 @@ export type RootStackParamList = {
     item: Item;
   };
 
+  Cart: undefined;
+
   Categories: undefined;
   CreateCategory: undefined;
   EditCategory: {
@@ -68,6 +70,4 @@ export type RootStackParamList = {
   EditOrderItem: {
     orderItem: OrderItemDto;
   };
-
-  Cart: undefined;
 };

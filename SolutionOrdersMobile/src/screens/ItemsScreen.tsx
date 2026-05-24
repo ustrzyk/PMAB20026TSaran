@@ -10,10 +10,11 @@ import {
   View,
 } from 'react-native';
 
-import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
-import {useItems} from '../context/ItemsContext';
+import {useCart} from '../context/CartContext.tsx';
+import {useItems} from '../context/ItemsContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 import type {Item} from '../types/models.ts';
@@ -30,8 +31,15 @@ interface DialogState {
   loading: boolean;
 }
 
+function formatMoney(value?: number | null): string {
+  const safeValue = value ?? 0;
+
+  return `${safeValue.toFixed(2)} zł`;
+}
+
 function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
+  const {addToCart, totalQuantity, totalValue} = useCart();
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
@@ -102,7 +110,9 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Usuwanie produktu',
-      message: `Czy na pewno chcesz usunąć produkt "${item.name ?? 'produkt'}"?`,
+      message: `Czy na pewno chcesz usunąć produkt "${
+        item.name ?? 'produkt'
+      }"?`,
       loading: false,
     });
   };
@@ -140,6 +150,41 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     }
   };
 
+  const handleDialogConfirm = (): void => {
+    if (dialog.type === 'confirm') {
+      confirmDelete();
+      return;
+    }
+
+    closeDialog();
+  };
+
+  const handleAddToCart = (item: Item): void => {
+    const quantity = item.quantity ?? 0;
+
+    if (quantity <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Brak produktu',
+        message: 'Tego produktu nie ma aktualnie na stanie.',
+        loading: false,
+      });
+
+      return;
+    }
+
+    addToCart(item, 1);
+
+    setDialog({
+      visible: true,
+      type: 'success',
+      title: 'Dodano do koszyka',
+      message: `Produkt "${item.name}" został dodany do koszyka.`,
+      loading: false,
+    });
+  };
+
   const renderSortButton = (
     label: string,
     value: SortMode,
@@ -165,6 +210,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   const renderItem = ({item}: {item: Item}): React.JSX.Element => {
     const price = item.price ?? 0;
     const quantity = item.quantity ?? 0;
+    const isAvailable = quantity > 0;
 
     return (
       <View style={styles.itemCard}>
@@ -183,33 +229,48 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
           </View>
 
-          <Text style={styles.itemPrice}>Cena: {price.toFixed(2)} zł</Text>
+          <Text style={styles.itemPrice}>Cena: {formatMoney(price)}</Text>
 
           <Text style={styles.itemText}>
             Stan magazynu: {quantity} {item.unitName ?? 'szt'}
           </Text>
         </View>
 
-        <View style={styles.itemActions}>
+        <View style={styles.shopActions}>
+          <TouchableOpacity
+            style={[
+              styles.addToCartButton,
+              !isAvailable && styles.disabledButton,
+            ]}
+            onPress={() => handleAddToCart(item)}
+            activeOpacity={0.8}
+            disabled={!isAvailable}>
+            <Text style={styles.buttonText}>
+              {isAvailable ? 'Dodaj do koszyka' : 'Brak na stanie'}
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.detailsButton}
             onPress={() => navigation.navigate('ItemDetails', {item})}
             activeOpacity={0.8}>
             <Text style={styles.buttonText}>Szczegóły</Text>
           </TouchableOpacity>
+        </View>
 
+        <View style={styles.adminActions}>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditItem', {item})}
             activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Edytuj</Text>
+            <Text style={styles.adminButtonText}>Edytuj</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
             activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Usuń</Text>
+            <Text style={styles.adminButtonText}>Usuń</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -247,17 +308,32 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
         cancelText="Anuluj"
         loading={dialog.loading}
-        onConfirm={dialog.type === 'confirm' ? confirmDelete : closeDialog}
+        onConfirm={handleDialogConfirm}
         onCancel={closeDialog}
       />
 
       <View style={styles.heroBox}>
         <Text style={styles.shopName}>3D Print Shop</Text>
-        <Text style={styles.heroTitle}>Produkty i akcesoria do druku 3D</Text>
+        <Text style={styles.heroTitle}>Sklep z drukarkami 3D</Text>
         <Text style={styles.heroSubtitle}>
-          Zarządzanie drukarkami 3D, filamentami, częściami zamiennymi i
-          akcesoriami sklepu.
+          Wybierz produkt, dodaj go do koszyka i złóż zamówienie.
         </Text>
+      </View>
+
+      <View style={styles.cartBar}>
+        <View>
+          <Text style={styles.cartBarTitle}>Koszyk</Text>
+          <Text style={styles.cartBarText}>
+            Produkty: {totalQuantity} | {formatMoney(totalValue)}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.cartButton}
+          onPress={() => navigation.navigate('Cart')}
+          activeOpacity={0.8}>
+          <Text style={styles.cartButtonText}>Przejdź</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.header}>
@@ -308,7 +384,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         style={styles.createButton}
         onPress={() => navigation.navigate('CreateItem')}
         activeOpacity={0.8}>
-        <Text style={styles.createButtonText}>+ Dodaj produkt</Text>
+        <Text style={styles.createButtonText}>+ Dodaj produkt do bazy</Text>
       </TouchableOpacity>
 
       <FlatList
@@ -400,6 +476,41 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
+  cartBar: {
+    backgroundColor: '#111827',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    padding: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  cartBarTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  cartBarText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    marginTop: 3,
+  },
+
+  cartButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+
+  cartButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
   header: {
     padding: 16,
     backgroundColor: '#111827',
@@ -436,49 +547,42 @@ const styles = StyleSheet.create({
   },
 
   searchBox: {
-    backgroundColor: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    backgroundColor: '#0f172a',
   },
 
   searchInput: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 11,
-    fontSize: 15,
+    fontSize: 14,
   },
 
   clearSearchButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
+    alignSelf: 'flex-end',
+    marginTop: 8,
   },
 
   clearSearchText: {
-    color: '#ffffff',
+    color: '#f97316',
     fontSize: 13,
     fontWeight: '800',
   },
 
   sortBox: {
-    backgroundColor: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
     paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingTop: 12,
   },
 
   sortTitle: {
     color: '#cbd5e1',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '900',
     marginBottom: 8,
   },
 
@@ -489,12 +593,12 @@ const styles = StyleSheet.create({
   },
 
   sortButton: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
 
   sortButtonSelected: {
@@ -513,17 +617,17 @@ const styles = StyleSheet.create({
   },
 
   createButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#334155',
     marginHorizontal: 16,
     marginTop: 14,
-    paddingVertical: 13,
+    paddingVertical: 11,
     borderRadius: 12,
     alignItems: 'center',
   },
 
   createButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 
@@ -567,64 +671,88 @@ const styles = StyleSheet.create({
   },
 
   categoryBadge: {
-    color: '#ffffff',
-    backgroundColor: '#2563eb',
+    backgroundColor: '#1e293b',
+    color: '#cbd5e1',
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 999,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
 
   codeBadge: {
-    color: '#ffffff',
-    backgroundColor: '#334155',
+    backgroundColor: '#422006',
+    color: '#fed7aa',
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 999,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
   },
 
   itemPrice: {
-    color: '#22c55e',
+    color: '#f97316',
     fontSize: 16,
     fontWeight: '900',
     marginBottom: 4,
   },
 
   itemText: {
-    color: '#cbd5e1',
+    color: '#94a3b8',
     fontSize: 13,
   },
 
-  itemActions: {
+  shopActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  adminActions: {
     flexDirection: 'row',
     gap: 8,
   },
 
-  detailsButton: {
-    flex: 1,
-    backgroundColor: '#f97316',
+  addToCartButton: {
+    flex: 2,
+    backgroundColor: '#16a34a',
     paddingVertical: 10,
     borderRadius: 10,
   },
 
-  editButton: {
+  detailsButton: {
     flex: 1,
     backgroundColor: '#2563eb',
     paddingVertical: 10,
     borderRadius: 10,
   },
 
-  deleteButton: {
+  editButton: {
     flex: 1,
-    backgroundColor: '#7f1d1d',
-    paddingVertical: 10,
+    backgroundColor: '#475569',
+    paddingVertical: 9,
     borderRadius: 10,
   },
 
+  deleteButton: {
+    flex: 1,
+    backgroundColor: '#7f1d1d',
+    paddingVertical: 9,
+    borderRadius: 10,
+  },
+
+  disabledButton: {
+    opacity: 0.55,
+  },
+
   buttonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  adminButtonText: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '800',
