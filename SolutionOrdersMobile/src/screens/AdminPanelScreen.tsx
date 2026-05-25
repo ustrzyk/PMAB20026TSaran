@@ -16,9 +16,10 @@ import type {RootStackParamList} from '../navigation/types.ts';
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminPanel'>;
 
 function AdminPanelScreen({navigation}: Props): React.JSX.Element {
-  const {user, isAdmin, logout} = useAuth();
+  const {user, isAdmin, isWorker, logout} = useAuth();
 
   const roleName = isAdmin ? 'Administrator' : 'Pracownik';
+  const hasAccess = isAdmin || isWorker;
 
   const handleLogout = (): void => {
     logout();
@@ -28,6 +29,35 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
       routes: [{name: 'Home'}],
     });
   };
+
+  if (!hasAccess) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.lockIcon}>🔒</Text>
+        <Text style={styles.accessTitle}>Brak dostępu</Text>
+        <Text style={styles.accessText}>
+          Panel pracownika jest dostępny tylko po zalogowaniu jako pracownik albo
+          administrator.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.primaryAccessButton}
+          onPress={() => navigation.reset({index: 0, routes: [{name: 'Home'}]})}
+          activeOpacity={0.85}>
+          <Text style={styles.primaryAccessButtonText}>Wróć do sklepu</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryAccessButton}
+          onPress={() =>
+            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+          }
+          activeOpacity={0.85}>
+          <Text style={styles.secondaryAccessButtonText}>Zaloguj</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -41,12 +71,12 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
             </Text>
           </View>
 
-            <TouchableOpacity
-              style={styles.logoutButton}
-              onPress={handleLogout}
-              activeOpacity={0.85}>
-              <Text style={styles.logoutButtonText}>Wyloguj</Text>
-            </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.85}>
+            <Text style={styles.logoutButtonText}>Wyloguj</Text>
+          </TouchableOpacity>
         </View>
       </View>
 
@@ -150,6 +180,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f172a',
+  },
+
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+
+  lockIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+
+  accessTitle: {
+    color: '#f8fafc',
+    fontSize: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  accessText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+
+  primaryAccessButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginBottom: 10,
+  },
+
+  primaryAccessButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  secondaryAccessButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+
+  secondaryAccessButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   content: {

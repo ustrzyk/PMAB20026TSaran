@@ -23,7 +23,7 @@ function formatMoney(value?: number | null): string {
 }
 
 function ClientPanelScreen({navigation}: Props): React.JSX.Element {
-  const {user, logout} = useAuth();
+  const {user, isCustomer, isAdmin, isWorker, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
 
   const handleLogout = (): void => {
@@ -34,6 +34,51 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
       routes: [{name: 'Home'}],
     });
   };
+
+  const handlePanelPress = (): void => {
+    if (isAdmin || isWorker) {
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'AdminPanel'}],
+      });
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Home'}],
+    });
+  };
+
+  if (!isCustomer) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.lockIcon}>👤</Text>
+        <Text style={styles.accessTitle}>Panel klienta</Text>
+        <Text style={styles.accessText}>
+          Ten ekran jest dostępny po zalogowaniu albo rejestracji konta klienta.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.primaryAccessButton}
+          onPress={() =>
+            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+          }
+          activeOpacity={0.85}>
+          <Text style={styles.primaryAccessButtonText}>Zaloguj</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryAccessButton}
+          onPress={handlePanelPress}
+          activeOpacity={0.85}>
+          <Text style={styles.secondaryAccessButtonText}>
+            {isAdmin || isWorker ? 'Panel pracownika' : 'Wróć do sklepu'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -101,6 +146,13 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.actionTitle}>Zamówienie</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={styles.homeButton}
+        onPress={() => navigation.navigate('Home')}
+        activeOpacity={0.85}>
+        <Text style={styles.homeButtonText}>Strona główna</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -109,6 +161,64 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0f172a',
+  },
+
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+
+  lockIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+
+  accessTitle: {
+    color: '#f8fafc',
+    fontSize: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  accessText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+
+  primaryAccessButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginBottom: 10,
+  },
+
+  primaryAccessButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  secondaryAccessButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+
+  secondaryAccessButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   content: {
@@ -270,6 +380,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     textAlign: 'center',
+  },
+
+  homeButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 18,
+  },
+
+  homeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 
