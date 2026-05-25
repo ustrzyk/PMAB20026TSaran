@@ -15,13 +15,15 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {WorkerDto} from '../types/models.ts';
+import type {WorkerDto, WorkerRole} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Workers'>;
 
 type StatusFilter = 'all' | 'active' | 'inactive';
+type RoleFilter = 'all' | 'admin' | 'worker';
 type SortMode = 'default' | 'nameAsc' | 'nameDesc' | 'loginAsc';
 
 interface DialogState {
@@ -38,7 +40,21 @@ function getFullName(worker: WorkerDto): string {
   return fullName.length > 0 ? fullName : 'Brak imienia i nazwiska';
 }
 
+function getWorkerRole(worker: WorkerDto): WorkerRole {
+  if (worker.role?.toLowerCase() === 'admin') {
+    return 'Admin';
+  }
+
+  return 'Worker';
+}
+
+function getRoleLabel(worker: WorkerDto): string {
+  return getWorkerRole(worker) === 'Admin' ? 'Administrator' : 'Pracownik';
+}
+
 function WorkersScreen({navigation}: Props): React.JSX.Element {
+  const {user} = useAuth();
+
   const [workers, setWorkers] = useState<WorkerDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,6 +63,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
   const [dialog, setDialog] = useState<DialogState>({
@@ -70,18 +87,28 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
       result = result.filter(worker => worker.isActive === false);
     }
 
+    if (roleFilter === 'admin') {
+      result = result.filter(worker => getWorkerRole(worker) === 'Admin');
+    }
+
+    if (roleFilter === 'worker') {
+      result = result.filter(worker => getWorkerRole(worker) === 'Worker');
+    }
+
     if (search.length > 0) {
       result = result.filter(worker => {
         const firstName = worker.firstName?.toLowerCase() ?? '';
         const lastName = worker.lastName?.toLowerCase() ?? '';
         const fullName = getFullName(worker).toLowerCase();
         const login = worker.login?.toLowerCase() ?? '';
+        const role = getRoleLabel(worker).toLowerCase();
 
         return (
           firstName.includes(search) ||
           lastName.includes(search) ||
           fullName.includes(search) ||
-          login.includes(search)
+          login.includes(search) ||
+          role.includes(search)
         );
       });
     }
@@ -101,7 +128,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [workers, searchText, statusFilter, sortMode]);
+  }, [workers, searchText, statusFilter, roleFilter, sortMode]);
 
   const activeCount = useMemo(() => {
     return workers.filter(worker => worker.isActive !== false).length;
@@ -109,6 +136,14 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
 
   const inactiveCount = useMemo(() => {
     return workers.filter(worker => worker.isActive === false).length;
+  }, [workers]);
+
+  const adminCount = useMemo(() => {
+    return workers.filter(worker => getWorkerRole(worker) === 'Admin').length;
+  }, [workers]);
+
+  const workerCount = useMemo(() => {
+    return workers.filter(worker => getWorkerRole(worker) === 'Worker').length;
   }, [workers]);
 
   const closeDialog = (): void => {
@@ -150,6 +185,18 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
   };
 
   const handleDelete = (worker: WorkerDto): void => {
+    if (worker.login === user?.login) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Nie można usunąć konta',
+        message: 'Nie możesz usunąć konta, na którym jesteś aktualnie zalogowany.',
+        loading: false,
+      });
+
+      return;
+    }
+
     setSelectedWorker(worker);
 
     setDialog({
@@ -214,6 +261,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
   const clearFilters = (): void => {
     setSearchText('');
     setStatusFilter('all');
+    setRoleFilter('all');
     setSortMode('default');
   };
 
@@ -227,6 +275,28 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
       <TouchableOpacity
         style={[styles.filterButton, selected && styles.filterButtonSelected]}
         onPress={() => setStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderRoleButton = (
+    label: string,
+    value: RoleFilter,
+  ): React.JSX.Element => {
+    const selected = roleFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        onPress={() => setRoleFilter(value)}
         activeOpacity={0.8}>
         <Text
           style={[
@@ -267,14 +337,11 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.shopName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Pracownicy</Text>
-          <Text style={styles.heroSubtitle}>
-            Pracownicy obsługujący panel sklepu i zamówienia.
-          </Text>
         </View>
 
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>Pracownicy</Text>
+            <Text style={styles.title}>Lista pracowników</Text>
             <Text style={styles.subtitle}>
               Wyświetlane: {filteredWorkers.length} / {workers.length}
             </Text>
@@ -295,6 +362,16 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.summaryLabel}>Nieaktywni</Text>
             <Text style={styles.summaryInactive}>{inactiveCount}</Text>
           </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Admini</Text>
+            <Text style={styles.summaryAdmin}>{adminCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Pracownicy</Text>
+            <Text style={styles.summaryWorker}>{workerCount}</Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -309,7 +386,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj pracownika po imieniu, nazwisku lub loginie..."
+            placeholder="Szukaj po imieniu, nazwisku, loginie lub roli..."
             placeholderTextColor="#64748b"
           />
         </View>
@@ -325,6 +402,16 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Rola</Text>
+
+          <View style={styles.filterButtons}>
+            {renderRoleButton('Wszyscy', 'all')}
+            {renderRoleButton('Administratorzy', 'admin')}
+            {renderRoleButton('Pracownicy', 'worker')}
+          </View>
+        </View>
+
+        <View style={styles.filterSection}>
           <Text style={styles.filterTitle}>Sortowanie</Text>
 
           <View style={styles.filterButtons}>
@@ -335,18 +422,12 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
           </View>
         </View>
 
-        <View style={styles.filterSummaryBox}>
-          <Text style={styles.filterSummaryText}>
-            Filtr:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
-          </Text>
-
-          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
-            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.clearFiltersButton}
+          onPress={clearFilters}
+          activeOpacity={0.8}>
+          <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+        </TouchableOpacity>
       </>
     );
   };
@@ -354,22 +435,25 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
   const renderItem = ({item}: {item: WorkerDto}): React.JSX.Element => {
     const fullName = getFullName(item);
     const isActive = item.isActive !== false;
+    const role = getWorkerRole(item);
 
     return (
       <View style={styles.workerCard}>
         <View style={styles.cardTopRow}>
           <View style={styles.cardTitleBox}>
             <Text style={styles.workerName}>{fullName}</Text>
+            <Text style={styles.workerLogin}>{item.login ?? 'Brak loginu'}</Text>
           </View>
 
-          <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
-            {isActive ? 'Aktywny' : 'Nieaktywny'}
-          </Text>
-        </View>
+          <View style={styles.badgesColumn}>
+            <Text style={role === 'Admin' ? styles.adminBadge : styles.workerBadge}>
+              {role === 'Admin' ? 'Admin' : 'Worker'}
+            </Text>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Login</Text>
-          <Text style={styles.infoValue}>{item.login ?? 'Brak loginu'}</Text>
+            <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
+              {isActive ? 'Aktywny' : 'Nieaktywny'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -442,7 +526,9 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 || statusFilter !== 'all'
+            {searchText.trim().length > 0 ||
+            statusFilter !== 'all' ||
+            roleFilter !== 'all'
               ? 'Brak pracowników pasujących do filtrów'
               : 'Brak pracowników w API'}
           </Text>
@@ -526,13 +612,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
-  },
-
   header: {
     padding: 16,
     backgroundColor: '#111827',
@@ -577,7 +656,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
 
   summaryColumn: {
@@ -586,20 +665,32 @@ const styles = StyleSheet.create({
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     marginBottom: 4,
   },
 
   summaryActive: {
     color: '#16a34a',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
   },
 
   summaryInactive: {
     color: '#f97316',
-    fontSize: 22,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  summaryAdmin: {
+    color: '#a855f7',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  summaryWorker: {
+    color: '#38bdf8',
+    fontSize: 20,
     fontWeight: '900',
   },
 
@@ -677,27 +768,19 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  filterSummaryBox: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
+  clearFiltersButton: {
+    backgroundColor: '#334155',
     marginHorizontal: 16,
     marginTop: 12,
     marginBottom: 4,
-    padding: 12,
-  },
-
-  filterSummaryText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 6,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 
   clearFiltersText: {
-    color: '#f97316',
-    fontSize: 12,
+    color: '#ffffff',
+    fontSize: 13,
     fontWeight: '900',
   },
 
@@ -729,6 +812,40 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  workerLogin: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
+  },
+
+  badgesColumn: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+
+  adminBadge: {
+    backgroundColor: '#581c87',
+    color: '#f3e8ff',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  workerBadge: {
+    backgroundColor: '#0c4a6e',
+    color: '#e0f2fe',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
   activeBadge: {
     backgroundColor: '#052e16',
     color: '#bbf7d0',
@@ -737,6 +854,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   inactiveBadge: {
@@ -747,27 +865,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
-  },
-
-  infoBox: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    borderRadius: 12,
-    padding: 10,
-  },
-
-  infoLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-
-  infoValue: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
+    overflow: 'hidden',
   },
 
   actions: {

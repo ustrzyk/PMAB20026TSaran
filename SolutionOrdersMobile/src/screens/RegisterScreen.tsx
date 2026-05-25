@@ -21,17 +21,27 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 function RegisterScreen({navigation}: Props): React.JSX.Element {
   const {registerCustomer} = useAuth();
 
-  const [name, setName] = useState('Jan Kowalski');
-  const [email, setEmail] = useState('jan@test.pl');
-  const [password, setPassword] = useState('1234');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleRegister = (): void => {
+  const handleRegister = async (): Promise<void> => {
     try {
+      setSubmitting(true);
       setError(null);
-      registerCustomer(name, email, password);
+
+      await registerCustomer(name, email, password);
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'ClientPanel'}],
+      });
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -44,9 +54,6 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.logo}>👤</Text>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.title}>Rejestracja klienta</Text>
-          <Text style={styles.subtitle}>
-            Załóż konto klienta, aby przejść do sklepu i składać zamówienia.
-          </Text>
         </View>
 
         <View style={styles.card}>
@@ -59,6 +66,7 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
             onChangeText={setName}
             placeholder="np. Jan Kowalski"
             placeholderTextColor="#64748b"
+            editable={!submitting}
           />
 
           <Text style={styles.label}>E-mail</Text>
@@ -70,6 +78,7 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
             placeholderTextColor="#64748b"
             autoCapitalize="none"
             keyboardType="email-address"
+            editable={!submitting}
           />
 
           <Text style={styles.label}>Hasło</Text>
@@ -80,22 +89,35 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
             placeholder="Minimum 4 znaki"
             placeholderTextColor="#64748b"
             secureTextEntry
+            editable={!submitting}
           />
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity
-            style={styles.registerButton}
+            style={[styles.registerButton, submitting && styles.disabledButton]}
             onPress={handleRegister}
-            activeOpacity={0.85}>
-            <Text style={styles.registerButtonText}>Utwórz konto</Text>
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.registerButtonText}>
+              {submitting ? 'Tworzenie konta...' : 'Utwórz konto'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => navigation.navigate('AuthLogin')}
-            activeOpacity={0.85}>
+            activeOpacity={0.85}
+            disabled={submitting}>
             <Text style={styles.loginButtonText}>Mam już konto</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guestButton}
+            onPress={() => navigation.navigate('Home')}
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.guestButtonText}>Wróć do sklepu</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -142,14 +164,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 28,
     fontWeight: '900',
-    textAlign: 'center',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
     textAlign: 'center',
   },
 
@@ -203,6 +217,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  disabledButton: {
+    opacity: 0.65,
+  },
+
   registerButtonText: {
     color: '#ffffff',
     fontSize: 16,
@@ -218,6 +236,22 @@ const styles = StyleSheet.create({
   },
 
   loginButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
+  guestButton: {
+    backgroundColor: '#1e293b',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+
+  guestButtonText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
