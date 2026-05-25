@@ -22,7 +22,7 @@ interface AuthContextValue {
     name: string,
     email: string,
     password: string,
-  ) => Promise<void>;
+  ) => Promise<AuthUser>;
   logout: () => void;
 }
 
@@ -40,6 +40,10 @@ function getNameFromEmail(email: string): string {
   }
 
   return trimmedEmail.split('@')[0];
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function normalizeWorkerRole(role?: string | null): UserRole {
@@ -86,6 +90,10 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       return loggedUser;
     }
 
+    if (!isValidEmail(safeLogin)) {
+      throw new Error('Podaj poprawny adres e-mail');
+    }
+
     if (safePassword.length < 4) {
       throw new Error('Hasło powinno mieć minimum 4 znaki');
     }
@@ -105,7 +113,7 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
     name: string,
     email: string,
     password: string,
-  ): Promise<void> => {
+  ): Promise<AuthUser> => {
     const safeName = name.trim();
     const safeEmail = email.trim().toLowerCase();
     const safePassword = password.trim();
@@ -114,11 +122,15 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       throw new Error('Podaj imię i nazwisko');
     }
 
+    if (safeName.length < 3) {
+      throw new Error('Imię i nazwisko powinno mieć minimum 3 znaki');
+    }
+
     if (safeEmail.length === 0) {
       throw new Error('Podaj adres e-mail');
     }
 
-    if (!safeEmail.includes('@')) {
+    if (!isValidEmail(safeEmail)) {
       throw new Error('Podaj poprawny adres e-mail');
     }
 
@@ -126,11 +138,15 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       throw new Error('Hasło powinno mieć minimum 4 znaki');
     }
 
-    setUser({
+    const customerUser: AuthUser = {
       name: safeName,
       login: safeEmail,
       role: 'customer',
-    });
+    };
+
+    setUser(customerUser);
+
+    return customerUser;
   };
 
   const logout = (): void => {
