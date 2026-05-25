@@ -35,12 +35,19 @@ import type {RootStackParamList} from './types.ts';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator(): React.JSX.Element {
-  const {user, isAdmin, isWorker} = useAuth();
-
-  const initialRouteName =
-    isAdmin || isWorker ? 'AdminPanel' : 'Home';
+  const {user, isAdmin, isWorker, isCustomer} = useAuth();
 
   const navigatorKey = user ? user.role : 'guest';
+
+  let initialRouteName: keyof RootStackParamList = 'Home';
+
+  if (isAdmin || isWorker) {
+    initialRouteName = 'AdminPanel';
+  }
+
+  if (isCustomer) {
+    initialRouteName = 'ClientPanel';
+  }
 
   return (
     <NavigationContainer>
@@ -107,159 +114,153 @@ function RootNavigator(): React.JSX.Element {
           options={{title: 'Potwierdzenie zamówienia'}}
         />
 
-        {user?.role === 'customer' ? (
-          <Stack.Screen
-            name="ClientPanel"
-            component={ClientPanelScreen}
-            options={{title: 'Moje konto'}}
-          />
-        ) : null}
+        <Stack.Screen
+          name="ClientPanel"
+          component={ClientPanelScreen}
+          options={{title: 'Moje konto'}}
+        />
 
-        {isAdmin || isWorker ? (
+        <Stack.Screen
+          name="AdminPanel"
+          component={AdminPanelScreen}
+          options={{title: 'Panel pracownika'}}
+        />
+
+        <Stack.Screen
+          name="Dashboard"
+          component={DashboardScreen}
+          options={{title: 'Dashboard'}}
+        />
+
+        <Stack.Screen
+          name="AdminItems"
+          component={AdminItemsScreen}
+          options={{title: 'Produkty'}}
+        />
+
+        <Stack.Screen
+          name="CreateItem"
+          component={ItemFormScreen}
+          options={{title: 'Dodaj produkt'}}
+        />
+
+        <Stack.Screen
+          name="EditItem"
+          component={ItemFormScreen}
+          options={{title: 'Edytuj produkt'}}
+        />
+
+        <Stack.Screen
+          name="Categories"
+          component={CategoriesScreen}
+          options={{title: 'Kategorie'}}
+        />
+
+        <Stack.Screen
+          name="CreateCategory"
+          component={CategoryFormScreen}
+          options={{title: 'Dodaj kategorię'}}
+        />
+
+        <Stack.Screen
+          name="EditCategory"
+          component={CategoryFormScreen}
+          options={{title: 'Edytuj kategorię'}}
+        />
+
+        <Stack.Screen
+          name="Units"
+          component={UnitsScreen}
+          options={{title: 'Jednostki miary'}}
+        />
+
+        <Stack.Screen
+          name="CreateUnit"
+          component={UnitFormScreen}
+          options={{title: 'Dodaj jednostkę'}}
+        />
+
+        <Stack.Screen
+          name="EditUnit"
+          component={UnitFormScreen}
+          options={{title: 'Edytuj jednostkę'}}
+        />
+
+        <Stack.Screen
+          name="Clients"
+          component={ClientsScreen}
+          options={{title: 'Klienci'}}
+        />
+
+        <Stack.Screen
+          name="CreateClient"
+          component={ClientFormScreen}
+          options={{title: 'Dodaj klienta'}}
+        />
+
+        <Stack.Screen
+          name="EditClient"
+          component={ClientFormScreen}
+          options={{title: 'Edytuj klienta'}}
+        />
+
+        {isAdmin ? (
           <>
             <Stack.Screen
-              name="AdminPanel"
-              component={AdminPanelScreen}
-              options={{title: 'Panel pracownika'}}
+              name="Workers"
+              component={WorkersScreen}
+              options={{title: 'Pracownicy'}}
             />
 
             <Stack.Screen
-              name="Dashboard"
-              component={DashboardScreen}
-              options={{title: 'Dashboard'}}
+              name="CreateWorker"
+              component={WorkerFormScreen}
+              options={{title: 'Dodaj pracownika'}}
             />
 
             <Stack.Screen
-              name="AdminItems"
-              component={AdminItemsScreen}
-              options={{title: 'Produkty'}}
-            />
-
-            <Stack.Screen
-              name="CreateItem"
-              component={ItemFormScreen}
-              options={{title: 'Dodaj produkt'}}
-            />
-
-            <Stack.Screen
-              name="EditItem"
-              component={ItemFormScreen}
-              options={{title: 'Edytuj produkt'}}
-            />
-
-            <Stack.Screen
-              name="Categories"
-              component={CategoriesScreen}
-              options={{title: 'Kategorie'}}
-            />
-
-            <Stack.Screen
-              name="CreateCategory"
-              component={CategoryFormScreen}
-              options={{title: 'Dodaj kategorię'}}
-            />
-
-            <Stack.Screen
-              name="EditCategory"
-              component={CategoryFormScreen}
-              options={{title: 'Edytuj kategorię'}}
-            />
-
-            <Stack.Screen
-              name="Units"
-              component={UnitsScreen}
-              options={{title: 'Jednostki miary'}}
-            />
-
-            <Stack.Screen
-              name="CreateUnit"
-              component={UnitFormScreen}
-              options={{title: 'Dodaj jednostkę'}}
-            />
-
-            <Stack.Screen
-              name="EditUnit"
-              component={UnitFormScreen}
-              options={{title: 'Edytuj jednostkę'}}
-            />
-
-            <Stack.Screen
-              name="Clients"
-              component={ClientsScreen}
-              options={{title: 'Klienci'}}
-            />
-
-            <Stack.Screen
-              name="CreateClient"
-              component={ClientFormScreen}
-              options={{title: 'Dodaj klienta'}}
-            />
-
-            <Stack.Screen
-              name="EditClient"
-              component={ClientFormScreen}
-              options={{title: 'Edytuj klienta'}}
-            />
-
-            {isAdmin ? (
-              <>
-                <Stack.Screen
-                  name="Workers"
-                  component={WorkersScreen}
-                  options={{title: 'Pracownicy'}}
-                />
-
-                <Stack.Screen
-                  name="CreateWorker"
-                  component={WorkerFormScreen}
-                  options={{title: 'Dodaj pracownika'}}
-                />
-
-                <Stack.Screen
-                  name="EditWorker"
-                  component={WorkerFormScreen}
-                  options={{title: 'Edytuj pracownika'}}
-                />
-              </>
-            ) : null}
-
-            <Stack.Screen
-              name="Orders"
-              component={OrdersScreen}
-              options={{title: 'Zamówienia'}}
-            />
-
-            <Stack.Screen
-              name="CreateOrder"
-              component={OrderFormScreen}
-              options={{title: 'Dodaj zamówienie'}}
-            />
-
-            <Stack.Screen
-              name="EditOrder"
-              component={OrderFormScreen}
-              options={{title: 'Edytuj zamówienie'}}
-            />
-
-            <Stack.Screen
-              name="OrderItems"
-              component={OrderItemsScreen}
-              options={{title: 'Pozycje zamówienia'}}
-            />
-
-            <Stack.Screen
-              name="CreateOrderItem"
-              component={OrderItemFormScreen}
-              options={{title: 'Dodaj pozycję'}}
-            />
-
-            <Stack.Screen
-              name="EditOrderItem"
-              component={OrderItemFormScreen}
-              options={{title: 'Edytuj pozycję'}}
+              name="EditWorker"
+              component={WorkerFormScreen}
+              options={{title: 'Edytuj pracownika'}}
             />
           </>
         ) : null}
+
+        <Stack.Screen
+          name="Orders"
+          component={OrdersScreen}
+          options={{title: 'Zamówienia'}}
+        />
+
+        <Stack.Screen
+          name="CreateOrder"
+          component={OrderFormScreen}
+          options={{title: 'Dodaj zamówienie'}}
+        />
+
+        <Stack.Screen
+          name="EditOrder"
+          component={OrderFormScreen}
+          options={{title: 'Edytuj zamówienie'}}
+        />
+
+        <Stack.Screen
+          name="OrderItems"
+          component={OrderItemsScreen}
+          options={{title: 'Pozycje zamówienia'}}
+        />
+
+        <Stack.Screen
+          name="CreateOrderItem"
+          component={OrderItemFormScreen}
+          options={{title: 'Dodaj pozycję'}}
+        />
+
+        <Stack.Screen
+          name="EditOrderItem"
+          component={OrderItemFormScreen}
+          options={{title: 'Edytuj pozycję'}}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

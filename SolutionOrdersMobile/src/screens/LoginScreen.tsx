@@ -31,7 +31,21 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
       setSubmitting(true);
       setError(null);
 
-      await login(loginOrEmail, password);
+      const loggedUser = await login(loginOrEmail, password);
+
+      if (loggedUser.role === 'admin' || loggedUser.role === 'worker') {
+        navigation.reset({
+          index: 0,
+          routes: [{name: 'AdminPanel'}],
+        });
+
+        return;
+      }
+
+      navigation.reset({
+        index: 0,
+        routes: [{name: 'ClientPanel'}],
+      });
     } catch (err) {
       setError((err as Error).message);
     } finally {

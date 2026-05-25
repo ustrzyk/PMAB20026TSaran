@@ -16,6 +16,7 @@ import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
+import type {WorkerRole} from '../types/models.ts';
 
 type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateWorker'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditWorker'>;
@@ -30,6 +31,14 @@ interface DialogState {
   loading: boolean;
 }
 
+function normalizeRole(role?: string | null): WorkerRole {
+  if (role?.toLowerCase() === 'admin') {
+    return 'Admin';
+  }
+
+  return 'Worker';
+}
+
 function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditWorker';
   const editedWorker = isEditMode ? route.params.worker : undefined;
@@ -38,6 +47,9 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
   const [lastName, setLastName] = useState(editedWorker?.lastName ?? '');
   const [login, setLogin] = useState(editedWorker?.login ?? '');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState<WorkerRole>(
+    normalizeRole(editedWorker?.role),
+  );
   const [isActive, setIsActive] = useState(editedWorker?.isActive ?? true);
 
   const [submitting, setSubmitting] = useState(false);
@@ -136,6 +148,7 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
           lastName: lastName.trim(),
           login: login.trim(),
           password: password.trim().length > 0 ? password.trim() : null,
+          role,
           isActive,
         });
 
@@ -151,6 +164,7 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
           lastName: lastName.trim(),
           login: login.trim(),
           password: password.trim(),
+          role,
           isActive,
         });
 
@@ -206,10 +220,6 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
           <Text style={styles.title}>
             {isEditMode ? 'Edytuj pracownika' : 'Dodaj pracownika'}
           </Text>
-
-          <Text style={styles.subtitle}>
-            Pracownicy będą przypisywani do zamówień obsługiwanych w sklepie.
-          </Text>
         </View>
 
         <View style={styles.card}>
@@ -260,6 +270,40 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
             secureTextEntry
             editable={!submitting}
           />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Rola pracownika</Text>
+
+          <View style={styles.roleButtons}>
+            <TouchableOpacity
+              style={[styles.roleButton, role === 'Worker' && styles.roleWorker]}
+              onPress={() => setRole('Worker')}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.roleButtonText,
+                  role === 'Worker' && styles.roleButtonTextSelected,
+                ]}>
+                Pracownik
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.roleButton, role === 'Admin' && styles.roleAdmin]}
+              onPress={() => setRole('Admin')}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.roleButtonText,
+                  role === 'Admin' && styles.roleButtonTextSelected,
+                ]}>
+                Administrator
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -363,13 +407,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-
   card: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -403,6 +440,41 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: 15,
     marginBottom: 14,
+  },
+
+  roleButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  roleButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  roleWorker: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  roleAdmin: {
+    backgroundColor: '#a855f7',
+    borderColor: '#a855f7',
+  },
+
+  roleButtonText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  roleButtonTextSelected: {
+    color: '#ffffff',
   },
 
   statusButtons: {

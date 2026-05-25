@@ -17,7 +17,7 @@ interface AuthContextValue {
   isCustomer: boolean;
   isWorker: boolean;
   isAdmin: boolean;
-  login: (loginOrEmail: string, password: string) => Promise<void>;
+  login: (loginOrEmail: string, password: string) => Promise<AuthUser>;
   registerCustomer: (
     name: string,
     email: string,
@@ -56,7 +56,7 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
   const login = async (
     loginOrEmail: string,
     password: string,
-  ): Promise<void> => {
+  ): Promise<AuthUser> => {
     const safeLogin = loginOrEmail.trim();
     const safePassword = password.trim();
 
@@ -74,25 +74,31 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
         password: safePassword,
       });
 
-      setUser({
+      const loggedUser: AuthUser = {
         id: worker.idWorker,
         name: worker.name,
         login: worker.login,
         role: normalizeWorkerRole(worker.role),
-      });
+      };
 
-      return;
+      setUser(loggedUser);
+
+      return loggedUser;
     }
 
     if (safePassword.length < 4) {
       throw new Error('Hasło powinno mieć minimum 4 znaki');
     }
 
-    setUser({
+    const customerUser: AuthUser = {
       name: getNameFromEmail(safeLogin),
       login: safeLogin.toLowerCase(),
       role: 'customer',
-    });
+    };
+
+    setUser(customerUser);
+
+    return customerUser;
   };
 
   const registerCustomer = async (
