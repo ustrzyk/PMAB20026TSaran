@@ -32,6 +32,8 @@ import type {
   UpdateUnitOfMeasurementCommand,
   UpdateWorkerCommand,
   WorkerDto,
+  WorkerLoginRequestDto,
+  WorkerLoginResponseDto,
 } from '../types/models.ts';
 
 class ApiService {
@@ -41,7 +43,6 @@ class ApiService {
     this.baseUrl = API_BASE_URL;
   }
 
-  // Wspólna metoda do obsługi zapytań HTTP.
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -69,7 +70,6 @@ class ApiService {
         );
       }
 
-      // PUT / DELETE często zwracają 204 No Content.
       if (response.status === 204) {
         return {} as T;
       }
@@ -83,6 +83,17 @@ class ApiService {
       console.error('API Error:', error);
       throw error;
     }
+  }
+
+  // ========== AUTH / LOGOWANIE ==========
+
+  async loginWorker(
+    data: WorkerLoginRequestDto,
+  ): Promise<WorkerLoginResponseDto> {
+    return this.request<WorkerLoginResponseDto>('/Auth/worker-login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   // ========== CHECKOUT / KOSZYK ==========
@@ -371,5 +382,4 @@ class ApiService {
   }
 }
 
-// Singleton używany w całej aplikacji.
 export default new ApiService();

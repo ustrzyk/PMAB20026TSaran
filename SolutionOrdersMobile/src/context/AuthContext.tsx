@@ -1,18 +1,28 @@
 import React, {createContext, useContext, useMemo, useState} from 'react';
 
-export type UserRole = 'customer' | 'admin';
+import apiService from '../api/apiService.ts';
+
+export type UserRole = 'guest' | 'customer' | 'worker' | 'admin';
 
 export interface AuthUser {
+  id?: number;
   name: string;
-  email: string;
+  login: string;
   role: UserRole;
 }
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoggedIn: boolean;
-  login: (email: string, password: string, role: UserRole) => void;
-  registerCustomer: (name: string, email: string, password: string) => void;
+  isCustomer: boolean;
+  isWorker: boolean;
+  isAdmin: boolean;
+  login: (loginOrEmail: string, password: string) => Promise<void>;
+  registerCustomer: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<void>;
   logout: () => void;
 }
 
@@ -26,40 +36,73 @@ function getNameFromEmail(email: string): string {
   const trimmedEmail = email.trim();
 
   if (trimmedEmail.length === 0 || !trimmedEmail.includes('@')) {
-    return 'Użytkownik';
+    return 'Klient';
   }
 
   return trimmedEmail.split('@')[0];
 }
 
+function normalizeWorkerRole(role?: string | null): UserRole {
+  if (role?.toLowerCase() === 'admin') {
+    return 'admin';
+  }
+
+  return 'worker';
+}
+
 export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
   const [user, setUser] = useState<AuthUser | null>(null);
 
-  const login = (email: string, password: string, role: UserRole): void => {
-    const safeEmail = email.trim();
+  const login = async (
+    loginOrEmail: string,
+    password: string,
+  ): Promise<void> => {
+    const safeLogin = loginOrEmail.trim();
+    const safePassword = password.trim();
 
-    if (safeEmail.length === 0) {
-      throw new Error('Podaj adres e-mail');
+    if (safeLogin.length === 0) {
+      throw new Error('Podaj login albo e-mail');
     }
 
-    if (password.trim().length === 0) {
+    if (safePassword.length === 0) {
       throw new Error('Podaj hasło');
     }
 
+    if (!safeLogin.includes('@')) {
+      const worker = await apiService.loginWorker({
+        login: safeLogin,
+        password: safePassword,
+      });
+
+      setUser({
+        id: worker.idWorker,
+        name: worker.name,
+        login: worker.login,
+        role: normalizeWorkerRole(worker.role),
+      });
+
+      return;
+    }
+
+    if (safePassword.length < 4) {
+      throw new Error('Hasło powinno mieć minimum 4 znaki');
+    }
+
     setUser({
-      email: safeEmail,
-      name: role === 'admin' ? 'Administrator' : getNameFromEmail(safeEmail),
-      role,
+      name: getNameFromEmail(safeLogin),
+      login: safeLogin.toLowerCase(),
+      role: 'customer',
     });
   };
 
-  const registerCustomer = (
+  const registerCustomer = async (
     name: string,
     email: string,
     password: string,
-  ): void => {
+  ): Promise<void> => {
     const safeName = name.trim();
-    const safeEmail = email.trim();
+    const safeEmail = email.trim().toLowerCase();
+    const safePassword = password.trim();
 
     if (safeName.length === 0) {
       throw new Error('Podaj imię i nazwisko');
@@ -69,13 +112,17 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       throw new Error('Podaj adres e-mail');
     }
 
-    if (password.trim().length < 4) {
+    if (!safeEmail.includes('@')) {
+      throw new Error('Podaj poprawny adres e-mail');
+    }
+
+    if (safePassword.length < 4) {
       throw new Error('Hasło powinno mieć minimum 4 znaki');
     }
 
     setUser({
       name: safeName,
-      email: safeEmail,
+      login: safeEmail,
       role: 'customer',
     });
   };
@@ -88,6 +135,9 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
     return {
       user,
       isLoggedIn: user !== null,
+      isCustomer: user?.role === 'customer',
+      isWorker: user?.role === 'worker',
+      isAdmin: user?.role === 'admin',
       login,
       registerCustomer,
       logout,

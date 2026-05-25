@@ -12,7 +12,7 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-import {useAuth, UserRole} from '../context/AuthContext.tsx';
+import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
@@ -21,41 +21,22 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AuthLogin'>;
 function LoginScreen({navigation}: Props): React.JSX.Element {
   const {login} = useAuth();
 
-  const [email, setEmail] = useState('himen@test.pl');
-  const [password, setPassword] = useState('czopek');
-  const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
+  const [loginOrEmail, setLoginOrEmail] = useState('tsaran');
+  const [password, setPassword] = useState('dalej');
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleLogin = (): void => {
+  const handleLogin = async (): Promise<void> => {
     try {
+      setSubmitting(true);
       setError(null);
-      login(email, password, selectedRole);
+
+      await login(loginOrEmail, password);
     } catch (err) {
       setError((err as Error).message);
+    } finally {
+      setSubmitting(false);
     }
-  };
-
-  const renderRoleButton = (
-    role: UserRole,
-    icon: string,
-    title: string,
-    description: string,
-  ): React.JSX.Element => {
-    const selected = selectedRole === role;
-
-    return (
-      <TouchableOpacity
-        style={[styles.roleCard, selected && styles.roleCardSelected]}
-        onPress={() => setSelectedRole(role)}
-        activeOpacity={0.85}>
-        <Text style={styles.roleIcon}>{icon}</Text>
-
-        <View style={styles.roleTextBox}>
-          <Text style={styles.roleTitle}>{title}</Text>
-          <Text style={styles.roleDescription}>{description}</Text>
-        </View>
-      </TouchableOpacity>
-    );
   };
 
   return (
@@ -66,42 +47,21 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.logo}>🖨️</Text>
           <Text style={styles.appName}>3D Print Shop</Text>
-          <Text style={styles.title}>Zaloguj się</Text>
-          <Text style={styles.subtitle}>
-            Wybierz tryb pracy i przejdź do sklepu albo administracji.
-          </Text>
+          <Text style={styles.title}>Logowanie</Text>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Kim jesteś?</Text>
+          <Text style={styles.sectionTitle}>Dane konta</Text>
 
-          {renderRoleButton(
-            'customer',
-            '🛒',
-            'Klient',
-            'Sklep, koszyk i moje zamówienie',
-          )}
-
-          {renderRoleButton(
-            'admin',
-            '🛠️',
-            'Administrator',
-            'Produkty, zamówienia, raporty i słowniki',
-          )}
-        </View>
-
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Dane logowania</Text>
-
-          <Text style={styles.label}>E-mail</Text>
+          <Text style={styles.label}>Login albo e-mail</Text>
           <TextInput
             style={styles.input}
-            value={email}
-            onChangeText={setEmail}
-            placeholder="np. klient@test.pl"
+            value={loginOrEmail}
+            onChangeText={setLoginOrEmail}
+            placeholder="np. tsaran albo klient@3dshop.pl"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
-            keyboardType="email-address"
+            editable={!submitting}
           />
 
           <Text style={styles.label}>Hasło</Text>
@@ -112,27 +72,37 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
             placeholder="Hasło"
             placeholderTextColor="#64748b"
             secureTextEntry
+            editable={!submitting}
           />
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <TouchableOpacity
-            style={styles.loginButton}
+            style={[styles.loginButton, submitting && styles.disabledButton]}
             onPress={handleLogin}
-            activeOpacity={0.85}>
-            <Text style={styles.loginButtonText}>Zaloguj</Text>
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.loginButtonText}>
+              {submitting ? 'Logowanie...' : 'Zaloguj'}
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.registerButton}
             onPress={() => navigation.navigate('Register')}
-            activeOpacity={0.85}>
-            <Text style={styles.registerButtonText}>
-              Nie mam konta — zarejestruj klienta
-            </Text>
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.registerButtonText}>Utwórz konto klienta</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.guestButton}
+            onPress={() => navigation.navigate('Home')}
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.guestButtonText}>Wróć do sklepu</Text>
           </TouchableOpacity>
         </View>
-
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -180,14 +150,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-
   card: {
     backgroundColor: '#111827',
     borderRadius: 18,
@@ -202,44 +164,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '900',
     marginBottom: 12,
-  },
-
-  roleCard: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-
-  roleCardSelected: {
-    borderColor: '#f97316',
-    backgroundColor: '#1f2937',
-  },
-
-  roleIcon: {
-    fontSize: 30,
-  },
-
-  roleTextBox: {
-    flex: 1,
-  },
-
-  roleTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  roleDescription: {
-    color: '#94a3b8',
-    fontSize: 13,
-    lineHeight: 18,
   },
 
   label: {
@@ -276,6 +200,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  disabledButton: {
+    opacity: 0.65,
+  },
+
   loginButtonText: {
     color: '#ffffff',
     fontSize: 16,
@@ -283,7 +211,7 @@ const styles = StyleSheet.create({
   },
 
   registerButton: {
-    backgroundColor: '#334155',
+    backgroundColor: '#16a34a',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -293,23 +221,21 @@ const styles = StyleSheet.create({
   registerButtonText: {
     color: '#ffffff',
     fontSize: 14,
+    fontWeight: '900',
+  },
+
+  guestButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+
+  guestButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '800',
-  },
-
-  infoBox: {
-    backgroundColor: '#172554',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#2563eb',
-  },
-
-  infoText: {
-    color: '#bfdbfe',
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '700',
-    textAlign: 'center',
   },
 });
 

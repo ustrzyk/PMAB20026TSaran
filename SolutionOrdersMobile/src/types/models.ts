@@ -124,11 +124,14 @@ export interface CreateClientResponse {
   message?: string;
 }
 
+export type WorkerRole = 'Admin' | 'Worker';
+
 export interface WorkerDto {
   idWorker: number;
   firstName?: string | null;
   lastName?: string | null;
   login: string;
+  role?: WorkerRole | string | null;
   isActive?: boolean;
 }
 
@@ -137,6 +140,7 @@ export interface CreateWorkerCommand {
   lastName?: string | null;
   login: string;
   password?: string | null;
+  role?: WorkerRole | string | null;
   isActive?: boolean;
 }
 
@@ -146,12 +150,25 @@ export interface UpdateWorkerCommand {
   lastName?: string | null;
   login: string;
   password?: string | null;
+  role?: WorkerRole | string | null;
   isActive?: boolean;
 }
 
 export interface CreateWorkerResponse {
   id: number;
   message?: string;
+}
+
+export interface WorkerLoginRequestDto {
+  login: string;
+  password: string;
+}
+
+export interface WorkerLoginResponseDto {
+  idWorker: number;
+  name: string;
+  login: string;
+  role: WorkerRole | string;
 }
 
 export interface OrderDto {
