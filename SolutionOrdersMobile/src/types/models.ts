@@ -193,6 +193,8 @@ export interface CustomerLoginResponseDto {
   idClient: number;
   name: string;
   email: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
 }
 
 export interface OrderDto {
@@ -274,9 +276,11 @@ export interface CreateOrderItemResponse {
 }
 
 export interface CheckoutClientDto {
+  idClient?: number | null;
   name: string;
   address: string;
   phoneNumber: string;
+  email?: string | null;
 }
 
 export interface CheckoutItemDto {

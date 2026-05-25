@@ -112,7 +112,9 @@ namespace SolutionOrders.API.Controllers
             {
                 IdClient = client.IdClient,
                 Name = client.Name ?? client.Email ?? "Klient",
-                Email = client.Email ?? email
+                Email = client.Email ?? email,
+                Adress = client.Adress,
+                PhoneNumber = client.PhoneNumber
             });
         }
 
@@ -171,7 +173,9 @@ namespace SolutionOrders.API.Controllers
             {
                 IdClient = client.IdClient,
                 Name = client.Name ?? email,
-                Email = client.Email ?? email
+                Email = client.Email ?? email,
+                Adress = client.Adress,
+                PhoneNumber = client.PhoneNumber
             });
         }
     }

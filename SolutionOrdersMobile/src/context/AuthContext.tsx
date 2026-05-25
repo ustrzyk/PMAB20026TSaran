@@ -9,6 +9,8 @@ export interface AuthUser {
   name: string;
   login: string;
   role: UserRole;
+  adress?: string | null;
+  phoneNumber?: string | null;
 }
 
 interface AuthContextValue {
@@ -96,6 +98,8 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       name: customer.name,
       login: customer.email,
       role: 'customer',
+      adress: customer.adress,
+      phoneNumber: customer.phoneNumber,
     };
 
     setUser(loggedUser);
@@ -149,6 +153,8 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       name: customer.name,
       login: customer.email,
       role: 'customer',
+      adress: customer.adress,
+      phoneNumber: customer.phoneNumber,
     };
 
     setUser(registeredUser);

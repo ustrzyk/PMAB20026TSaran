@@ -136,10 +136,28 @@ function CartScreen({navigation}: Props): React.JSX.Element {
   const estimatedDeliveryDate = getEstimatedDeliveryDate(deliveryMethod);
 
   useEffect(() => {
-    if (isCustomer && user?.name && clientName.trim().length === 0) {
+    if (!isCustomer || !user) {
+      return;
+    }
+
+    if (user.name && clientName.trim().length === 0) {
       setClientName(user.name);
     }
-  }, [clientName, isCustomer, user]);
+
+    if (user.adress && clientAddress.trim().length === 0) {
+      setClientAddress(user.adress);
+    }
+
+    if (user.phoneNumber && clientPhone.trim().length === 0) {
+      setClientPhone(user.phoneNumber);
+    }
+  }, [
+    clientAddress,
+    clientName,
+    clientPhone,
+    isCustomer,
+    user,
+  ]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -233,9 +251,11 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
       const result = await apiService.createCheckoutOrder({
         client: {
+          idClient: isCustomer ? user?.id ?? null : null,
           name: clientName.trim(),
           address: clientAddress.trim(),
           phoneNumber: clientPhone.trim(),
+          email: isCustomer ? user?.login ?? null : null,
         },
         items: cartItems.map(cartItem => ({
           idItem: cartItem.item.idItem,
