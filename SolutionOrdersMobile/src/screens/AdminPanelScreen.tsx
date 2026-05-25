@@ -16,15 +16,20 @@ import type {RootStackParamList} from '../navigation/types.ts';
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminPanel'>;
 
 function AdminPanelScreen({navigation}: Props): React.JSX.Element {
-  const {user, logout} = useAuth();
+  const {user, isAdmin, logout} = useAuth();
+
+  const roleName = isAdmin ? 'Administrator' : 'Pracownik';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
         <View style={styles.heroTopRow}>
-          <View>
+          <View style={styles.heroTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
-            <Text style={styles.title}>Panel administratora</Text>
+            <Text style={styles.title}>Panel pracownika</Text>
+            <Text style={styles.userText}>
+              {user?.name ?? roleName} | {roleName}
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -34,10 +39,6 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.logoutButtonText}>Wyloguj</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.subtitle}>
-          Zalogowano jako {user?.name ?? 'Administrator'}.
-        </Text>
       </View>
 
       <TouchableOpacity
@@ -110,17 +111,28 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Organizacja</Text>
+      {isAdmin ? (
+        <>
+          <Text style={styles.sectionTitle}>Administracja</Text>
 
-      <View style={styles.grid}>
-        <TouchableOpacity
-          style={[styles.menuCard, styles.peopleCard]}
-          onPress={() => navigation.navigate('Workers')}
-          activeOpacity={0.85}>
-          <Text style={styles.icon}>🛠️</Text>
-          <Text style={styles.menuTitle}>Pracownicy</Text>
-        </TouchableOpacity>
-      </View>
+          <View style={styles.grid}>
+            <TouchableOpacity
+              style={[styles.menuCard, styles.adminCard]}
+              onPress={() => navigation.navigate('Workers')}
+              activeOpacity={0.85}>
+              <Text style={styles.icon}>🛠️</Text>
+              <Text style={styles.menuTitle}>Pracownicy</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : null}
+
+      <TouchableOpacity
+        style={styles.shopButton}
+        onPress={() => navigation.navigate('Home')}
+        activeOpacity={0.85}>
+        <Text style={styles.shopButtonText}>Przejdź do sklepu</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -152,6 +164,10 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
 
+  heroTextBox: {
+    flex: 1,
+  },
+
   appName: {
     color: '#f97316',
     fontSize: 13,
@@ -167,11 +183,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 10,
+  userText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 6,
   },
 
   logoutButton: {
@@ -262,7 +278,7 @@ const styles = StyleSheet.create({
     borderColor: '#16a34a',
   },
 
-  peopleCard: {
+  adminCard: {
     borderColor: '#a855f7',
   },
 
@@ -276,6 +292,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     textAlign: 'center',
+  },
+
+  shopButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+
+  shopButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 

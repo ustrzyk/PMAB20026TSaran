@@ -1,18 +1,22 @@
-import React from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import apiService from '../api/apiService.ts';
 import {useAuth} from '../context/AuthContext.tsx';
 import {useCart} from '../context/CartContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
+import type {CategoryDto, Item} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
@@ -22,81 +26,305 @@ function formatMoney(value?: number | null): string {
   return `${safeValue.toFixed(2)} zł`;
 }
 
+function getCategoryIcon(categoryName: string): string {
+  const name = categoryName.toLowerCase();
+
+  if (name.includes('druk')) {
+    return '🖨️';
+  }
+
+  if (name.includes('filament') || name.includes('pla') || name.includes('petg')) {
+    return '🧵';
+  }
+
+  if (name.includes('czę') || name.includes('czes') || name.includes('akces')) {
+    return '⚙️';
+  }
+
+  if (name.includes('serwis') || name.includes('narz')) {
+    return '🧰';
+  }
+
+  return '🏷️';
+}
+
 function HomeScreen({navigation}: Props): React.JSX.Element {
-  const {user, logout} = useAuth();
+  const {user, isAdmin, isWorker, isCustomer, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
+
+  const [items, setItems] = useState<Item[]>([]);
+  const [categories, setCategories] = useState<CategoryDto[]>([]);
+  const [searchText, setSearchText] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadHomeData = useCallback(async (): Promise<void> => {
+    try {
+      setError(null);
+      setLoading(true);
+
+      const [itemsFromApi, categoriesFromApi] = await Promise.all([
+        apiService.getItems(),
+        apiService.getCategories(),
+      ]);
+
+      setItems(itemsFromApi);
+      setCategories(categoriesFromApi);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadHomeData();
+  }, [loadHomeData]);
+
+  const activeItems = useMemo(() => {
+    return items.filter(item => item.isActive !== false);
+  }, [items]);
+
+  const activeCategories = useMemo(() => {
+    return categories.filter(category => category.isActive !== false);
+  }, [categories]);
+
+  const visibleCategories = useMemo(() => {
+    return activeCategories.slice(0, 4);
+  }, [activeCategories]);
+
+  const visibleProducts = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    let result = activeItems;
+
+    if (search.length > 0) {
+      result = result.filter(item => {
+        const name = item.name?.toLowerCase() ?? '';
+        const code = item.code?.toLowerCase() ?? '';
+        const category = item.categoryName?.toLowerCase() ?? '';
+
+        return (
+          name.includes(search) ||
+          code.includes(search) ||
+          category.includes(search)
+        );
+      });
+    }
+
+    return result.slice(0, 6);
+  }, [activeItems, searchText]);
+
+  const handleAccountPress = (): void => {
+    if (isAdmin || isWorker) {
+      navigation.navigate('AdminPanel');
+      return;
+    }
+
+    if (isCustomer) {
+      navigation.navigate('ClientPanel');
+      return;
+    }
+
+    navigation.navigate('AuthLogin');
+  };
+
+  const getAccountLabel = (): string => {
+    if (isAdmin || isWorker) {
+      return 'Panel';
+    }
+
+    if (isCustomer) {
+      return 'Konto';
+    }
+
+    return 'Zaloguj';
+  };
+
+  const renderCategory = (category: CategoryDto): React.JSX.Element => {
+    return (
+      <TouchableOpacity
+        key={category.idCategory}
+        style={styles.categoryCard}
+        onPress={() => navigation.navigate('Items')}
+        activeOpacity={0.85}>
+        <Text style={styles.categoryIcon}>{getCategoryIcon(category.name)}</Text>
+        <Text style={styles.categoryName} numberOfLines={1}>
+          {category.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderProduct = (item: Item): React.JSX.Element => {
+    return (
+      <TouchableOpacity
+        key={item.idItem}
+        style={styles.productCard}
+        onPress={() => navigation.navigate('ItemDetails', {item})}
+        activeOpacity={0.85}>
+        <View style={styles.productIconBox}>
+          <Text style={styles.productIcon}>🖨️</Text>
+        </View>
+
+        <Text style={styles.productName} numberOfLines={2}>
+          {item.name}
+        </Text>
+
+        <Text style={styles.productCategory} numberOfLines={1}>
+          {item.categoryName ?? 'Produkt'}
+        </Text>
+
+        <View style={styles.productBottomRow}>
+          <Text style={styles.productPrice}>{formatMoney(item.price)}</Text>
+          <Text style={styles.productStock}>Stan: {item.quantity ?? 0}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.heroBox}>
-        <View style={styles.heroTopRow}>
+      <View style={styles.topBar}>
+        <View style={styles.brandBox}>
+          <Text style={styles.logo}>🖨️</Text>
+
           <View>
             <Text style={styles.appName}>3D Print Shop</Text>
-            <Text style={styles.title}>Cześć, {user?.name ?? 'Kliencie'}</Text>
+            <Text style={styles.appSubtitle}>Sklep z drukiem 3D</Text>
           </View>
+        </View>
+
+        <TouchableOpacity
+          style={styles.accountButton}
+          onPress={handleAccountPress}
+          activeOpacity={0.85}>
+          <Text style={styles.accountButtonText}>{getAccountLabel()}</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.heroBox}>
+        <Text style={styles.heroTitle}>Drukarki 3D, filamenty i akcesoria</Text>
+
+        <View style={styles.heroActions}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('Items')}
+            activeOpacity={0.85}>
+            <Text style={styles.primaryButtonText}>Zobacz ofertę</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={logout}
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('Cart')}
             activeOpacity={0.85}>
-            <Text style={styles.logoutButtonText}>Wyloguj</Text>
+            <Text style={styles.secondaryButtonText}>Koszyk</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.subtitle}>
-          Wybierz produkty, dodaj je do koszyka i sprawdź swoje zamówienie.
-        </Text>
       </View>
 
-      <View style={styles.cartBox}>
-        <Text style={styles.cartIcon}>🛒</Text>
-
-        <View style={styles.cartTextBox}>
-          <Text style={styles.cartTitle}>Koszyk</Text>
-          <Text style={styles.cartText}>
+      <View style={styles.quickRow}>
+        <TouchableOpacity
+          style={styles.quickCard}
+          onPress={() => navigation.navigate('Cart')}
+          activeOpacity={0.85}>
+          <Text style={styles.quickIcon}>🛒</Text>
+          <Text style={styles.quickTitle}>Koszyk</Text>
+          <Text style={styles.quickText}>
             {totalQuantity} szt. | {formatMoney(totalValue)}
           </Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.smallButton}
-          onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.85}>
-          <Text style={styles.smallButtonText}>Otwórz</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={styles.sectionTitle}>Co chcesz zrobić?</Text>
-
-      <View style={styles.grid}>
-        <TouchableOpacity
-          style={[styles.actionCard, styles.shopCard]}
-          onPress={() => navigation.navigate('Items')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>🖨️</Text>
-          <Text style={styles.actionTitle}>Sklep</Text>
-          <Text style={styles.actionText}>Produkty 3D</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionCard, styles.cartCard]}
-          onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>🛒</Text>
-          <Text style={styles.actionTitle}>Koszyk</Text>
-          <Text style={styles.actionText}>Finalizacja</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionCard, styles.orderCard]}
+          style={styles.quickCard}
           onPress={() => navigation.navigate('TrackOrder')}
           activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>📦</Text>
-          <Text style={styles.actionTitle}>Zamówienie</Text>
-          <Text style={styles.actionText}>Status po numerze</Text>
+          <Text style={styles.quickIcon}>📦</Text>
+          <Text style={styles.quickTitle}>Zamówienie</Text>
+          <Text style={styles.quickText}>Sprawdź status</Text>
         </TouchableOpacity>
       </View>
-            
+
+      <View style={styles.searchBox}>
+        <TextInput
+          style={styles.searchInput}
+          value={searchText}
+          onChangeText={setSearchText}
+          placeholder="Szukaj produktu..."
+          placeholderTextColor="#64748b"
+        />
+      </View>
+
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator size="small" color="#f97316" />
+          <Text style={styles.loadingText}>Ładowanie oferty...</Text>
+        </View>
+      ) : null}
+
+      {error ? (
+        <View style={styles.errorBox}>
+          <Text style={styles.errorText}>Nie udało się pobrać oferty</Text>
+
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={loadHomeData}
+            activeOpacity={0.85}>
+            <Text style={styles.retryButtonText}>Odśwież</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {!loading && !error ? (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Kategorie</Text>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Items')}
+              activeOpacity={0.85}>
+              <Text style={styles.sectionLink}>Wszystkie</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.categoryGrid}>
+            {visibleCategories.length > 0 ? (
+              visibleCategories.map(renderCategory)
+            ) : (
+              <Text style={styles.emptyText}>Brak aktywnych kategorii</Text>
+            )}
+          </View>
+
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Polecane produkty</Text>
+
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Items')}
+              activeOpacity={0.85}>
+              <Text style={styles.sectionLink}>Więcej</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.productsGrid}>
+            {visibleProducts.length > 0 ? (
+              visibleProducts.map(renderProduct)
+            ) : (
+              <Text style={styles.emptyText}>
+                Brak produktów pasujących do wyszukiwania
+              </Text>
+            )}
+          </View>
+        </>
+      ) : null}
+
+      {user ? (
+        <TouchableOpacity
+          style={styles.logoutButton}
+          onPress={logout}
+          activeOpacity={0.85}>
+          <Text style={styles.logoutButtonText}>Wyloguj</Text>
+        </TouchableOpacity>
+      ) : null}
     </ScrollView>
   );
 }
@@ -112,6 +340,51 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
 
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 14,
+  },
+
+  brandBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+
+  logo: {
+    fontSize: 34,
+  },
+
+  appName: {
+    color: '#f8fafc',
+    fontSize: 19,
+    fontWeight: '900',
+  },
+
+  appSubtitle: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  accountButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 9,
+  },
+
+  accountButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
   heroBox: {
     backgroundColor: '#111827',
     borderRadius: 22,
@@ -121,172 +394,273 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  heroTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    alignItems: 'flex-start',
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 7,
-  },
-
-  title: {
+  heroTitle: {
     color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 25,
+    lineHeight: 31,
     fontWeight: '900',
+    marginBottom: 14,
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 10,
+  heroActions: {
+    flexDirection: 'row',
+    gap: 10,
   },
 
-  logoutButton: {
-    backgroundColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+  primaryButton: {
+    flex: 1,
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
 
-  logoutButtonText: {
+  primaryButtonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '900',
   },
 
-  cartBox: {
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+
+  secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  quickRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 14,
+  },
+
+  quickCard: {
+    flex: 1,
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 18,
+    borderColor: '#334155',
+  },
+
+  quickIcon: {
+    fontSize: 26,
+    marginBottom: 7,
+  },
+
+  quickTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  quickText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  searchBox: {
+    marginBottom: 14,
+  },
+
+  searchInput: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+
+  loadingBox: {
+    backgroundColor: '#111827',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
+    marginBottom: 14,
   },
 
-  cartIcon: {
-    fontSize: 34,
-  },
-
-  cartTextBox: {
-    flex: 1,
-  },
-
-  cartTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  cartText: {
+  loadingText: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '700',
   },
 
-  smallButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+  errorBox: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    marginBottom: 14,
   },
 
-  smallButtonText: {
+  errorText: {
+    color: '#fecaca',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 10,
+  },
+
+  retryButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 10,
+    paddingVertical: 9,
+    alignItems: 'center',
+  },
+
+  retryButtonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
+  },
+
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    marginTop: 4,
   },
 
   sectionTitle: {
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
-    marginBottom: 12,
   },
 
-  grid: {
+  sectionLink: {
+    color: '#f97316',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 18,
+  },
+
+  categoryCard: {
+    width: '47.8%',
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  categoryIcon: {
+    fontSize: 25,
+  },
+
+  categoryName: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    flex: 1,
+  },
+
+  productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
 
-  actionCard: {
-    width: '30.8%',
-    minHeight: 132,
+  productCard: {
+    width: '47.8%',
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 12,
     borderWidth: 1,
+    borderColor: '#334155',
+  },
+
+  productIconBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    height: 78,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 10,
   },
 
-  shopCard: {
-    borderColor: '#16a34a',
+  productIcon: {
+    fontSize: 38,
   },
 
-  cartCard: {
-    borderColor: '#f97316',
+  productName: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    minHeight: 38,
+    lineHeight: 19,
   },
 
-  orderCard: {
-    borderColor: '#38bdf8',
-  },
-
-  actionIcon: {
-    fontSize: 34,
+  productCategory: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
     marginBottom: 8,
   },
 
-  actionTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 4,
+  productBottomRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#1e293b',
+    paddingTop: 8,
   },
 
-  actionText: {
+  productPrice: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  productStock: {
     color: '#94a3b8',
     fontSize: 11,
     fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 15,
+    marginTop: 3,
   },
 
-  tipBox: {
-    backgroundColor: '#172554',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#2563eb',
+  emptyText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  logoutButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
     marginTop: 18,
   },
 
-  tipTitle: {
+  logoutButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  tipText: {
-    color: '#bfdbfe',
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '700',
   },
 });
 

@@ -11,6 +11,7 @@ import type {
 export type RootStackParamList = {
   AuthLogin: undefined;
   Register: undefined;
+  ClientPanel: undefined;
 
   Home: undefined;
 
