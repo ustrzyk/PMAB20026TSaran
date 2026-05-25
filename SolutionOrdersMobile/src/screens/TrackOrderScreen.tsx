@@ -12,6 +12,7 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
+import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 import type {OrderDto, OrderItemDto} from '../types/models.ts';
@@ -33,6 +34,8 @@ function formatDate(value?: string | null): string {
 }
 
 function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
+  const {isAdmin, isWorker, isCustomer} = useAuth();
+
   const initialOrderId = route.params?.idOrder;
 
   const [orderNumber, setOrderNumber] = useState(
@@ -236,6 +239,24 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
           )}
         </>
       )}
+
+      {isCustomer ? (
+        <TouchableOpacity
+          style={styles.customerPanelButton}
+          onPress={() => navigation.navigate('ClientPanel')}
+          activeOpacity={0.8}>
+          <Text style={styles.customerPanelButtonText}>Moje konto</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {isAdmin || isWorker ? (
+        <TouchableOpacity
+          style={styles.adminPanelButton}
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.8}>
+          <Text style={styles.adminPanelButtonText}>Panel pracownika</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <TouchableOpacity
         style={styles.shopButton}
@@ -480,6 +501,36 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 14,
     textAlign: 'center',
+  },
+
+  customerPanelButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  customerPanelButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  adminPanelButton: {
+    backgroundColor: '#a855f7',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  adminPanelButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   shopButton: {

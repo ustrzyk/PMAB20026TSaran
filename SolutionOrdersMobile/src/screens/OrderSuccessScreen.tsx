@@ -9,6 +9,8 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import {useAuth} from '../context/AuthContext.tsx';
+
 import type {RootStackParamList} from '../navigation/types.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OrderSuccess'>;
@@ -28,6 +30,8 @@ function formatDate(value?: string | null): string {
 }
 
 function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
+  const {isAdmin, isWorker, isCustomer} = useAuth();
+
   const {
     idOrder,
     totalValue,
@@ -42,20 +46,41 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
   const safeDeliveryPrice = deliveryPrice ?? 0;
   const safeFinalValue = finalValue ?? totalValue + safeDeliveryPrice;
 
+  const goHome = (): void => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Home'}],
+    });
+  };
+
+  const goToCustomerPanel = (): void => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'ClientPanel'}],
+    });
+  };
+
+  const goToAdminPanel = (): void => {
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'AdminPanel'}],
+    });
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.successBox}>
         <Text style={styles.successIcon}>✓</Text>
 
-        <Text style={styles.title}>Dziękujemy za zamówienie</Text>
+        <Text style={styles.title}>Zamówienie złożone</Text>
 
         <Text style={styles.subtitle}>
-          Zamówienie zostało poprawnie zapisane w systemie sklepu.
+          Numer zamówienia zapisz albo użyj przycisku sprawdzenia statusu.
         </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Podsumowanie zamówienia</Text>
+        <Text style={styles.sectionTitle}>Podsumowanie</Text>
 
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Numer zamówienia</Text>
@@ -111,13 +136,6 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => navigation.navigate('Items')}
-        activeOpacity={0.8}>
-        <Text style={styles.primaryButtonText}>Kontynuuj zakupy</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
         style={styles.trackButton}
         onPress={() =>
           navigation.navigate('TrackOrder', {
@@ -129,19 +147,35 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={() => navigation.navigate('Home')}
+        style={styles.primaryButton}
+        onPress={() => navigation.navigate('Items')}
         activeOpacity={0.8}>
-        <Text style={styles.secondaryButtonText}>Wróć na stronę główną</Text>
+        <Text style={styles.primaryButtonText}>Kontynuuj zakupy</Text>
       </TouchableOpacity>
 
+      {isCustomer ? (
+        <TouchableOpacity
+          style={styles.customerButton}
+          onPress={goToCustomerPanel}
+          activeOpacity={0.8}>
+          <Text style={styles.customerButtonText}>Moje konto</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {isAdmin || isWorker ? (
+        <TouchableOpacity
+          style={styles.adminButton}
+          onPress={goToAdminPanel}
+          activeOpacity={0.8}>
+          <Text style={styles.adminButtonText}>Panel pracownika</Text>
+        </TouchableOpacity>
+      ) : null}
+
       <TouchableOpacity
-        style={styles.adminButton}
-        onPress={() => navigation.navigate('Orders')}
+        style={styles.secondaryButton}
+        onPress={goHome}
         activeOpacity={0.8}>
-        <Text style={styles.adminButtonText}>
-          Zobacz zamówienia w panelu admina
-        </Text>
+        <Text style={styles.secondaryButtonText}>Strona główna</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -249,20 +283,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  primaryButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
   trackButton: {
     backgroundColor: '#38bdf8',
     paddingVertical: 13,
@@ -277,28 +297,56 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  secondaryButton: {
-    backgroundColor: '#f97316',
+  primaryButton: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  customerButton: {
+    backgroundColor: '#2563eb',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
   },
 
-  secondaryButtonText: {
+  customerButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
   },
 
   adminButton: {
+    backgroundColor: '#a855f7',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  adminButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  secondaryButton: {
     backgroundColor: '#334155',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
   },
 
-  adminButtonText: {
+  secondaryButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
