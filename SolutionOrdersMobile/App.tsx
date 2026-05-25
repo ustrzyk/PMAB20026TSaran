@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect} from 'react';
 import {StatusBar, StyleSheet, useColorScheme, View} from 'react-native';
 import {
   SafeAreaProvider,
@@ -6,8 +6,8 @@ import {
 } from 'react-native-safe-area-context';
 
 import {AuthProvider} from './src/context/AuthContext.tsx';
-import {CartProvider} from './src/context/CartContext.tsx';
-import {ItemsProvider} from './src/context/ItemsContext.tsx';
+import {CartProvider, useCart} from './src/context/CartContext.tsx';
+import {ItemsProvider, useItems} from './src/context/ItemsContext.tsx';
 import RootNavigator from './src/navigation/RootNavigator.tsx';
 
 function App(): React.JSX.Element {
@@ -33,9 +33,21 @@ function AppContent(): React.JSX.Element {
 
   return (
     <View style={[styles.container, {paddingTop: insets.top}]}>
+      <CartSynchronizer />
       <RootNavigator />
     </View>
   );
+}
+
+function CartSynchronizer(): null {
+  const {items} = useItems();
+  const {syncCartWithItems} = useCart();
+
+  useEffect(() => {
+    syncCartWithItems(items);
+  }, [items, syncCartWithItems]);
+
+  return null;
 }
 
 const styles = StyleSheet.create({
