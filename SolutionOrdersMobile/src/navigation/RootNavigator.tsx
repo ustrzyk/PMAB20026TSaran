@@ -1,6 +1,20 @@
 import React from 'react';
-import {NavigationContainer} from '@react-navigation/native';
-import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+
+import {
+  NavigationContainer,
+  useNavigation,
+} from '@react-navigation/native';
+
+import {
+  createNativeStackNavigator,
+  type NativeStackNavigationProp,
+} from '@react-navigation/native-stack';
 
 import AdminItemsScreen from '../screens/AdminItemsScreen.tsx';
 import AdminPanelScreen from '../screens/AdminPanelScreen.tsx';
@@ -33,6 +47,62 @@ import {useAuth} from '../context/AuthContext.tsx';
 import type {RootStackParamList} from './types.ts';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+type GuardMode = 'employee' | 'admin';
+
+interface AccessGuardProps {
+  mode: GuardMode;
+  children: React.ReactNode;
+}
+
+function AccessGuard({mode, children}: AccessGuardProps): React.JSX.Element {
+  const {isAdmin, isWorker} = useAuth();
+
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const hasAccess = mode === 'admin' ? isAdmin : isAdmin || isWorker;
+
+  if (hasAccess) {
+    return <>{children}</>;
+  }
+
+  return (
+    <View style={styles.accessContainer}>
+      <Text style={styles.accessIcon}>🔒</Text>
+
+      <Text style={styles.accessTitle}>Brak dostępu</Text>
+
+      <Text style={styles.accessText}>
+        Ten ekran jest dostępny tylko dla pracownika albo administratora.
+      </Text>
+
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() =>
+          navigation.reset({
+            index: 0,
+            routes: [{name: 'Home'}],
+          })
+        }
+        activeOpacity={0.85}>
+        <Text style={styles.primaryButtonText}>Wróć do sklepu</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() =>
+          navigation.reset({
+            index: 0,
+            routes: [{name: 'AuthLogin'}],
+          })
+        }
+        activeOpacity={0.85}>
+        <Text style={styles.secondaryButtonText}>Zaloguj</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
 
 function RootNavigator(): React.JSX.Element {
   const {user, isAdmin, isWorker, isCustomer} = useAuth();
@@ -126,144 +196,254 @@ function RootNavigator(): React.JSX.Element {
           options={{title: 'Panel pracownika'}}
         />
 
-        <Stack.Screen
-          name="Dashboard"
-          component={DashboardScreen}
-          options={{title: 'Dashboard'}}
-        />
+        <Stack.Screen name="Dashboard" options={{title: 'Dashboard'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <DashboardScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="AdminItems"
-          component={AdminItemsScreen}
-          options={{title: 'Produkty'}}
-        />
+        <Stack.Screen name="AdminItems" options={{title: 'Produkty'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <AdminItemsScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="CreateItem"
-          component={ItemFormScreen}
-          options={{title: 'Dodaj produkt'}}
-        />
+        <Stack.Screen name="CreateItem" options={{title: 'Dodaj produkt'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <ItemFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="EditItem"
-          component={ItemFormScreen}
-          options={{title: 'Edytuj produkt'}}
-        />
+        <Stack.Screen name="EditItem" options={{title: 'Edytuj produkt'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <ItemFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="Categories"
-          component={CategoriesScreen}
-          options={{title: 'Kategorie'}}
-        />
+        <Stack.Screen name="Categories" options={{title: 'Kategorie'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <CategoriesScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
         <Stack.Screen
           name="CreateCategory"
-          component={CategoryFormScreen}
-          options={{title: 'Dodaj kategorię'}}
-        />
+          options={{title: 'Dodaj kategorię'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <CategoryFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
         <Stack.Screen
           name="EditCategory"
-          component={CategoryFormScreen}
-          options={{title: 'Edytuj kategorię'}}
-        />
+          options={{title: 'Edytuj kategorię'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <CategoryFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="Units"
-          component={UnitsScreen}
-          options={{title: 'Jednostki miary'}}
-        />
+        <Stack.Screen name="Units" options={{title: 'Jednostki miary'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <UnitsScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="CreateUnit"
-          component={UnitFormScreen}
-          options={{title: 'Dodaj jednostkę'}}
-        />
+        <Stack.Screen name="CreateUnit" options={{title: 'Dodaj jednostkę'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <UnitFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="EditUnit"
-          component={UnitFormScreen}
-          options={{title: 'Edytuj jednostkę'}}
-        />
+        <Stack.Screen name="EditUnit" options={{title: 'Edytuj jednostkę'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <UnitFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="Clients"
-          component={ClientsScreen}
-          options={{title: 'Klienci'}}
-        />
+        <Stack.Screen name="Clients" options={{title: 'Klienci'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <ClientsScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="CreateClient"
-          component={ClientFormScreen}
-          options={{title: 'Dodaj klienta'}}
-        />
+        <Stack.Screen name="CreateClient" options={{title: 'Dodaj klienta'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <ClientFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="EditClient"
-          component={ClientFormScreen}
-          options={{title: 'Edytuj klienta'}}
-        />
+        <Stack.Screen name="EditClient" options={{title: 'Edytuj klienta'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <ClientFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        {isAdmin ? (
-          <>
-            <Stack.Screen
-              name="Workers"
-              component={WorkersScreen}
-              options={{title: 'Pracownicy'}}
-            />
+        <Stack.Screen name="Workers" options={{title: 'Pracownicy'}}>
+          {props => (
+            <AccessGuard mode="admin">
+              <WorkersScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-            <Stack.Screen
-              name="CreateWorker"
-              component={WorkerFormScreen}
-              options={{title: 'Dodaj pracownika'}}
-            />
+        <Stack.Screen name="CreateWorker" options={{title: 'Dodaj pracownika'}}>
+          {props => (
+            <AccessGuard mode="admin">
+              <WorkerFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-            <Stack.Screen
-              name="EditWorker"
-              component={WorkerFormScreen}
-              options={{title: 'Edytuj pracownika'}}
-            />
-          </>
-        ) : null}
+        <Stack.Screen name="EditWorker" options={{title: 'Edytuj pracownika'}}>
+          {props => (
+            <AccessGuard mode="admin">
+              <WorkerFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="Orders"
-          component={OrdersScreen}
-          options={{title: 'Zamówienia'}}
-        />
+        <Stack.Screen name="Orders" options={{title: 'Zamówienia'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <OrdersScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="CreateOrder"
-          component={OrderFormScreen}
-          options={{title: 'Dodaj zamówienie'}}
-        />
+        <Stack.Screen name="CreateOrder" options={{title: 'Dodaj zamówienie'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <OrderFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
-        <Stack.Screen
-          name="EditOrder"
-          component={OrderFormScreen}
-          options={{title: 'Edytuj zamówienie'}}
-        />
+        <Stack.Screen name="EditOrder" options={{title: 'Edytuj zamówienie'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <OrderFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
         <Stack.Screen
           name="OrderItems"
-          component={OrderItemsScreen}
-          options={{title: 'Pozycje zamówienia'}}
-        />
+          options={{title: 'Pozycje zamówienia'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <OrderItemsScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
         <Stack.Screen
           name="CreateOrderItem"
-          component={OrderItemFormScreen}
-          options={{title: 'Dodaj pozycję'}}
-        />
+          options={{title: 'Dodaj pozycję'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <OrderItemFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
 
         <Stack.Screen
           name="EditOrderItem"
-          component={OrderItemFormScreen}
-          options={{title: 'Edytuj pozycję'}}
-        />
+          options={{title: 'Edytuj pozycję'}}>
+          {props => (
+            <AccessGuard mode="employee">
+              <OrderItemFormScreen {...props} />
+            </AccessGuard>
+          )}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  accessContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+
+  accessIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+
+  accessTitle: {
+    color: '#f8fafc',
+    fontSize: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  accessText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+
+  primaryButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginBottom: 10,
+  },
+
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  secondaryButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+
+  secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+});
 
 export default RootNavigator;
