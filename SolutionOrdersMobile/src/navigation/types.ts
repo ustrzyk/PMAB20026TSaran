@@ -9,6 +9,9 @@ import type {
 } from '../types/models.ts';
 
 export type RootStackParamList = {
+  AuthLogin: undefined;
+  Register: undefined;
+
   Home: undefined;
 
   Dashboard: undefined;

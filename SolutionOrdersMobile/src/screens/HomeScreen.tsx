@@ -9,6 +9,7 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import {useAuth} from '../context/AuthContext.tsx';
 import {useCart} from '../context/CartContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
@@ -22,98 +23,80 @@ function formatMoney(value?: number | null): string {
 }
 
 function HomeScreen({navigation}: Props): React.JSX.Element {
+  const {user, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
-        <Text style={styles.appName}>3D Print Shop</Text>
+        <View style={styles.heroTopRow}>
+          <View>
+            <Text style={styles.appName}>3D Print Shop</Text>
+            <Text style={styles.title}>Cześć, {user?.name ?? 'Kliencie'}</Text>
+          </View>
 
-        <Text style={styles.title}>Sklep z drukarkami 3D</Text>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={logout}
+            activeOpacity={0.85}>
+            <Text style={styles.logoutButtonText}>Wyloguj</Text>
+          </TouchableOpacity>
+        </View>
 
         <Text style={styles.subtitle}>
-          Kup drukarki 3D, filamenty, dysze, części zamienne i akcesoria.
-          Wybierz produkt, dodaj go do koszyka i złóż zamówienie z dostawą.
+          Wybierz produkty, dodaj je do koszyka i sprawdź swoje zamówienie.
         </Text>
       </View>
 
-      <View style={styles.cartSummaryBox}>
-        <View>
-          <Text style={styles.cartSummaryTitle}>Twój koszyk</Text>
-          <Text style={styles.cartSummaryText}>
-            Produkty: {totalQuantity} | Wartość: {formatMoney(totalValue)}
+      <View style={styles.cartBox}>
+        <Text style={styles.cartIcon}>🛒</Text>
+
+        <View style={styles.cartTextBox}>
+          <Text style={styles.cartTitle}>Koszyk</Text>
+          <Text style={styles.cartText}>
+            {totalQuantity} szt. | {formatMoney(totalValue)}
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.cartButton}
+          style={styles.smallButton}
           onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.8}>
-          <Text style={styles.cartButtonText}>Koszyk</Text>
+          activeOpacity={0.85}>
+          <Text style={styles.smallButtonText}>Otwórz</Text>
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Sklep internetowy</Text>
+      <Text style={styles.sectionTitle}>Co chcesz zrobić?</Text>
 
-      <TouchableOpacity
-        style={[styles.menuCard, styles.shopCard]}
-        onPress={() => navigation.navigate('Items')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Przeglądaj produkty</Text>
-          <Text style={styles.menuDescription}>
-            Lista produktów sklepu: drukarki 3D, filamenty, stoły robocze,
-            części, dysze i narzędzia.
-          </Text>
-        </View>
+      <View style={styles.grid}>
+        <TouchableOpacity
+          style={[styles.actionCard, styles.shopCard]}
+          onPress={() => navigation.navigate('Items')}
+          activeOpacity={0.85}>
+          <Text style={styles.actionIcon}>🖨️</Text>
+          <Text style={styles.actionTitle}>Sklep</Text>
+          <Text style={styles.actionText}>Produkty 3D</Text>
+        </TouchableOpacity>
 
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionCard, styles.cartCard]}
+          onPress={() => navigation.navigate('Cart')}
+          activeOpacity={0.85}>
+          <Text style={styles.actionIcon}>🛒</Text>
+          <Text style={styles.actionTitle}>Koszyk</Text>
+          <Text style={styles.actionText}>Finalizacja</Text>
+        </TouchableOpacity>
 
-      <TouchableOpacity
-        style={[styles.menuCard, styles.cartCard]}
-        onPress={() => navigation.navigate('Cart')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Koszyk i zamówienie</Text>
-          <Text style={styles.menuDescription}>
-            Sprawdź wybrane produkty, wpisz dane klienta i złóż zamówienie.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[styles.menuCard, styles.trackCard]}
-        onPress={() => navigation.navigate('TrackOrder')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Sprawdź zamówienie</Text>
-          <Text style={styles.menuDescription}>
-            Wpisz numer zamówienia i zobacz jego szczegóły oraz produkty.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Administracja</Text>
-
-      <TouchableOpacity
-        style={[styles.menuCard, styles.adminCard]}
-        onPress={() => navigation.navigate('AdminPanel')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Panel administracyjny</Text>
-          <Text style={styles.menuDescription}>
-            Zarządzanie produktami, kategoriami, klientami, pracownikami,
-            zamówieniami i raportami sprzedaży.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.actionCard, styles.orderCard]}
+          onPress={() => navigation.navigate('TrackOrder')}
+          activeOpacity={0.85}>
+          <Text style={styles.actionIcon}>📦</Text>
+          <Text style={styles.actionTitle}>Zamówienie</Text>
+          <Text style={styles.actionText}>Status po numerze</Text>
+        </TouchableOpacity>
+      </View>
+            
     </ScrollView>
   );
 }
@@ -131,11 +114,18 @@ const styles = StyleSheet.create({
 
   heroBox: {
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
+  },
+
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'flex-start',
   },
 
   appName: {
@@ -144,12 +134,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   title: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
   },
 
@@ -157,45 +147,65 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 14,
     lineHeight: 20,
-    marginTop: 8,
+    marginTop: 10,
   },
 
-  cartSummaryBox: {
+  logoutButton: {
+    backgroundColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  cartBox: {
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#f97316',
     marginBottom: 18,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     gap: 12,
   },
 
-  cartSummaryTitle: {
+  cartIcon: {
+    fontSize: 34,
+  },
+
+  cartTextBox: {
+    flex: 1,
+  },
+
+  cartTitle: {
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
-  cartSummaryText: {
+  cartText: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '700',
   },
 
-  cartButton: {
+  smallButton: {
     backgroundColor: '#f97316',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
 
-  cartButtonText: {
+  smallButtonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
   },
 
@@ -206,16 +216,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  menuCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
+  grid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+
+  actionCard: {
+    width: '30.8%',
+    minHeight: 132,
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   shopCard: {
@@ -226,36 +241,52 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
-  trackCard: {
+  orderCard: {
     borderColor: '#38bdf8',
   },
 
-  adminCard: {
-    borderColor: '#a855f7',
+  actionIcon: {
+    fontSize: 34,
+    marginBottom: 8,
   },
 
-  menuTextBox: {
-    flex: 1,
-  },
-
-  menuTitle: {
+  actionTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 15,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  actionText: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+
+  tipBox: {
+    backgroundColor: '#172554',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    marginTop: 18,
+  },
+
+  tipTitle: {
+    color: '#ffffff',
+    fontSize: 15,
     fontWeight: '900',
     marginBottom: 5,
   },
 
-  menuDescription: {
-    color: '#94a3b8',
+  tipText: {
+    color: '#bfdbfe',
     fontSize: 13,
-    lineHeight: 18,
-  },
-
-  menuArrow: {
-    color: '#f97316',
-    fontSize: 18,
-    fontWeight: '900',
-    marginLeft: 12,
+    lineHeight: 19,
+    fontWeight: '700',
   },
 });
 

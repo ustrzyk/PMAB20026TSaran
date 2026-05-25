@@ -5,6 +5,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 
+import {AuthProvider} from './src/context/AuthContext.tsx';
 import {CartProvider} from './src/context/CartContext.tsx';
 import {ItemsProvider} from './src/context/ItemsContext.tsx';
 import RootNavigator from './src/navigation/RootNavigator.tsx';
@@ -16,11 +17,13 @@ function App(): React.JSX.Element {
     <SafeAreaProvider>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-      <ItemsProvider>
-        <CartProvider>
-          <AppContent />
-        </CartProvider>
-      </ItemsProvider>
+      <AuthProvider>
+        <ItemsProvider>
+          <CartProvider>
+            <AppContent />
+          </CartProvider>
+        </ItemsProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }
