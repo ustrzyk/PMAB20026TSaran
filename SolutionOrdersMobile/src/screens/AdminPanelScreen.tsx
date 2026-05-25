@@ -20,6 +20,15 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
 
   const roleName = isAdmin ? 'Administrator' : 'Pracownik';
 
+  const handleLogout = (): void => {
+    logout();
+
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Home'}],
+    });
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
@@ -32,12 +41,12 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={logout}
-            activeOpacity={0.85}>
-            <Text style={styles.logoutButtonText}>Wyloguj</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              activeOpacity={0.85}>
+              <Text style={styles.logoutButtonText}>Wyloguj</Text>
+            </TouchableOpacity>
         </View>
       </View>
 

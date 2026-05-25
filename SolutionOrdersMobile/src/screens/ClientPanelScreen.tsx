@@ -26,6 +26,15 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
   const {user, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
 
+  const handleLogout = (): void => {
+    logout();
+
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Home'}],
+    });
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
@@ -37,7 +46,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
 
           <TouchableOpacity
             style={styles.logoutButton}
-            onPress={logout}
+            onPress={handleLogout}
             activeOpacity={0.85}>
             <Text style={styles.logoutButtonText}>Wyloguj</Text>
           </TouchableOpacity>
