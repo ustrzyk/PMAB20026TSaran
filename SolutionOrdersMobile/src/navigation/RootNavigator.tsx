@@ -8,6 +8,7 @@ import CartScreen from '../screens/CartScreen.tsx';
 import CategoriesScreen from '../screens/CategoriesScreen.tsx';
 import CategoryFormScreen from '../screens/CategoryFormScreen.tsx';
 import ClientFormScreen from '../screens/ClientFormScreen.tsx';
+import ClientPanelScreen from '../screens/ClientPanelScreen.tsx';
 import ClientsScreen from '../screens/ClientsScreen.tsx';
 import DashboardScreen from '../screens/DashboardScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
@@ -34,7 +35,10 @@ import type {RootStackParamList} from './types.ts';
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 function RootNavigator(): React.JSX.Element {
-  const {user} = useAuth();
+  const {user, isAdmin, isWorker} = useAuth();
+
+  const initialRouteName =
+    isAdmin || isWorker ? 'AdminPanel' : 'Home';
 
   const navigatorKey = user ? user.role : 'guest';
 
@@ -42,9 +46,7 @@ function RootNavigator(): React.JSX.Element {
     <NavigationContainer>
       <Stack.Navigator
         key={navigatorKey}
-        initialRouteName={
-          !user ? 'AuthLogin' : user.role === 'admin' ? 'AdminPanel' : 'Home'
-        }
+        initialRouteName={initialRouteName}
         screenOptions={{
           headerStyle: {
             backgroundColor: '#f97316',
@@ -57,69 +59,68 @@ function RootNavigator(): React.JSX.Element {
             backgroundColor: '#0f172a',
           },
         }}>
-        {!user ? (
-          <>
-            <Stack.Screen
-              name="AuthLogin"
-              component={LoginScreen}
-              options={{
-                title: 'Logowanie',
-                headerShown: false,
-              }}
-            />
+        <Stack.Screen
+          name="Home"
+          component={HomeScreen}
+          options={{title: '3D Print Shop'}}
+        />
 
-            <Stack.Screen
-              name="Register"
-              component={RegisterScreen}
-              options={{
-                title: 'Rejestracja',
-              }}
-            />
-          </>
-        ) : user.role === 'customer' ? (
-          <>
-            <Stack.Screen
-              name="Home"
-              component={HomeScreen}
-              options={{title: 'Panel klienta'}}
-            />
+        <Stack.Screen
+          name="Items"
+          component={ItemsScreen}
+          options={{title: 'Sklep'}}
+        />
 
-            <Stack.Screen
-              name="Items"
-              component={ItemsScreen}
-              options={{title: 'Sklep'}}
-            />
+        <Stack.Screen
+          name="ItemDetails"
+          component={ItemDetailsScreen}
+          options={{title: 'Produkt'}}
+        />
 
-            <Stack.Screen
-              name="Cart"
-              component={CartScreen}
-              options={{title: 'Koszyk'}}
-            />
+        <Stack.Screen
+          name="Cart"
+          component={CartScreen}
+          options={{title: 'Koszyk'}}
+        />
 
-            <Stack.Screen
-              name="OrderSuccess"
-              component={OrderSuccessScreen}
-              options={{title: 'Potwierdzenie zamówienia'}}
-            />
+        <Stack.Screen
+          name="TrackOrder"
+          component={TrackOrderScreen}
+          options={{title: 'Sprawdź zamówienie'}}
+        />
 
-            <Stack.Screen
-              name="TrackOrder"
-              component={TrackOrderScreen}
-              options={{title: 'Moje zamówienie'}}
-            />
+        <Stack.Screen
+          name="AuthLogin"
+          component={LoginScreen}
+          options={{title: 'Logowanie'}}
+        />
 
-            <Stack.Screen
-              name="ItemDetails"
-              component={ItemDetailsScreen}
-              options={{title: 'Produkt'}}
-            />
-          </>
-        ) : (
+        <Stack.Screen
+          name="Register"
+          component={RegisterScreen}
+          options={{title: 'Rejestracja'}}
+        />
+
+        <Stack.Screen
+          name="OrderSuccess"
+          component={OrderSuccessScreen}
+          options={{title: 'Potwierdzenie zamówienia'}}
+        />
+
+        {user?.role === 'customer' ? (
+          <Stack.Screen
+            name="ClientPanel"
+            component={ClientPanelScreen}
+            options={{title: 'Moje konto'}}
+          />
+        ) : null}
+
+        {isAdmin || isWorker ? (
           <>
             <Stack.Screen
               name="AdminPanel"
               component={AdminPanelScreen}
-              options={{title: 'Panel administratora'}}
+              options={{title: 'Panel pracownika'}}
             />
 
             <Stack.Screen
@@ -200,23 +201,27 @@ function RootNavigator(): React.JSX.Element {
               options={{title: 'Edytuj klienta'}}
             />
 
-            <Stack.Screen
-              name="Workers"
-              component={WorkersScreen}
-              options={{title: 'Pracownicy'}}
-            />
+            {isAdmin ? (
+              <>
+                <Stack.Screen
+                  name="Workers"
+                  component={WorkersScreen}
+                  options={{title: 'Pracownicy'}}
+                />
 
-            <Stack.Screen
-              name="CreateWorker"
-              component={WorkerFormScreen}
-              options={{title: 'Dodaj pracownika'}}
-            />
+                <Stack.Screen
+                  name="CreateWorker"
+                  component={WorkerFormScreen}
+                  options={{title: 'Dodaj pracownika'}}
+                />
 
-            <Stack.Screen
-              name="EditWorker"
-              component={WorkerFormScreen}
-              options={{title: 'Edytuj pracownika'}}
-            />
+                <Stack.Screen
+                  name="EditWorker"
+                  component={WorkerFormScreen}
+                  options={{title: 'Edytuj pracownika'}}
+                />
+              </>
+            ) : null}
 
             <Stack.Screen
               name="Orders"
@@ -253,14 +258,8 @@ function RootNavigator(): React.JSX.Element {
               component={OrderItemFormScreen}
               options={{title: 'Edytuj pozycję'}}
             />
-
-            <Stack.Screen
-              name="TrackOrder"
-              component={TrackOrderScreen}
-              options={{title: 'Podgląd zamówienia'}}
-            />
           </>
-        )}
+        ) : null}
       </Stack.Navigator>
     </NavigationContainer>
   );

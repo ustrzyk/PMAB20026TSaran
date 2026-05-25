@@ -21,8 +21,8 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AuthLogin'>;
 function LoginScreen({navigation}: Props): React.JSX.Element {
   const {login} = useAuth();
 
-  const [loginOrEmail, setLoginOrEmail] = useState('tsaran');
-  const [password, setPassword] = useState('dalej');
+  const [loginOrEmail, setLoginOrEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
