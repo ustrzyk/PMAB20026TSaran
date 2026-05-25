@@ -17,7 +17,14 @@ export type RootStackParamList = {
 
   Dashboard: undefined;
   AdminPanel: undefined;
-  Items: undefined;
+
+  Items:
+    | {
+        initialCategory?: string;
+        initialSearch?: string;
+      }
+    | undefined;
+
   AdminItems: undefined;
 
   TrackOrder:

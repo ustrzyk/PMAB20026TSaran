@@ -90,7 +90,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
   }, [categories]);
 
   const visibleCategories = useMemo(() => {
-    return activeCategories.slice(0, 4);
+    return activeCategories.slice(0, 6);
   }, [activeCategories]);
 
   const visibleProducts = useMemo(() => {
@@ -129,6 +129,15 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     navigation.navigate('AuthLogin');
   };
 
+  const handleLogout = (): void => {
+    logout();
+
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Home'}],
+    });
+  };
+
   const getAccountLabel = (): string => {
     if (isAdmin || isWorker) {
       return 'Panel';
@@ -141,22 +150,46 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     return 'Zaloguj';
   };
 
+  const handleSearchPress = (): void => {
+    const search = searchText.trim();
+
+    if (search.length === 0) {
+      navigation.navigate('Items');
+      return;
+    }
+
+    navigation.navigate('Items', {
+      initialSearch: search,
+    });
+  };
+
   const renderCategory = (category: CategoryDto): React.JSX.Element => {
     return (
       <TouchableOpacity
         key={category.idCategory}
         style={styles.categoryCard}
-        onPress={() => navigation.navigate('Items')}
+        onPress={() =>
+          navigation.navigate('Items', {
+            initialCategory: category.name,
+          })
+        }
         activeOpacity={0.85}>
         <Text style={styles.categoryIcon}>{getCategoryIcon(category.name)}</Text>
-        <Text style={styles.categoryName} numberOfLines={1}>
-          {category.name}
-        </Text>
+
+        <View style={styles.categoryTextBox}>
+          <Text style={styles.categoryName} numberOfLines={1}>
+            {category.name}
+          </Text>
+
+          <Text style={styles.categoryHint}>Zobacz produkty</Text>
+        </View>
       </TouchableOpacity>
     );
   };
 
   const renderProduct = (item: Item): React.JSX.Element => {
+    const isAvailable = (item.quantity ?? 0) > 0;
+
     return (
       <TouchableOpacity
         key={item.idItem}
@@ -177,7 +210,10 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.productBottomRow}>
           <Text style={styles.productPrice}>{formatMoney(item.price)}</Text>
-          <Text style={styles.productStock}>Stan: {item.quantity ?? 0}</Text>
+
+          <Text style={isAvailable ? styles.productStock : styles.productStockEmpty}>
+            {isAvailable ? `Stan: ${item.quantity ?? 0}` : 'Brak na stanie'}
+          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -191,7 +227,9 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
           <View>
             <Text style={styles.appName}>3D Print Shop</Text>
-            <Text style={styles.appSubtitle}>Sklep z drukiem 3D</Text>
+            <Text style={styles.appSubtitle}>
+              {user ? user.name : 'Sklep z drukiem 3D'}
+            </Text>
           </View>
         </View>
 
@@ -252,7 +290,15 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           onChangeText={setSearchText}
           placeholder="Szukaj produktu..."
           placeholderTextColor="#64748b"
+          onSubmitEditing={handleSearchPress}
         />
+
+        <TouchableOpacity
+          style={styles.searchButton}
+          onPress={handleSearchPress}
+          activeOpacity={0.85}>
+          <Text style={styles.searchButtonText}>Szukaj</Text>
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -296,10 +342,12 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           </View>
 
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Polecane produkty</Text>
+            <Text style={styles.sectionTitle}>
+              {searchText.trim().length > 0 ? 'Wyniki wyszukiwania' : 'Polecane produkty'}
+            </Text>
 
             <TouchableOpacity
-              onPress={() => navigation.navigate('Items')}
+              onPress={handleSearchPress}
               activeOpacity={0.85}>
               <Text style={styles.sectionLink}>Więcej</Text>
             </TouchableOpacity>
@@ -320,7 +368,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
       {user ? (
         <TouchableOpacity
           style={styles.logoutButton}
-          onPress={logout}
+          onPress={handleLogout}
           activeOpacity={0.85}>
           <Text style={styles.logoutButtonText}>Wyloguj</Text>
         </TouchableOpacity>
@@ -470,9 +518,12 @@ const styles = StyleSheet.create({
 
   searchBox: {
     marginBottom: 14,
+    flexDirection: 'row',
+    gap: 10,
   },
 
   searchInput: {
+    flex: 1,
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
@@ -481,6 +532,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+  },
+
+  searchButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+  },
+
+  searchButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
   },
 
   loadingBox: {
@@ -573,11 +637,21 @@ const styles = StyleSheet.create({
     fontSize: 25,
   },
 
+  categoryTextBox: {
+    flex: 1,
+  },
+
   categoryName: {
     color: '#f8fafc',
     fontSize: 14,
     fontWeight: '900',
-    flex: 1,
+  },
+
+  categoryHint: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 2,
   },
 
   productsGrid: {
@@ -640,6 +714,13 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 11,
     fontWeight: '700',
+    marginTop: 3,
+  },
+
+  productStockEmpty: {
+    color: '#fca5a5',
+    fontSize: 11,
+    fontWeight: '800',
     marginTop: 3,
   },
 
