@@ -29,7 +29,7 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
 
             var worker = await context.Workers
                 .FirstOrDefaultAsync(worker =>
-                        worker.IdWorker == request.IdWorker,
+                    worker.IdWorker == request.IdWorker,
                     cancellationToken);
 
             if (worker == null)
@@ -38,13 +38,25 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
                     $"Pracownik o ID {request.IdWorker} nie istnieje");
             }
 
-            worker.FirstName = request.FirstName;
-            worker.LastName = request.LastName;
-            worker.Login = request.Login;
+            var loginExists = await context.Workers
+                .AnyAsync(otherWorker =>
+                    otherWorker.IdWorker != request.IdWorker &&
+                    otherWorker.Login == request.Login.Trim(),
+                    cancellationToken);
+
+            if (loginExists)
+            {
+                throw new ArgumentException("Inny pracownik ma już taki login");
+            }
+
+            worker.FirstName = request.FirstName.Trim();
+            worker.LastName = request.LastName.Trim();
+            worker.Login = request.Login.Trim();
+            worker.Role = NormalizeRole(request.Role);
 
             if (!string.IsNullOrWhiteSpace(request.Password))
             {
-                worker.Password = request.Password;
+                worker.Password = request.Password.Trim();
             }
 
             worker.IsActive = request.IsActive;
@@ -52,6 +64,16 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
             await context.SaveChangesAsync(cancellationToken);
 
             return Unit.Value;
+        }
+
+        private static string NormalizeRole(string? role)
+        {
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Admin";
+            }
+
+            return "Worker";
         }
     }
 }

@@ -8,8 +8,8 @@
         public bool IsActive { get; set; }
         public string Login { get; set; } = string.Empty;
         public string? Password { get; set; }
+        public string Role { get; set; } = "Worker";
 
-        // Navigation property
         public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
     }
 }
