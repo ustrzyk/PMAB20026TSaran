@@ -30,11 +30,17 @@ interface DialogState {
   loading: boolean;
 }
 
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditClient';
   const editedClient = isEditMode ? route.params.client : undefined;
 
   const [name, setName] = useState(editedClient?.name ?? '');
+  const [email, setEmail] = useState(editedClient?.email ?? '');
+  const [password, setPassword] = useState('');
   const [adress, setAdress] = useState(editedClient?.adress ?? '');
   const [phoneNumber, setPhoneNumber] = useState(
     editedClient?.phoneNumber ?? '',
@@ -83,12 +89,30 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const validateForm = (): string | null => {
-    if (name.trim().length === 0) {
+    const safeName = name.trim();
+    const safeEmail = email.trim();
+    const safePassword = password.trim();
+    const hasEmail = safeEmail.length > 0;
+    const hasPassword = safePassword.length > 0;
+
+    if (safeName.length === 0) {
       return 'Podaj nazwę klienta';
     }
 
-    if (name.trim().length > 80) {
+    if (safeName.length > 80) {
       return 'Nazwa klienta może mieć maksymalnie 80 znaków';
+    }
+
+    if (hasEmail && !isValidEmail(safeEmail)) {
+      return 'Podaj poprawny adres e-mail klienta';
+    }
+
+    if (!isEditMode && hasEmail && !hasPassword) {
+      return 'Podaj hasło, jeśli tworzysz klienta z kontem logowania';
+    }
+
+    if (hasPassword && safePassword.length < 4) {
+      return 'Hasło powinno mieć minimum 4 znaki';
     }
 
     if (phoneNumber.trim().length > 30) {
@@ -118,6 +142,9 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const submitForm = async (): Promise<void> => {
+    const safeEmail = email.trim().toLowerCase();
+    const safePassword = password.trim();
+
     try {
       setSubmitting(true);
 
@@ -133,6 +160,8 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
           adress: adress.trim().length > 0 ? adress.trim() : null,
           phoneNumber:
             phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
+          email: safeEmail.length > 0 ? safeEmail : null,
+          password: safePassword.length > 0 ? safePassword : null,
           isActive,
         });
 
@@ -148,6 +177,8 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
           adress: adress.trim().length > 0 ? adress.trim() : null,
           phoneNumber:
             phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
+          email: safeEmail.length > 0 ? safeEmail : null,
+          password: safePassword.length > 0 ? safePassword : null,
           isActive,
         });
 
@@ -205,7 +236,7 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Dane klienta będą używane przy obsłudze zamówień.
+            Dane klienta będą używane przy logowaniu i obsłudze zamówień.
           </Text>
         </View>
 
@@ -221,6 +252,39 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
             placeholderTextColor="#64748b"
             editable={!submitting}
           />
+
+          <Text style={styles.label}>E-mail klienta</Text>
+          <TextInput
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Np. jan@3dshop.pl"
+            placeholderTextColor="#64748b"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>
+            {isEditMode ? 'Nowe hasło klienta' : 'Hasło klienta'}
+          </Text>
+          <TextInput
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+            placeholder={
+              isEditMode
+                ? 'Opcjonalnie - wpisz nowe hasło'
+                : 'Wymagane tylko przy koncie logowania'
+            }
+            placeholderTextColor="#64748b"
+            secureTextEntry
+            editable={!submitting}
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Dane kontaktowe</Text>
 
           <Text style={styles.label}>Adres</Text>
           <TextInput

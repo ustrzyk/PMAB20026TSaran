@@ -22,7 +22,8 @@ import type {ClientDto} from '../types/models.ts';
 type Props = NativeStackScreenProps<RootStackParamList, 'Clients'>;
 
 type StatusFilter = 'all' | 'active' | 'inactive';
-type SortMode = 'default' | 'nameAsc' | 'nameDesc';
+type AccountFilter = 'all' | 'withAccount' | 'withoutAccount';
+type SortMode = 'default' | 'nameAsc' | 'nameDesc' | 'emailAsc';
 
 interface DialogState {
   visible: boolean;
@@ -30,6 +31,10 @@ interface DialogState {
   title: string;
   message: string;
   loading: boolean;
+}
+
+function hasClientAccount(client: ClientDto): boolean {
+  return (client.email ?? '').trim().length > 0;
 }
 
 function ClientsScreen({navigation}: Props): React.JSX.Element {
@@ -41,6 +46,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [accountFilter, setAccountFilter] = useState<AccountFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
   const [dialog, setDialog] = useState<DialogState>({
@@ -64,14 +70,24 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
       result = result.filter(client => client.isActive === false);
     }
 
+    if (accountFilter === 'withAccount') {
+      result = result.filter(client => hasClientAccount(client));
+    }
+
+    if (accountFilter === 'withoutAccount') {
+      result = result.filter(client => !hasClientAccount(client));
+    }
+
     if (search.length > 0) {
       result = result.filter(client => {
         const name = client.name?.toLowerCase() ?? '';
+        const email = client.email?.toLowerCase() ?? '';
         const address = client.adress?.toLowerCase() ?? '';
         const phoneNumber = client.phoneNumber?.toLowerCase() ?? '';
 
         return (
           name.includes(search) ||
+          email.includes(search) ||
           address.includes(search) ||
           phoneNumber.includes(search)
         );
@@ -88,8 +104,12 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
       sorted.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
     }
 
+    if (sortMode === 'emailAsc') {
+      sorted.sort((a, b) => (a.email ?? '').localeCompare(b.email ?? ''));
+    }
+
     return sorted;
-  }, [clients, searchText, statusFilter, sortMode]);
+  }, [clients, searchText, statusFilter, accountFilter, sortMode]);
 
   const activeCount = useMemo(() => {
     return clients.filter(client => client.isActive !== false).length;
@@ -97,6 +117,14 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
 
   const inactiveCount = useMemo(() => {
     return clients.filter(client => client.isActive === false).length;
+  }, [clients]);
+
+  const accountsCount = useMemo(() => {
+    return clients.filter(client => hasClientAccount(client)).length;
+  }, [clients]);
+
+  const withoutAccountsCount = useMemo(() => {
+    return clients.filter(client => !hasClientAccount(client)).length;
   }, [clients]);
 
   const closeDialog = (): void => {
@@ -200,6 +228,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
   const clearFilters = (): void => {
     setSearchText('');
     setStatusFilter('all');
+    setAccountFilter('all');
     setSortMode('default');
   };
 
@@ -213,6 +242,28 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
       <TouchableOpacity
         style={[styles.filterButton, selected && styles.filterButtonSelected]}
         onPress={() => setStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderAccountButton = (
+    label: string,
+    value: AccountFilter,
+  ): React.JSX.Element => {
+    const selected = accountFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        onPress={() => setAccountFilter(value)}
         activeOpacity={0.8}>
         <Text
           style={[
@@ -254,7 +305,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.shopName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Klienci</Text>
           <Text style={styles.heroSubtitle}>
-            Klienci sklepu i dane kontaktowe używane przy zamówieniach.
+            Klienci sklepu, dane kontaktowe oraz konta logowania klientów.
           </Text>
         </View>
 
@@ -281,6 +332,16 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.summaryLabel}>Nieaktywni</Text>
             <Text style={styles.summaryInactive}>{inactiveCount}</Text>
           </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Z kontem</Text>
+            <Text style={styles.summaryAccount}>{accountsCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Bez konta</Text>
+            <Text style={styles.summaryNoAccount}>{withoutAccountsCount}</Text>
+          </View>
         </View>
 
         <TouchableOpacity
@@ -295,7 +356,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj klienta po nazwie, adresie lub telefonie..."
+            placeholder="Szukaj po nazwie, e-mailu, adresie lub telefonie..."
             placeholderTextColor="#64748b"
           />
         </View>
@@ -311,12 +372,23 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Konto klienta</Text>
+
+          <View style={styles.filterButtons}>
+            {renderAccountButton('Wszyscy', 'all')}
+            {renderAccountButton('Z kontem', 'withAccount')}
+            {renderAccountButton('Bez konta', 'withoutAccount')}
+          </View>
+        </View>
+
+        <View style={styles.filterSection}>
           <Text style={styles.filterTitle}>Sortowanie</Text>
 
           <View style={styles.filterButtons}>
             {renderSortButton('Domyślnie', 'default')}
             {renderSortButton('Nazwa A-Z', 'nameAsc')}
             {renderSortButton('Nazwa Z-A', 'nameDesc')}
+            {renderSortButton('E-mail A-Z', 'emailAsc')}
           </View>
         </View>
 
@@ -338,6 +410,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
 
   const renderItem = ({item}: {item: ClientDto}): React.JSX.Element => {
     const isActive = item.isActive !== false;
+    const hasAccount = hasClientAccount(item);
 
     return (
       <View style={styles.clientCard}>
@@ -346,9 +419,20 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.clientName}>{item.name ?? 'Brak nazwy'}</Text>
           </View>
 
-          <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
-            {isActive ? 'Aktywny' : 'Nieaktywny'}
-          </Text>
+          <View style={styles.badgeColumn}>
+            <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
+              {isActive ? 'Aktywny' : 'Nieaktywny'}
+            </Text>
+
+            <Text style={hasAccount ? styles.accountBadge : styles.noAccountBadge}>
+              {hasAccount ? 'Konto' : 'Bez konta'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>E-mail</Text>
+          <Text style={styles.infoValue}>{item.email ?? 'Brak e-maila'}</Text>
         </View>
 
         <View style={styles.infoBox}>
@@ -431,7 +515,9 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 || statusFilter !== 'all'
+            {searchText.trim().length > 0 ||
+            statusFilter !== 'all' ||
+            accountFilter !== 'all'
               ? 'Brak klientów pasujących do filtrów'
               : 'Brak klientów w API'}
           </Text>
@@ -566,7 +652,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 12,
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
 
   summaryColumn: {
@@ -575,20 +661,32 @@ const styles = StyleSheet.create({
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     marginBottom: 4,
   },
 
   summaryActive: {
     color: '#16a34a',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '900',
   },
 
   summaryInactive: {
     color: '#f97316',
-    fontSize: 22,
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  summaryAccount: {
+    color: '#38bdf8',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  summaryNoAccount: {
+    color: '#a855f7',
+    fontSize: 20,
     fontWeight: '900',
   },
 
@@ -718,6 +816,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  badgeColumn: {
+    alignItems: 'flex-end',
+    gap: 6,
+  },
+
   activeBadge: {
     backgroundColor: '#052e16',
     color: '#bbf7d0',
@@ -726,6 +829,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   inactiveBadge: {
@@ -736,6 +840,29 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
+  },
+
+  accountBadge: {
+    backgroundColor: '#0c4a6e',
+    color: '#e0f2fe',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  noAccountBadge: {
+    backgroundColor: '#3f3f46',
+    color: '#e4e4e7',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
   },
 
   infoBox: {
@@ -763,7 +890,7 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 4,
+    marginTop: 8,
   },
 
   editButton: {
