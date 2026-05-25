@@ -19,6 +19,9 @@ import type {
   CreateUnitOfMeasurementResponse,
   CreateWorkerCommand,
   CreateWorkerResponse,
+  CustomerLoginRequestDto,
+  CustomerLoginResponseDto,
+  CustomerRegisterRequestDto,
   DashboardDto,
   Item,
   OrderDto,
@@ -51,7 +54,7 @@ class ApiService {
     }
 
     if (status === 401) {
-      return 'Nieprawidłowy login albo hasło.';
+      return 'Nieprawidłowy login/e-mail albo hasło.';
     }
 
     if (status === 403) {
@@ -130,6 +133,24 @@ class ApiService {
     data: WorkerLoginRequestDto,
   ): Promise<WorkerLoginResponseDto> {
     return this.request<WorkerLoginResponseDto>('/Auth/worker-login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async loginCustomer(
+    data: CustomerLoginRequestDto,
+  ): Promise<CustomerLoginResponseDto> {
+    return this.request<CustomerLoginResponseDto>('/Auth/customer-login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async registerCustomer(
+    data: CustomerRegisterRequestDto,
+  ): Promise<CustomerLoginResponseDto> {
+    return this.request<CustomerLoginResponseDto>('/Auth/customer-register', {
       method: 'POST',
       body: JSON.stringify(data),
     });

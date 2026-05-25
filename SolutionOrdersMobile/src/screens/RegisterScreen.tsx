@@ -24,6 +24,8 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [adress, setAdress] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -32,7 +34,7 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
       setSubmitting(true);
       setError(null);
 
-      await registerCustomer(name, email, password);
+      await registerCustomer(name, email, password, adress, phoneNumber);
 
       navigation.reset({
         index: 0,
@@ -89,6 +91,32 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
             placeholder="Minimum 4 znaki"
             placeholderTextColor="#64748b"
             secureTextEntry
+            editable={!submitting}
+          />
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Dane dostawy</Text>
+
+          <Text style={styles.label}>Adres</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={adress}
+            onChangeText={setAdress}
+            placeholder="np. ul. Testowa 1, Warszawa"
+            placeholderTextColor="#64748b"
+            multiline
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>Telefon</Text>
+          <TextInput
+            style={styles.input}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            placeholder="np. 500111222"
+            placeholderTextColor="#64748b"
+            keyboardType="phone-pad"
             editable={!submitting}
           />
 
@@ -200,6 +228,11 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     fontSize: 15,
     marginBottom: 12,
+  },
+
+  textArea: {
+    minHeight: 78,
+    textAlignVertical: 'top',
   },
 
   errorText: {

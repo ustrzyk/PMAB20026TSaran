@@ -101,6 +101,7 @@ export interface ClientDto {
   name: string;
   adress?: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
   isActive?: boolean;
 }
 
@@ -108,6 +109,8 @@ export interface CreateClientCommand {
   name: string;
   adress?: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
+  password?: string | null;
   isActive?: boolean;
 }
 
@@ -116,6 +119,8 @@ export interface UpdateClientCommand {
   name: string;
   adress?: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
+  password?: string | null;
   isActive?: boolean;
 }
 
@@ -169,6 +174,25 @@ export interface WorkerLoginResponseDto {
   name: string;
   login: string;
   role: WorkerRole | string;
+}
+
+export interface CustomerLoginRequestDto {
+  email: string;
+  password: string;
+}
+
+export interface CustomerRegisterRequestDto {
+  name: string;
+  email: string;
+  password: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+}
+
+export interface CustomerLoginResponseDto {
+  idClient: number;
+  name: string;
+  email: string;
 }
 
 export interface OrderDto {

@@ -22,6 +22,8 @@ interface AuthContextValue {
     name: string,
     email: string,
     password: string,
+    adress?: string,
+    phoneNumber?: string,
   ) => Promise<AuthUser>;
   logout: () => void;
 }
@@ -30,16 +32,6 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 interface AuthProviderProps {
   children: React.ReactNode;
-}
-
-function getNameFromEmail(email: string): string {
-  const trimmedEmail = email.trim();
-
-  if (trimmedEmail.length === 0 || !trimmedEmail.includes('@')) {
-    return 'Klient';
-  }
-
-  return trimmedEmail.split('@')[0];
 }
 
 function isValidEmail(value: string): boolean {
@@ -94,29 +86,35 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       throw new Error('Podaj poprawny adres e-mail');
     }
 
-    if (safePassword.length < 4) {
-      throw new Error('Hasło powinno mieć minimum 4 znaki');
-    }
+    const customer = await apiService.loginCustomer({
+      email: safeLogin.toLowerCase(),
+      password: safePassword,
+    });
 
-    const customerUser: AuthUser = {
-      name: getNameFromEmail(safeLogin),
-      login: safeLogin.toLowerCase(),
+    const loggedUser: AuthUser = {
+      id: customer.idClient,
+      name: customer.name,
+      login: customer.email,
       role: 'customer',
     };
 
-    setUser(customerUser);
+    setUser(loggedUser);
 
-    return customerUser;
+    return loggedUser;
   };
 
   const registerCustomer = async (
     name: string,
     email: string,
     password: string,
+    adress?: string,
+    phoneNumber?: string,
   ): Promise<AuthUser> => {
     const safeName = name.trim();
     const safeEmail = email.trim().toLowerCase();
     const safePassword = password.trim();
+    const safeAdress = adress?.trim() ?? '';
+    const safePhoneNumber = phoneNumber?.trim() ?? '';
 
     if (safeName.length === 0) {
       throw new Error('Podaj imię i nazwisko');
@@ -138,15 +136,24 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       throw new Error('Hasło powinno mieć minimum 4 znaki');
     }
 
-    const customerUser: AuthUser = {
+    const customer = await apiService.registerCustomer({
       name: safeName,
-      login: safeEmail,
+      email: safeEmail,
+      password: safePassword,
+      adress: safeAdress.length > 0 ? safeAdress : null,
+      phoneNumber: safePhoneNumber.length > 0 ? safePhoneNumber : null,
+    });
+
+    const registeredUser: AuthUser = {
+      id: customer.idClient,
+      name: customer.name,
+      login: customer.email,
       role: 'customer',
     };
 
-    setUser(customerUser);
+    setUser(registeredUser);
 
-    return customerUser;
+    return registeredUser;
   };
 
   const logout = (): void => {
