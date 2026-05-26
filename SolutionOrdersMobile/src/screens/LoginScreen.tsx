@@ -72,7 +72,7 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
             style={styles.input}
             value={loginOrEmail}
             onChangeText={setLoginOrEmail}
-            placeholder="np. tsaran albo klient@3dshop.pl"
+            placeholder="e-mail"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
             editable={!submitting}

@@ -34,7 +34,7 @@ function formatDate(value?: string | null): string {
 }
 
 function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
-  const {isAdmin, isWorker, isCustomer} = useAuth();
+  const {user, isAdmin, isWorker, isCustomer} = useAuth();
 
   const initialOrderId = route.params?.idOrder;
 
@@ -53,6 +53,22 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     setError(null);
   };
 
+  const checkCustomerAccess = (foundOrder: OrderDto): void => {
+    if (!isCustomer) {
+      return;
+    }
+
+    if (!user?.id) {
+      throw new Error('Nie udało się rozpoznać konta klienta.');
+    }
+
+    if (foundOrder.idClient !== user.id) {
+      throw new Error(
+        'To zamówienie nie jest przypisane do Twojego konta klienta.',
+      );
+    }
+  };
+
   const loadOrder = async (idOrder: number): Promise<void> => {
     try {
       setLoading(true);
@@ -61,8 +77,10 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
       const foundOrder = await apiService.getOrder(idOrder);
 
       if (foundOrder.isActive === false) {
-        throw new Error('Zamówienie jest nieaktywne');
+        throw new Error('Zamówienie jest nieaktywne.');
       }
+
+      checkCustomerAccess(foundOrder);
 
       const foundItems = await apiService.getOrderItemsByOrder(idOrder);
       const activeItems = foundItems.filter(item => item.isActive !== false);
@@ -72,6 +90,12 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     } catch (err) {
       setOrder(null);
       setOrderItems([]);
+
+      if (err instanceof Error && err.message.length > 0) {
+        setError(err.message);
+        return;
+      }
+
       setError(
         'Nie znaleziono aktywnego zamówienia albo wystąpił błąd pobierania danych.',
       );
