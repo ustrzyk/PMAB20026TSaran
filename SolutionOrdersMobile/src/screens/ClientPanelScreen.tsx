@@ -119,6 +119,28 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.detailsBox}>
+        <Text style={styles.detailsTitle}>Dane dostawy</Text>
+
+        <View style={styles.detailsRow}>
+          <Text style={styles.detailsLabel}>Adres</Text>
+          <Text style={styles.detailsValue}>
+            {user?.adress && user.adress.length > 0
+              ? user.adress
+              : 'Brak adresu w koncie'}
+          </Text>
+        </View>
+
+        <View style={styles.detailsRow}>
+          <Text style={styles.detailsLabel}>Telefon</Text>
+          <Text style={styles.detailsValue}>
+            {user?.phoneNumber && user.phoneNumber.length > 0
+              ? user.phoneNumber
+              : 'Brak telefonu w koncie'}
+          </Text>
+        </View>
+      </View>
+
       <Text style={styles.sectionTitle}>Szybkie akcje</Text>
 
       <View style={styles.grid}>
@@ -139,11 +161,19 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.actionCard, styles.ordersCard]}
+          onPress={() => navigation.navigate('CustomerOrders')}
+          activeOpacity={0.85}>
+          <Text style={styles.actionIcon}>📋</Text>
+          <Text style={styles.actionTitle}>Moje zamówienia</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.actionCard, styles.orderCard]}
           onPress={() => navigation.navigate('TrackOrder')}
           activeOpacity={0.85}>
           <Text style={styles.actionIcon}>📦</Text>
-          <Text style={styles.actionTitle}>Zamówienie</Text>
+          <Text style={styles.actionTitle}>Sprawdź zamówienie</Text>
         </TouchableOpacity>
       </View>
 
@@ -294,7 +324,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#f97316',
-    marginBottom: 18,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -334,6 +364,44 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  detailsBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 18,
+  },
+
+  detailsTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+
+  detailsRow: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
+  },
+
+  detailsLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  detailsValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+
   sectionTitle: {
     color: '#f8fafc',
     fontSize: 18,
@@ -348,7 +416,7 @@ const styles = StyleSheet.create({
   },
 
   actionCard: {
-    width: '30.8%',
+    width: '47.8%',
     minHeight: 118,
     backgroundColor: '#111827',
     borderRadius: 18,
@@ -364,6 +432,10 @@ const styles = StyleSheet.create({
 
   cartCard: {
     borderColor: '#f97316',
+  },
+
+  ordersCard: {
+    borderColor: '#a855f7',
   },
 
   orderCard: {

@@ -12,6 +12,7 @@ export type RootStackParamList = {
   AuthLogin: undefined;
   Register: undefined;
   ClientPanel: undefined;
+  CustomerOrders: undefined;
 
   Home: undefined;
 
