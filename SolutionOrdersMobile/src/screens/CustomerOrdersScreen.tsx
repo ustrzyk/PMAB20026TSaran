@@ -42,34 +42,22 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const customerOrders = useMemo(() => {
-    if (!user?.id) {
-      return [];
-    }
-
-    return orders
-      .filter(order => {
-        return order.isActive !== false && order.idClient === user.id;
-      })
-      .sort((a, b) => {
-        const firstDate = a.dataOrder ? new Date(a.dataOrder).getTime() : 0;
-        const secondDate = b.dataOrder ? new Date(b.dataOrder).getTime() : 0;
-
-        return secondDate - firstDate;
-      });
-  }, [orders, user]);
-
   const totalOrdersValue = useMemo(() => {
-    return customerOrders.reduce((sum, order) => {
+    return orders.reduce((sum, order) => {
       return sum + (order.totalValue ?? 0);
     }, 0);
-  }, [customerOrders]);
+  }, [orders]);
 
   const loadOrders = useCallback(async (): Promise<void> => {
     try {
       setError(null);
 
-      const data = await apiService.getOrders();
+      if (!user?.id) {
+        setOrders([]);
+        return;
+      }
+
+      const data = await apiService.getOrdersByClient(user.id);
 
       setOrders(data);
     } catch (err) {
@@ -81,7 +69,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user]);
 
   useFocusEffect(
     useCallback(() => {
@@ -208,7 +196,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   return (
     <View style={styles.container}>
       <FlatList
-        data={customerOrders}
+        data={orders}
         renderItem={renderOrder}
         keyExtractor={item => item.idOrder.toString()}
         contentContainerStyle={styles.listContent}
@@ -228,9 +216,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             <View style={styles.summaryBox}>
               <View style={styles.summaryColumn}>
                 <Text style={styles.summaryLabel}>Zamówienia</Text>
-                <Text style={styles.summaryValue}>
-                  {customerOrders.length}
-                </Text>
+                <Text style={styles.summaryValue}>{orders.length}</Text>
               </View>
 
               <View style={styles.summaryColumn}>

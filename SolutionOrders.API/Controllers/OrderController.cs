@@ -14,16 +14,28 @@ namespace SolutionOrders.API.Controllers
         [ProducesResponseType(typeof(IEnumerable<OrderDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetAllOrders()
         {
-            // Tworzymy Query
             var query = new GetAllOrdersQuery();
 
-            // Wysyłamy do MediatR
             return Ok(await mediator.Send(query));
         }
 
-        /// <summary>
-        /// Pobiera zamówienie po ID
-        /// </summary>
+        [HttpGet("Client/{idClient}")]
+        [ProducesResponseType(typeof(IEnumerable<OrderDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> GetOrdersByClient(int idClient)
+        {
+            try
+            {
+                var query = new GetOrdersByClientQuery(idClient);
+
+                return Ok(await mediator.Send(query));
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(OrderDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -40,9 +52,6 @@ namespace SolutionOrders.API.Controllers
             return Ok(result);
         }
 
-        /// <summary>
-        /// Tworzy nowe zamówienie
-        /// </summary>
         [HttpPost]
         [ProducesResponseType(typeof(int), StatusCodes.Status201Created)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -52,7 +61,6 @@ namespace SolutionOrders.API.Controllers
             {
                 var orderId = await mediator.Send(command);
 
-                // HTTP 201 Created z Location header
                 return CreatedAtAction(nameof(GetById), new { id = orderId },
                     new { id = orderId, message = "Zamówienie zostało utworzone" }
                 );
@@ -63,9 +71,6 @@ namespace SolutionOrders.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Aktualizuje zamówienie
-        /// </summary>
         [HttpPut("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -80,7 +85,8 @@ namespace SolutionOrders.API.Controllers
             try
             {
                 await mediator.Send(command);
-                return NoContent();  // HTTP 204 - sukces bez body
+
+                return NoContent();
             }
             catch (ArgumentException ex)
             {
@@ -92,9 +98,6 @@ namespace SolutionOrders.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Usuwa zamówienie
-        /// </summary>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -106,6 +109,7 @@ namespace SolutionOrders.API.Controllers
             try
             {
                 await mediator.Send(command);
+
                 return NoContent();
             }
             catch (InvalidOperationException ex)

@@ -348,6 +348,10 @@ class ApiService {
     return this.request<OrderDto[]>('/Order');
   }
 
+  async getOrdersByClient(idClient: number): Promise<OrderDto[]> {
+    return this.request<OrderDto[]>(`/Order/Client/${idClient}`);
+  }
+
   async getOrder(idOrder: number): Promise<OrderDto> {
     return this.request<OrderDto>(`/Order/${idOrder}`);
   }
