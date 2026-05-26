@@ -13,6 +13,14 @@ export interface AuthUser {
   phoneNumber?: string | null;
 }
 
+export interface CustomerProfileUpdateData {
+  name: string;
+  email: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+  password?: string | null;
+}
+
 interface AuthContextValue {
   user: AuthUser | null;
   isLoggedIn: boolean;
@@ -26,6 +34,9 @@ interface AuthContextValue {
     password: string,
     adress?: string,
     phoneNumber?: string,
+  ) => Promise<AuthUser>;
+  updateCustomerProfile: (
+    data: CustomerProfileUpdateData,
   ) => Promise<AuthUser>;
   logout: () => void;
 }
@@ -162,6 +173,62 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
     return registeredUser;
   };
 
+  const updateCustomerProfile = async (
+    data: CustomerProfileUpdateData,
+  ): Promise<AuthUser> => {
+    if (!user || user.role !== 'customer' || !user.id) {
+      throw new Error('Musisz być zalogowany jako klient');
+    }
+
+    const safeName = data.name.trim();
+    const safeEmail = data.email.trim().toLowerCase();
+    const safeAdress = data.adress?.trim() ?? '';
+    const safePhoneNumber = data.phoneNumber?.trim() ?? '';
+    const safePassword = data.password?.trim() ?? '';
+
+    if (safeName.length === 0) {
+      throw new Error('Podaj imię i nazwisko');
+    }
+
+    if (safeName.length < 3) {
+      throw new Error('Imię i nazwisko powinno mieć minimum 3 znaki');
+    }
+
+    if (safeEmail.length === 0) {
+      throw new Error('Podaj adres e-mail');
+    }
+
+    if (!isValidEmail(safeEmail)) {
+      throw new Error('Podaj poprawny adres e-mail');
+    }
+
+    if (safePassword.length > 0 && safePassword.length < 4) {
+      throw new Error('Nowe hasło powinno mieć minimum 4 znaki');
+    }
+
+    await apiService.updateClient(user.id, {
+      idClient: user.id,
+      name: safeName,
+      email: safeEmail,
+      adress: safeAdress.length > 0 ? safeAdress : null,
+      phoneNumber: safePhoneNumber.length > 0 ? safePhoneNumber : null,
+      password: safePassword.length > 0 ? safePassword : null,
+      isActive: true,
+    });
+
+    const updatedUser: AuthUser = {
+      ...user,
+      name: safeName,
+      login: safeEmail,
+      adress: safeAdress.length > 0 ? safeAdress : null,
+      phoneNumber: safePhoneNumber.length > 0 ? safePhoneNumber : null,
+    };
+
+    setUser(updatedUser);
+
+    return updatedUser;
+  };
+
   const logout = (): void => {
     setUser(null);
   };
@@ -175,6 +242,7 @@ export function AuthProvider({children}: AuthProviderProps): React.JSX.Element {
       isAdmin: user?.role === 'admin',
       login,
       registerCustomer,
+      updateCustomerProfile,
       logout,
     };
   }, [user]);

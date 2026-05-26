@@ -25,6 +25,7 @@ import ClientFormScreen from '../screens/ClientFormScreen.tsx';
 import ClientPanelScreen from '../screens/ClientPanelScreen.tsx';
 import ClientsScreen from '../screens/ClientsScreen.tsx';
 import CustomerOrdersScreen from '../screens/CustomerOrdersScreen.tsx';
+import CustomerProfileScreen from '../screens/CustomerProfileScreen.tsx';
 import DashboardScreen from '../screens/DashboardScreen.tsx';
 import HomeScreen from '../screens/HomeScreen.tsx';
 import ItemDetailsScreen from '../screens/ItemDetailsScreen.tsx';
@@ -189,6 +190,12 @@ function RootNavigator(): React.JSX.Element {
           name="ClientPanel"
           component={ClientPanelScreen}
           options={{title: 'Moje konto'}}
+        />
+
+        <Stack.Screen
+          name="CustomerProfile"
+          component={CustomerProfileScreen}
+          options={{title: 'Dane konta'}}
         />
 
         <Stack.Screen

@@ -169,6 +169,14 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
 
         <TouchableOpacity
+          style={[styles.actionCard, styles.profileCard]}
+          onPress={() => navigation.navigate('CustomerProfile')}
+          activeOpacity={0.85}>
+          <Text style={styles.actionIcon}>👤</Text>
+          <Text style={styles.actionTitle}>Dane konta</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
           style={[styles.actionCard, styles.orderCard]}
           onPress={() => navigation.navigate('TrackOrder')}
           activeOpacity={0.85}>
@@ -436,6 +444,10 @@ const styles = StyleSheet.create({
 
   ordersCard: {
     borderColor: '#a855f7',
+  },
+
+  profileCard: {
+    borderColor: '#38bdf8',
   },
 
   orderCard: {
