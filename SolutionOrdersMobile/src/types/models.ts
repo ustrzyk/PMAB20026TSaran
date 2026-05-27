@@ -329,6 +329,8 @@ export interface DashboardLatestOrderDto {
   clientName?: string | null;
   workerName?: string | null;
 
+  status?: OrderStatus | string | null;
+
   orderItemsCount: number;
   totalValue: number;
 }
@@ -378,16 +380,29 @@ export interface DashboardDto {
   workersCount: number;
 
   ordersCount: number;
-  activeOrdersCount: number;
-  inactiveOrdersCount: number;
-
   orderItemsCount: number;
 
-  productsValue: number;
-  ordersValue: number;
+  productsStockValue: number;
+  ordersTotalValue: number;
 
   latestOrders: DashboardLatestOrderDto[];
+
   lowStockProducts: DashboardLowStockProductDto[];
+
   categorySales: DashboardCategorySalesDto[];
+
   topProducts: DashboardTopProductDto[];
+}
+
+export interface CartItemModel {
+  item: ItemDto;
+  quantity: number;
+}
+
+export type ApiStatus = 'idle' | 'loading' | 'success' | 'error';
+
+export interface ApiState<T> {
+  data: T | null;
+  status: ApiStatus;
+  error: string | null;
 }

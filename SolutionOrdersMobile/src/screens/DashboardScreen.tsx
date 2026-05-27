@@ -46,6 +46,12 @@ function formatQuantity(value?: number | null, unitName?: string | null): string
   return `${safeValue} ${safeUnit}`.trim();
 }
 
+function getLatestOrderStatus(order: DashboardLatestOrderDto): string {
+  return order.status && order.status.trim().length > 0
+    ? order.status
+    : 'Nowe';
+}
+
 function DashboardScreen({navigation}: Props): React.JSX.Element {
   const [dashboard, setDashboard] = useState<DashboardDto | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,6 +194,8 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
   const renderLatestOrder = (
     order: DashboardLatestOrderDto,
   ): React.JSX.Element => {
+    const status = getLatestOrderStatus(order);
+
     return (
       <TouchableOpacity
         key={order.idOrder}
@@ -199,7 +207,11 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         }
         activeOpacity={0.8}>
         <View style={styles.orderHeader}>
-          <Text style={styles.orderTitle}>Zamówienie nr {order.idOrder}</Text>
+          <View style={styles.orderTitleBox}>
+            <Text style={styles.orderTitle}>Zamówienie nr {order.idOrder}</Text>
+            <Text style={styles.orderStatusBadge}>{status}</Text>
+          </View>
+
           <Text style={styles.orderValue}>{formatMoney(order.totalValue)}</Text>
         </View>
 
@@ -212,6 +224,8 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         </Text>
 
         <Text style={styles.orderText}>Data: {formatDate(order.dataOrder)}</Text>
+
+        <Text style={styles.orderText}>Status: {status}</Text>
 
         <Text style={styles.orderText}>Pozycje: {order.orderItemsCount}</Text>
       </TouchableOpacity>
@@ -740,11 +754,28 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
+  orderTitleBox: {
+    flex: 1,
+    marginRight: 8,
+  },
+
   orderTitle: {
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    flex: 1,
+  },
+
+  orderStatusBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+    marginTop: 5,
   },
 
   orderValue: {
