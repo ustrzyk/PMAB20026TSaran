@@ -14,6 +14,8 @@
         public string? Notes { get; set; }
         public DateTime? DeliveryDate { get; set; }
 
+        public string Status { get; set; } = "Nowe";
+
         public int OrderItemsCount { get; set; }
         public decimal TotalValue { get; set; }
 

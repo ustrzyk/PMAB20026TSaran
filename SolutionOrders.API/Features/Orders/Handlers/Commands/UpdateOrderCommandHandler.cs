@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SolutionOrders.API.Features.Orders.Helpers;
 using SolutionOrders.API.Features.Orders.Messages.Commands;
 using SolutionOrders.API.Models.Data;
 
@@ -60,6 +61,7 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
             order.IdWorker = request.IdWorker;
             order.Notes = request.Notes;
             order.DeliveryDate = request.DeliveryDate;
+            order.Status = OrderStatusHelper.Normalize(request.Status, order.Status);
             order.IsActive = request.IsActive;
 
             await context.SaveChangesAsync(cancellationToken);

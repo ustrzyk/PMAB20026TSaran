@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using SolutionOrders.API.Features.Orders.Helpers;
 
 namespace SolutionOrders.API.Features.Orders.Messages.Commands
 {
@@ -9,6 +10,7 @@ namespace SolutionOrders.API.Features.Orders.Messages.Commands
         public int? IdWorker { get; set; }
         public string? Notes { get; set; }
         public DateTime? DeliveryDate { get; set; }
+        public string? Status { get; set; } = OrderStatusHelper.New;
         public bool IsActive { get; set; } = true;
     }
 }
