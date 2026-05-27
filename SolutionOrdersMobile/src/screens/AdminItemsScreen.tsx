@@ -27,10 +27,12 @@ type SortMode =
   | 'priceDesc'
   | 'quantityAsc'
   | 'quantityDesc'
-  | 'stockValueDesc';
+  | 'stockValueDesc'
+  | 'lowStockFirst';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
-type StockFilter = 'all' | 'available' | 'empty' | 'low';
+type StockFilter = 'all' | 'available' | 'empty' | 'low' | 'good';
+type PriceFilter = 'all' | 'to50' | 'from50to200' | 'from200';
 
 interface DialogState {
   visible: boolean;
@@ -50,8 +52,24 @@ function getStockValue(item: Item): number {
   return (item.price ?? 0) * (item.quantity ?? 0);
 }
 
+function isLowStock(item: Item): boolean {
+  const quantity = item.quantity ?? 0;
+
+  return item.isActive !== false && quantity > 0 && quantity <= 5;
+}
+
+function isGoodStock(item: Item): boolean {
+  const quantity = item.quantity ?? 0;
+
+  return item.isActive !== false && quantity > 5;
+}
+
 function getStockLabel(item: Item): string {
   const quantity = item.quantity ?? 0;
+
+  if (item.isActive === false) {
+    return 'Nieaktywny';
+  }
 
   if (quantity <= 0) {
     return 'Brak na stanie';
@@ -64,6 +82,36 @@ function getStockLabel(item: Item): string {
   return 'Stan OK';
 }
 
+function getCategoryIcon(categoryName?: string | null): string {
+  const name = categoryName?.toLowerCase() ?? '';
+
+  if (name.includes('druk')) {
+    return '🖨️';
+  }
+
+  if (
+    name.includes('filament') ||
+    name.includes('pla') ||
+    name.includes('petg')
+  ) {
+    return '🧵';
+  }
+
+  if (
+    name.includes('akces') ||
+    name.includes('czę') ||
+    name.includes('czes')
+  ) {
+    return '⚙️';
+  }
+
+  if (name.includes('serwis') || name.includes('narz')) {
+    return '🧰';
+  }
+
+  return '🏷️';
+}
+
 function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
 
@@ -72,6 +120,8 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
+
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
   const [dialog, setDialog] = useState<DialogState>({
@@ -105,11 +155,11 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     }
 
     if (statusFilter === 'active') {
-      result = result.filter(item => item.isActive);
+      result = result.filter(item => item.isActive !== false);
     }
 
     if (statusFilter === 'inactive') {
-      result = result.filter(item => !item.isActive);
+      result = result.filter(item => item.isActive === false);
     }
 
     if (stockFilter === 'available') {
@@ -121,11 +171,27 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     }
 
     if (stockFilter === 'low') {
-      result = result.filter(item => {
-        const quantity = item.quantity ?? 0;
+      result = result.filter(item => isLowStock(item));
+    }
 
-        return quantity > 0 && quantity <= 5;
+    if (stockFilter === 'good') {
+      result = result.filter(item => isGoodStock(item));
+    }
+
+    if (priceFilter === 'to50') {
+      result = result.filter(item => (item.price ?? 0) <= 50);
+    }
+
+    if (priceFilter === 'from50to200') {
+      result = result.filter(item => {
+        const price = item.price ?? 0;
+
+        return price > 50 && price <= 200;
       });
+    }
+
+    if (priceFilter === 'from200') {
+      result = result.filter(item => (item.price ?? 0) > 200);
     }
 
     if (search.length > 0) {
@@ -134,12 +200,14 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         const description = item.description?.toLowerCase() ?? '';
         const code = item.code?.toLowerCase() ?? '';
         const categoryName = item.categoryName?.toLowerCase() ?? '';
+        const unitName = item.unitName?.toLowerCase() ?? '';
 
         return (
           name.includes(search) ||
           description.includes(search) ||
           code.includes(search) ||
-          categoryName.includes(search)
+          categoryName.includes(search) ||
+          unitName.includes(search)
         );
       });
     }
@@ -170,8 +238,57 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
       sorted.sort((a, b) => getStockValue(b) - getStockValue(a));
     }
 
+    if (sortMode === 'lowStockFirst') {
+      sorted.sort((a, b) => {
+        const aQuantity = a.quantity ?? 0;
+        const bQuantity = b.quantity ?? 0;
+
+        return aQuantity - bQuantity;
+      });
+    }
+
     return sorted;
-  }, [items, searchText, sortMode, selectedCategory, statusFilter, stockFilter]);
+  }, [
+    items,
+    priceFilter,
+    searchText,
+    selectedCategory,
+    sortMode,
+    statusFilter,
+    stockFilter,
+  ]);
+
+  const activeCount = useMemo(() => {
+    return items.filter(item => item.isActive !== false).length;
+  }, [items]);
+
+  const inactiveCount = useMemo(() => {
+    return items.filter(item => item.isActive === false).length;
+  }, [items]);
+
+  const availableCount = useMemo(() => {
+    return items.filter(item => item.isActive !== false && (item.quantity ?? 0) > 0)
+      .length;
+  }, [items]);
+
+  const emptyCount = useMemo(() => {
+    return items.filter(item => item.isActive !== false && (item.quantity ?? 0) <= 0)
+      .length;
+  }, [items]);
+
+  const lowStockCount = useMemo(() => {
+    return items.filter(item => isLowStock(item)).length;
+  }, [items]);
+
+  const totalStockValue = useMemo(() => {
+    return items.reduce((sum, item) => {
+      if (item.isActive === false) {
+        return sum;
+      }
+
+      return sum + getStockValue(item);
+    }, 0);
+  }, [items]);
 
   const visibleStockValue = useMemo(() => {
     return filteredItems.reduce((sum, item) => {
@@ -200,9 +317,9 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
       visible: true,
       type: 'confirm',
       title: 'Usuwanie produktu',
-      message: `Czy na pewno chcesz usunąć produkt "${
-        item.name ?? 'produkt'
-      }"?`,
+      message:
+        `Czy na pewno chcesz usunąć produkt "${item.name ?? 'produkt'}"?\n\n` +
+        'Po usunięciu produkt nie będzie dostępny na liście.',
       loading: false,
     });
   };
@@ -226,7 +343,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         visible: true,
         type: 'success',
         title: 'Produkt usunięty',
-        message: 'Produkt został poprawnie usunięty z listy.',
+        message: 'Produkt został usunięty z listy administracyjnej.',
         loading: false,
       });
     } catch (err) {
@@ -254,29 +371,8 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     setSelectedCategory('all');
     setStatusFilter('all');
     setStockFilter('all');
+    setPriceFilter('all');
     setSortMode('default');
-  };
-
-  const renderSortButton = (
-    label: string,
-    value: SortMode,
-  ): React.JSX.Element => {
-    const isSelected = sortMode === value;
-
-    return (
-      <TouchableOpacity
-        style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
-        onPress={() => setSortMode(value)}
-        activeOpacity={0.8}>
-        <Text
-          style={[
-            styles.filterButtonText,
-            isSelected && styles.filterButtonTextSelected,
-          ]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
   };
 
   const renderCategoryButton = (categoryName: string): React.JSX.Element => {
@@ -284,18 +380,23 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
-        key={categoryName}
+        key={`admin-category-${categoryName}`}
         style={[
           styles.categoryButton,
           isSelected && styles.categoryButtonSelected,
         ]}
         onPress={() => setSelectedCategory(categoryName)}
-        activeOpacity={0.8}>
+        activeOpacity={0.85}>
+        <Text style={styles.categoryButtonIcon}>
+          {categoryName === 'all' ? '🏷️' : getCategoryIcon(categoryName)}
+        </Text>
+
         <Text
           style={[
             styles.categoryButtonText,
             isSelected && styles.categoryButtonTextSelected,
-          ]}>
+          ]}
+          numberOfLines={1}>
           {categoryName === 'all' ? 'Wszystkie' : categoryName}
         </Text>
       </TouchableOpacity>
@@ -310,9 +411,10 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
+        key={`admin-status-${value}`}
         style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
         onPress={() => setStatusFilter(value)}
-        activeOpacity={0.8}>
+        activeOpacity={0.85}>
         <Text
           style={[
             styles.filterButtonText,
@@ -332,13 +434,63 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
-        style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
+        key={`admin-stock-${value}`}
+        style={[
+          styles.stockFilterButton,
+          isSelected && styles.stockFilterButtonSelected,
+        ]}
         onPress={() => setStockFilter(value)}
-        activeOpacity={0.8}>
+        activeOpacity={0.85}>
         <Text
           style={[
-            styles.filterButtonText,
-            isSelected && styles.filterButtonTextSelected,
+            styles.stockFilterButtonText,
+            isSelected && styles.stockFilterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderPriceButton = (
+    label: string,
+    value: PriceFilter,
+  ): React.JSX.Element => {
+    const isSelected = priceFilter === value;
+
+    return (
+      <TouchableOpacity
+        key={`admin-price-${value}`}
+        style={[styles.priceButton, isSelected && styles.priceButtonSelected]}
+        onPress={() => setPriceFilter(value)}
+        activeOpacity={0.85}>
+        <Text
+          style={[
+            styles.priceButtonText,
+            isSelected && styles.priceButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSortButton = (
+    label: string,
+    value: SortMode,
+  ): React.JSX.Element => {
+    const isSelected = sortMode === value;
+
+    return (
+      <TouchableOpacity
+        key={`admin-sort-${value}`}
+        style={[styles.sortButton, isSelected && styles.sortButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.85}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            isSelected && styles.sortButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -352,51 +504,98 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.shopName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Produkty - administracja</Text>
+
           <Text style={styles.heroSubtitle}>
-            Dodawanie, edycja, usuwanie i kontrola stanów magazynowych.
+            Zarządzanie asortymentem, cenami, stanami magazynowymi i
+            aktywnością produktów.
           </Text>
         </View>
 
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Produkty w bazie</Text>
+
             <Text style={styles.subtitle}>
               Wyświetlane: {filteredItems.length} / {items.length}
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.refreshButton} onPress={refreshItems}>
+          <TouchableOpacity
+            style={styles.refreshButton}
+            onPress={refreshItems}
+            activeOpacity={0.85}>
             <Text style={styles.refreshButtonText}>Odśwież</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.summaryBox}>
           <View style={styles.summaryColumn}>
-            <Text style={styles.summaryLabel}>Ilość sztuk</Text>
-            <Text style={styles.summaryQuantity}>{visibleQuantity}</Text>
+            <Text style={styles.summaryLabel}>Aktywne</Text>
+            <Text style={styles.summaryActive}>{activeCount}</Text>
           </View>
 
           <View style={styles.summaryColumn}>
-            <Text style={styles.summaryLabel}>Wartość magazynu</Text>
-            <Text style={styles.summaryValue}>
-              {formatMoney(visibleStockValue)}
-            </Text>
+            <Text style={styles.summaryLabel}>Nieaktywne</Text>
+            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Dostępne</Text>
+            <Text style={styles.summaryAvailable}>{availableCount}</Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('CreateItem')}
-          activeOpacity={0.8}>
-          <Text style={styles.createButtonText}>+ Dodaj produkt do bazy</Text>
-        </TouchableOpacity>
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Niski stan</Text>
+            <Text style={styles.summaryWarning}>{lowStockCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Brak stanu</Text>
+            <Text style={styles.summaryDanger}>{emptyCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Widoczne szt.</Text>
+            <Text style={styles.summaryQuantity}>{visibleQuantity}</Text>
+          </View>
+        </View>
+
+        <View style={styles.valueBox}>
+          <View style={styles.valueColumn}>
+            <Text style={styles.valueLabel}>Wartość widocznych produktów</Text>
+            <Text style={styles.valueText}>{formatMoney(visibleStockValue)}</Text>
+          </View>
+
+          <View style={styles.valueColumn}>
+            <Text style={styles.valueLabel}>Wartość aktywnego magazynu</Text>
+            <Text style={styles.valueText}>{formatMoney(totalStockValue)}</Text>
+          </View>
+        </View>
+
+        <View style={styles.actionsTopRow}>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => navigation.navigate('CreateItem')}
+            activeOpacity={0.85}>
+            <Text style={styles.createButtonText}>+ Dodaj produkt</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.dashboardButton}
+            onPress={() => navigation.navigate('Dashboard')}
+            activeOpacity={0.85}>
+            <Text style={styles.dashboardButtonText}>Dashboard</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchBox}>
           <TextInput
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj produktu, kodu lub kategorii..."
+            placeholder="Szukaj produktu, kodu, opisu, kategorii lub jednostki..."
             placeholderTextColor="#64748b"
           />
         </View>
@@ -411,7 +610,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.filterSection}>
-          <Text style={styles.filterTitle}>Status</Text>
+          <Text style={styles.filterTitle}>Aktywność</Text>
 
           <View style={styles.filterButtons}>
             {renderStatusButton('Wszystkie', 'all')}
@@ -426,8 +625,20 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.filterButtons}>
             {renderStockButton('Wszystkie', 'all')}
             {renderStockButton('Dostępne', 'available')}
-            {renderStockButton('Brak', 'empty')}
+            {renderStockButton('Stan OK', 'good')}
             {renderStockButton('Niski stan', 'low')}
+            {renderStockButton('Brak stanu', 'empty')}
+          </View>
+        </View>
+
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Cena</Text>
+
+          <View style={styles.filterButtons}>
+            {renderPriceButton('Wszystkie', 'all')}
+            {renderPriceButton('do 50 zł', 'to50')}
+            {renderPriceButton('50-200 zł', 'from50to200')}
+            {renderPriceButton('powyżej 200 zł', 'from200')}
           </View>
         </View>
 
@@ -441,19 +652,34 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
             {renderSortButton('Cena ↓', 'priceDesc')}
             {renderSortButton('Stan ↑', 'quantityAsc')}
             {renderSortButton('Stan ↓', 'quantityDesc')}
+            {renderSortButton('Niski stan', 'lowStockFirst')}
             {renderSortButton('Wartość ↓', 'stockValueDesc')}
           </View>
         </View>
 
         <View style={styles.filterSummaryBox}>
           <Text style={styles.filterSummaryText}>
-            Filtr:{' '}
+            Kategoria:{' '}
+            {selectedCategory === 'all' ? 'wszystkie' : selectedCategory}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Aktywność: {statusFilter} | Stan: {stockFilter} | Cena:{' '}
+            {priceFilter}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Sortowanie: {sortMode}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Szukaj:{' '}
             {searchText.trim().length > 0
               ? searchText.trim()
               : 'brak wyszukiwania'}
           </Text>
 
-          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
             <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
         </View>
@@ -462,16 +688,27 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   };
 
   const renderItem = ({item}: {item: Item}): React.JSX.Element => {
-    const stockLabel = getStockLabel(item);
+    const price = item.price ?? 0;
     const quantity = item.quantity ?? 0;
+    const stockValue = getStockValue(item);
+    const stockLabel = getStockLabel(item);
+    const lowStock = isLowStock(item);
 
     return (
       <View style={styles.itemCard}>
-        <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
+        <View style={styles.itemTopRow}>
+          <View style={styles.itemIconBox}>
+            <Text style={styles.itemIcon}>{getCategoryIcon(item.categoryName)}</Text>
+          </View>
 
-        <Text style={styles.itemDescription} numberOfLines={2}>
-          {item.description ?? 'Brak opisu produktu'}
-        </Text>
+          <View style={styles.itemContent}>
+            <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
+
+            <Text style={styles.itemDescription} numberOfLines={3}>
+              {item.description ?? 'Brak opisu produktu'}
+            </Text>
+          </View>
+        </View>
 
         <View style={styles.badgeRow}>
           <Text style={styles.categoryBadge}>
@@ -480,15 +717,15 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
 
           <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
 
-          <Text style={item.isActive ? styles.activeBadge : styles.inactiveBadge}>
-            {item.isActive ? 'Aktywny' : 'Nieaktywny'}
+          <Text style={item.isActive !== false ? styles.activeBadge : styles.inactiveBadge}>
+            {item.isActive !== false ? 'Aktywny' : 'Nieaktywny'}
           </Text>
 
           <Text
             style={
               quantity <= 0
-                ? styles.emptyStockBadge
-                : quantity <= 5
+                ? styles.emptyBadge
+                : lowStock
                   ? styles.lowStockBadge
                   : styles.goodStockBadge
             }>
@@ -496,44 +733,64 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
           </Text>
         </View>
 
-        <View style={styles.rowBox}>
-          <View style={styles.smallInfoBox}>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoCell}>
             <Text style={styles.infoLabel}>Cena</Text>
-            <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
+            <Text style={styles.priceValue}>{formatMoney(price)}</Text>
           </View>
 
-          <View style={styles.smallInfoBox}>
+          <View style={styles.infoCell}>
             <Text style={styles.infoLabel}>Stan</Text>
             <Text style={styles.infoValue}>
               {quantity} {item.unitName ?? 'szt'}
             </Text>
           </View>
+
+          <View style={styles.infoCell}>
+            <Text style={styles.infoLabel}>Wartość</Text>
+            <Text style={styles.infoValue}>{formatMoney(stockValue)}</Text>
+          </View>
         </View>
 
-        <View style={styles.stockValueBox}>
-          <Text style={styles.infoLabel}>Wartość na magazynie</Text>
-          <Text style={styles.stockValue}>{formatMoney(getStockValue(item))}</Text>
-        </View>
+        {lowStock ? (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningTitle}>Niski stan magazynowy</Text>
+            <Text style={styles.warningText}>
+              Ten produkt ma tylko {quantity} {item.unitName ?? 'szt'} na stanie.
+              Warto rozważyć uzupełnienie magazynu.
+            </Text>
+          </View>
+        ) : null}
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.detailsButton}
-            onPress={() => navigation.navigate('ItemDetails', {item})}
-            activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Podgląd</Text>
-          </TouchableOpacity>
+        {quantity <= 0 && item.isActive !== false ? (
+          <View style={styles.dangerBox}>
+            <Text style={styles.dangerTitle}>Brak produktu na stanie</Text>
+            <Text style={styles.dangerText}>
+              Produkt jest aktywny, ale nie ma ilości magazynowej. Klient nie
+              powinien móc go zamówić.
+            </Text>
+          </View>
+        ) : null}
 
+        <View style={styles.cardActions}>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditItem', {item})}
-            activeOpacity={0.8}>
+            activeOpacity={0.85}>
             <Text style={styles.buttonText}>Edytuj</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.previewButton}
+            onPress={() => navigation.navigate('ItemDetails', {item})}
+            activeOpacity={0.85}>
+            <Text style={styles.buttonText}>Podgląd</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.deleteButton}
             onPress={() => handleDelete(item)}
-            activeOpacity={0.8}>
+            activeOpacity={0.85}>
             <Text style={styles.buttonText}>Usuń</Text>
           </TouchableOpacity>
         </View>
@@ -553,10 +810,22 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Błąd: {error}</Text>
+        <Text style={styles.errorTitle}>Nie udało się pobrać produktów</Text>
 
-        <TouchableOpacity style={styles.retryButton} onPress={refreshItems}>
+        <Text style={styles.errorText}>{error}</Text>
+
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={refreshItems}
+          activeOpacity={0.85}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backPanelButton}
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.85}>
+          <Text style={styles.backPanelButtonText}>Panel pracownika</Text>
         </TouchableOpacity>
       </View>
     );
@@ -587,14 +856,44 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 ||
-            selectedCategory !== 'all' ||
-            statusFilter !== 'all' ||
-            stockFilter !== 'all'
-              ? 'Brak produktów pasujących do filtrów'
-              : 'Brak produktów w API'}
-          </Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>📦</Text>
+            <Text style={styles.emptyTitle}>Brak produktów</Text>
+
+            <Text style={styles.emptyText}>
+              {searchText.trim().length > 0 ||
+              selectedCategory !== 'all' ||
+              statusFilter !== 'all' ||
+              stockFilter !== 'all' ||
+              priceFilter !== 'all'
+                ? 'Brak produktów pasujących do aktualnych filtrów.'
+                : 'Brak produktów w bazie API.'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.clearEmptyButton}
+              onPress={clearFilters}
+              activeOpacity={0.85}>
+              <Text style={styles.clearEmptyButtonText}>Wyczyść filtry</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footerBox}>
+            <TouchableOpacity
+              style={styles.footerCreateButton}
+              onPress={() => navigation.navigate('CreateItem')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerCreateButtonText}>Dodaj produkt</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerPanelButton}
+              onPress={() => navigation.navigate('AdminPanel')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerPanelButtonText}>Panel pracownika</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     </View>
@@ -621,9 +920,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
+  errorTitle: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
   errorText: {
     color: '#fca5a5',
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -633,12 +940,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginBottom: 10,
   },
 
   retryButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+
+  backPanelButton: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+
+  backPanelButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   listContent: {
@@ -663,7 +988,7 @@ const styles = StyleSheet.create({
 
   heroTitle: {
     color: '#f8fafc',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
   },
 
@@ -672,6 +997,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     marginTop: 6,
+    fontWeight: '700',
   },
 
   header: {
@@ -686,7 +1012,7 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 23,
     fontWeight: '900',
   },
 
@@ -697,7 +1023,7 @@ const styles = StyleSheet.create({
   },
 
   refreshButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#334155',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 10,
@@ -706,7 +1032,7 @@ const styles = StyleSheet.create({
   refreshButtonText: {
     color: '#ffffff',
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '900',
   },
 
   summaryBox: {
@@ -715,10 +1041,10 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     marginHorizontal: 16,
     marginTop: 14,
-    padding: 14,
-    borderRadius: 12,
+    padding: 13,
+    borderRadius: 14,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
 
   summaryColumn: {
@@ -727,27 +1053,89 @@ const styles = StyleSheet.create({
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
     marginBottom: 4,
   },
 
-  summaryQuantity: {
+  summaryActive: {
+    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryInactive: {
+    color: '#ef4444',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryAvailable: {
     color: '#38bdf8',
     fontSize: 22,
     fontWeight: '900',
   },
 
-  summaryValue: {
+  summaryWarning: {
     color: '#f97316',
     fontSize: 22,
     fontWeight: '900',
   },
 
-  createButton: {
-    backgroundColor: '#16a34a',
+  summaryDanger: {
+    color: '#ef4444',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryQuantity: {
+    color: '#f8fafc',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  valueBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#16a34a',
     marginHorizontal: 16,
     marginTop: 14,
+    padding: 13,
+    borderRadius: 14,
+    gap: 10,
+  },
+
+  valueColumn: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+
+  valueLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  valueText: {
+    color: '#16a34a',
+    fontSize: 20,
+    fontWeight: '900',
+  },
+
+  actionsTopRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginHorizontal: 16,
+    marginTop: 14,
+  },
+
+  createButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
@@ -755,7 +1143,21 @@ const styles = StyleSheet.create({
 
   createButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  dashboardButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  dashboardButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
   },
 
@@ -794,6 +1196,39 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
+  categoryButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: '100%',
+  },
+
+  categoryButtonSelected: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  categoryButtonIcon: {
+    fontSize: 13,
+  },
+
+  categoryButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+    maxWidth: 165,
+  },
+
+  categoryButtonTextSelected: {
+    color: '#ffffff',
+  },
+
   filterButton: {
     backgroundColor: '#111827',
     borderWidth: 1,
@@ -818,7 +1253,7 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  categoryButton: {
+  stockFilterButton: {
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
@@ -827,18 +1262,66 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
 
-  categoryButtonSelected: {
+  stockFilterButtonSelected: {
     backgroundColor: '#16a34a',
     borderColor: '#16a34a',
   },
 
-  categoryButtonText: {
+  stockFilterButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '800',
   },
 
-  categoryButtonTextSelected: {
+  stockFilterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  priceButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  priceButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  priceButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  priceButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  sortButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#a855f7',
+    borderColor: '#a855f7',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -876,6 +1359,31 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
 
+  itemTopRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 10,
+  },
+
+  itemIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  itemIcon: {
+    fontSize: 30,
+  },
+
+  itemContent: {
+    flex: 1,
+  },
+
   itemName: {
     color: '#f8fafc',
     fontSize: 17,
@@ -887,14 +1395,13 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 8,
   },
 
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   categoryBadge: {
@@ -905,6 +1412,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   codeBadge: {
@@ -915,6 +1423,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   activeBadge: {
@@ -925,6 +1434,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   inactiveBadge: {
@@ -935,6 +1445,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   goodStockBadge: {
@@ -945,19 +1456,21 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   lowStockBadge: {
-    backgroundColor: '#713f12',
-    color: '#fde68a',
+    backgroundColor: '#431407',
+    color: '#fed7aa',
     paddingHorizontal: 9,
     paddingVertical: 4,
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
-  emptyStockBadge: {
+  emptyBadge: {
     backgroundColor: '#7f1d1d',
     color: '#fecaca',
     paddingHorizontal: 9,
@@ -965,67 +1478,94 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
-  rowBox: {
+  infoGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 10,
   },
 
-  smallInfoBox: {
+  infoCell: {
     flex: 1,
+    minWidth: '30%',
     backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#1e293b',
     borderRadius: 12,
     padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
   },
 
   infoLabel: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
   },
 
   infoValue: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
   },
 
   priceValue: {
     color: '#f97316',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '900',
   },
 
-  stockValueBox: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
+  warningBox: {
+    backgroundColor: '#431407',
     borderRadius: 12,
     padding: 10,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 10,
   },
 
-  stockValue: {
-    color: '#16a34a',
-    fontSize: 18,
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 13,
     fontWeight: '900',
+    marginBottom: 3,
   },
 
-  actions: {
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  dangerBox: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    marginBottom: 10,
+  },
+
+  dangerTitle: {
+    color: '#fecaca',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  dangerText: {
+    color: '#fecaca',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  cardActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 12,
-  },
-
-  detailsButton: {
-    flex: 1,
-    backgroundColor: '#38bdf8',
-    paddingVertical: 10,
-    borderRadius: 10,
   },
 
   editButton: {
@@ -1033,6 +1573,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#2563eb',
     paddingVertical: 10,
     borderRadius: 10,
+    alignItems: 'center',
+  },
+
+  previewButton: {
+    flex: 1,
+    backgroundColor: '#38bdf8',
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: 'center',
   },
 
   deleteButton: {
@@ -1040,21 +1589,89 @@ const styles = StyleSheet.create({
     backgroundColor: '#7f1d1d',
     paddingVertical: 10,
     borderRadius: 10,
+    alignItems: 'center',
   },
 
   buttonText: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900',
-    textAlign: 'center',
+  },
+
+  emptyBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 20,
+    alignItems: 'center',
+  },
+
+  emptyIcon: {
+    fontSize: 42,
+    marginBottom: 8,
+  },
+
+  emptyTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 6,
   },
 
   emptyText: {
     color: '#94a3b8',
     textAlign: 'center',
-    marginTop: 40,
-    marginHorizontal: 16,
-    fontSize: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
+  },
+
+  clearEmptyButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  clearEmptyButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  footerBox: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 10,
+  },
+
+  footerCreateButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerCreateButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  footerPanelButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerPanelButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 
