@@ -83,6 +83,9 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<OrderDto | null>(null);
+  const [updatingStatusOrderId, setUpdatingStatusOrderId] = useState<
+    number | null
+  >(null);
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
@@ -277,6 +280,80 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     }
   };
 
+  const changeOrderStatus = async (
+    order: OrderDto,
+    newStatus: OrderStatus,
+  ): Promise<void> => {
+    const currentStatus = getOrderStatus(order);
+
+    if (currentStatus === newStatus) {
+      return;
+    }
+
+    if (!order.idClient || order.idClient <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Brak klienta',
+        message: 'Nie można zmienić statusu, bo zamówienie nie ma klienta.',
+        loading: false,
+      });
+
+      return;
+    }
+
+    if (!order.idWorker || order.idWorker <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Brak pracownika',
+        message:
+          'Nie można zmienić statusu, bo zamówienie nie ma przypisanego pracownika.',
+        loading: false,
+      });
+
+      return;
+    }
+
+    try {
+      setUpdatingStatusOrderId(order.idOrder);
+
+      await apiService.updateOrder(order.idOrder, {
+        idOrder: order.idOrder,
+        dataOrder: order.dataOrder ?? null,
+        idClient: order.idClient,
+        idWorker: order.idWorker,
+        notes: order.notes ?? null,
+        deliveryDate: order.deliveryDate ?? null,
+        status: newStatus,
+        isActive: order.isActive !== false,
+      });
+
+      setOrders(previousOrders =>
+        previousOrders.map(previousOrder => {
+          if (previousOrder.idOrder === order.idOrder) {
+            return {
+              ...previousOrder,
+              status: newStatus,
+            };
+          }
+
+          return previousOrder;
+        }),
+      );
+    } catch (err) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Błąd zmiany statusu',
+        message: (err as Error).message,
+        loading: false,
+      });
+    } finally {
+      setUpdatingStatusOrderId(null);
+    }
+  };
+
   const handleDialogConfirm = (): void => {
     if (dialog.type === 'confirm') {
       confirmDelete();
@@ -364,6 +441,36 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             selected && styles.sortButtonTextSelected,
           ]}>
           {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderQuickStatusButton = (
+    order: OrderDto,
+    status: OrderStatus,
+  ): React.JSX.Element => {
+    const currentStatus = getOrderStatus(order);
+    const selected = currentStatus === status;
+    const disabled = updatingStatusOrderId === order.idOrder;
+
+    return (
+      <TouchableOpacity
+        key={status}
+        style={[
+          styles.quickStatusButton,
+          selected && styles.quickStatusButtonSelected,
+          disabled && styles.quickStatusButtonDisabled,
+        ]}
+        onPress={() => changeOrderStatus(order, status)}
+        activeOpacity={0.8}
+        disabled={selected || disabled}>
+        <Text
+          style={[
+            styles.quickStatusButtonText,
+            selected && styles.quickStatusButtonTextSelected,
+          ]}>
+          {status}
         </Text>
       </TouchableOpacity>
     );
@@ -497,6 +604,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     const isActive = item.isActive !== false;
     const orderStatus = getOrderStatus(item);
     const hasItems = item.orderItemsCount > 0;
+    const isUpdatingThisOrder = updatingStatusOrderId === item.idOrder;
 
     return (
       <View style={styles.orderCard}>
@@ -519,7 +627,17 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>Status realizacji</Text>
-          <Text style={styles.statusValue}>{orderStatus}</Text>
+          <Text style={styles.statusValue}>
+            {isUpdatingThisOrder ? 'Zapisywanie...' : orderStatus}
+          </Text>
+        </View>
+
+        <View style={styles.quickStatusSection}>
+          <Text style={styles.quickStatusTitle}>Szybka zmiana statusu</Text>
+
+          <View style={styles.quickStatusButtons}>
+            {ORDER_STATUSES.map(status => renderQuickStatusButton(item, status))}
+          </View>
         </View>
 
         <View style={styles.infoBox}>
@@ -1037,6 +1155,56 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
     marginBottom: 8,
+  },
+
+  quickStatusSection: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+
+  quickStatusTitle: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  quickStatusButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+
+  quickStatusButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+  },
+
+  quickStatusButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  quickStatusButtonDisabled: {
+    opacity: 0.65,
+  },
+
+  quickStatusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '900',
+  },
+
+  quickStatusButtonTextSelected: {
+    color: '#ffffff',
   },
 
   rowBox: {
