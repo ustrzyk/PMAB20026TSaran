@@ -5,6 +5,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,9 +17,13 @@ import apiService from '../api/apiService.ts';
 import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {OrderDto} from '../types/models.ts';
+import type {OrderDto, OrderStatus} from '../types/models.ts';
+import {ORDER_STATUSES} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerOrders'>;
+
+type CustomerOrderFilter = 'all' | OrderStatus;
+type CustomerOrderSort = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc';
 
 function formatMoney(value?: number | null): string {
   const safeValue = value ?? 0;
@@ -34,10 +39,33 @@ function formatDate(value?: string | null): string {
   return value.substring(0, 10);
 }
 
-function getOrderStatus(order: OrderDto): string {
-  return order.status && order.status.trim().length > 0
-    ? order.status
-    : 'Nowe';
+function getDateTime(value?: string | null): number {
+  if (!value) {
+    return 0;
+  }
+
+  return new Date(value).getTime();
+}
+
+function getOrderStatus(order: OrderDto): OrderStatus {
+  const status = order.status?.trim();
+
+  if (status && ORDER_STATUSES.includes(status as OrderStatus)) {
+    return status as OrderStatus;
+  }
+
+  return 'Nowe';
+}
+
+function isOrderInProgress(order: OrderDto): boolean {
+  const status = getOrderStatus(order);
+
+  return (
+    status === 'Nowe' ||
+    status === 'W realizacji' ||
+    status === 'Gotowe' ||
+    status === 'Wysłane'
+  );
 }
 
 function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
@@ -48,23 +76,70 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState<CustomerOrderFilter>('all');
+  const [sortMode, setSortMode] = useState<CustomerOrderSort>('newest');
+
+  const filteredOrders = useMemo(() => {
+    const search = searchText.trim().toLowerCase();
+
+    let result = orders;
+
+    if (statusFilter !== 'all') {
+      result = result.filter(order => getOrderStatus(order) === statusFilter);
+    }
+
+    if (search.length > 0) {
+      result = result.filter(order => {
+        const idOrder = order.idOrder.toString();
+        const status = getOrderStatus(order).toLowerCase();
+        const notes = order.notes?.toLowerCase() ?? '';
+        const deliveryDate = order.deliveryDate?.toLowerCase() ?? '';
+
+        return (
+          idOrder.includes(search) ||
+          status.includes(search) ||
+          notes.includes(search) ||
+          deliveryDate.includes(search)
+        );
+      });
+    }
+
+    const sorted = [...result];
+
+    if (sortMode === 'newest') {
+      sorted.sort((a, b) => getDateTime(b.dataOrder) - getDateTime(a.dataOrder));
+    }
+
+    if (sortMode === 'oldest') {
+      sorted.sort((a, b) => getDateTime(a.dataOrder) - getDateTime(b.dataOrder));
+    }
+
+    if (sortMode === 'valueDesc') {
+      sorted.sort((a, b) => (b.totalValue ?? 0) - (a.totalValue ?? 0));
+    }
+
+    if (sortMode === 'valueAsc') {
+      sorted.sort((a, b) => (a.totalValue ?? 0) - (b.totalValue ?? 0));
+    }
+
+    return sorted;
+  }, [orders, searchText, statusFilter, sortMode]);
+
   const totalOrdersValue = useMemo(() => {
     return orders.reduce((sum, order) => {
       return sum + (order.totalValue ?? 0);
     }, 0);
   }, [orders]);
 
-  const ordersInProgressCount = useMemo(() => {
-    return orders.filter(order => {
-      const status = getOrderStatus(order);
+  const visibleOrdersValue = useMemo(() => {
+    return filteredOrders.reduce((sum, order) => {
+      return sum + (order.totalValue ?? 0);
+    }, 0);
+  }, [filteredOrders]);
 
-      return (
-        status === 'Nowe' ||
-        status === 'W realizacji' ||
-        status === 'Gotowe' ||
-        status === 'Wysłane'
-      );
-    }).length;
+  const ordersInProgressCount = useMemo(() => {
+    return orders.filter(order => isOrderInProgress(order)).length;
   }, [orders]);
 
   const finishedOrdersCount = useMemo(() => {
@@ -108,6 +183,61 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   const handleRefresh = async (): Promise<void> => {
     setRefreshing(true);
     await loadOrders();
+  };
+
+  const clearFilters = (): void => {
+    setSearchText('');
+    setStatusFilter('all');
+    setSortMode('newest');
+  };
+
+  const renderStatusFilterButton = (
+    label: string,
+    value: CustomerOrderFilter,
+  ): React.JSX.Element => {
+    const selected = statusFilter === value;
+
+    return (
+      <TouchableOpacity
+        key={`customer-status-filter-${value}`}
+        style={[
+          styles.filterButton,
+          selected && styles.filterButtonSelected,
+        ]}
+        onPress={() => setStatusFilter(value)}
+        activeOpacity={0.85}>
+        <Text
+          style={[
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSortButton = (
+    label: string,
+    value: CustomerOrderSort,
+  ): React.JSX.Element => {
+    const selected = sortMode === value;
+
+    return (
+      <TouchableOpacity
+        key={`customer-order-sort-${value}`}
+        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        onPress={() => setSortMode(value)}
+        activeOpacity={0.85}>
+        <Text
+          style={[
+            styles.sortButtonText,
+            selected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   const renderOrder = ({item}: {item: OrderDto}): React.JSX.Element => {
@@ -230,13 +360,14 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   return (
     <View style={styles.container}>
       <FlatList
-        data={orders}
+        data={filteredOrders}
         renderItem={renderOrder}
         keyExtractor={item => item.idOrder.toString()}
         contentContainerStyle={styles.listContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
+        keyboardShouldPersistTaps="handled"
         ListHeaderComponent={
           <>
             <View style={styles.heroBox}>
@@ -249,32 +380,98 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
 
             <View style={styles.summaryBox}>
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Zamówienia</Text>
+                <Text style={styles.summaryLabel}>Wszystkie</Text>
                 <Text style={styles.summaryValue}>{orders.length}</Text>
               </View>
 
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>W toku</Text>
-                <Text style={styles.summaryProgress}>
-                  {ordersInProgressCount}
+                <Text style={styles.summaryLabel}>Wyświetlane</Text>
+                <Text style={styles.summaryVisible}>
+                  {filteredOrders.length}
                 </Text>
               </View>
             </View>
 
             <View style={styles.summaryBox}>
               <View style={styles.summaryColumn}>
+                <Text style={styles.summaryLabel}>W toku</Text>
+                <Text style={styles.summaryProgress}>
+                  {ordersInProgressCount}
+                </Text>
+              </View>
+
+              <View style={styles.summaryColumn}>
                 <Text style={styles.summaryLabel}>Zakończone/anulowane</Text>
                 <Text style={styles.summaryFinished}>
                   {finishedOrdersCount}
                 </Text>
               </View>
+            </View>
 
+            <View style={styles.summaryBox}>
               <View style={styles.summaryColumn}>
                 <Text style={styles.summaryLabel}>Łączna wartość</Text>
                 <Text style={styles.summaryMoney}>
                   {formatMoney(totalOrdersValue)}
                 </Text>
               </View>
+
+              <View style={styles.summaryColumn}>
+                <Text style={styles.summaryLabel}>Widoczna wartość</Text>
+                <Text style={styles.summaryMoney}>
+                  {formatMoney(visibleOrdersValue)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.searchBox}>
+              <TextInput
+                style={styles.searchInput}
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Szukaj po numerze, statusie, dacie lub notatce..."
+                placeholderTextColor="#64748b"
+              />
+            </View>
+
+            <View style={styles.filterBox}>
+              <Text style={styles.filterTitle}>Status</Text>
+
+              <View style={styles.filterButtons}>
+                {renderStatusFilterButton('Wszystkie', 'all')}
+                {ORDER_STATUSES.map(status =>
+                  renderStatusFilterButton(status, status),
+                )}
+              </View>
+            </View>
+
+            <View style={styles.filterBox}>
+              <Text style={styles.filterTitle}>Sortowanie</Text>
+
+              <View style={styles.filterButtons}>
+                {renderSortButton('Najnowsze', 'newest')}
+                {renderSortButton('Najstarsze', 'oldest')}
+                {renderSortButton('Wartość ↓', 'valueDesc')}
+                {renderSortButton('Wartość ↑', 'valueAsc')}
+              </View>
+            </View>
+
+            <View style={styles.filterSummaryBox}>
+              <Text style={styles.filterSummaryText}>
+                Status:{' '}
+                {statusFilter === 'all' ? 'wszystkie' : statusFilter}
+              </Text>
+
+              <Text style={styles.filterSummaryText}>
+                Szukaj:{' '}
+                {searchText.trim().length > 0
+                  ? searchText.trim()
+                  : 'brak wyszukiwania'}
+              </Text>
+
+              <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
+                <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -290,15 +487,26 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.emptyIcon}>📦</Text>
             <Text style={styles.emptyTitle}>Brak zamówień</Text>
             <Text style={styles.emptyText}>
-              Złóż pierwsze zamówienie w sklepie, a pojawi się na tej liście.
+              {orders.length === 0
+                ? 'Złóż pierwsze zamówienie w sklepie, a pojawi się na tej liście.'
+                : 'Brak zamówień pasujących do filtrów.'}
             </Text>
 
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={() => navigation.navigate('Items')}
-              activeOpacity={0.85}>
-              <Text style={styles.primaryButtonText}>Przejdź do sklepu</Text>
-            </TouchableOpacity>
+            {orders.length === 0 ? (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => navigation.navigate('Items')}
+                activeOpacity={0.85}>
+                <Text style={styles.primaryButtonText}>Przejdź do sklepu</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={clearFilters}
+                activeOpacity={0.85}>
+                <Text style={styles.primaryButtonText}>Wyczyść filtry</Text>
+              </TouchableOpacity>
+            )}
           </View>
         }
         ListFooterComponent={
@@ -434,6 +642,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  summaryVisible: {
+    color: '#f97316',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
   summaryProgress: {
     color: '#f97316',
     fontSize: 24,
@@ -449,6 +663,108 @@ const styles = StyleSheet.create({
   summaryMoney: {
     color: '#16a34a',
     fontSize: 20,
+    fontWeight: '900',
+  },
+
+  searchBox: {
+    marginBottom: 12,
+  },
+
+  searchInput: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+  },
+
+  filterBox: {
+    marginBottom: 12,
+  },
+
+  filterTitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  filterButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  filterButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  filterButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  filterButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  filterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  sortButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  filterSummaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+
+  filterSummaryText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+
+  clearFiltersText: {
+    color: '#f97316',
+    fontSize: 12,
     fontWeight: '900',
   },
 
