@@ -17,12 +17,14 @@ import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {OrderDto} from '../types/models.ts';
+import type {OrderDto, OrderStatus} from '../types/models.ts';
+import {ORDER_STATUSES} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Orders'>;
 
 type SortMode = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc' | 'itemsDesc';
-type StatusFilter = 'all' | 'active' | 'inactive';
+type RecordFilter = 'all' | 'active' | 'inactive';
+type OrderStatusFilter = 'all' | OrderStatus;
 
 interface DialogState {
   visible: boolean;
@@ -54,6 +56,27 @@ function getDateTime(value?: string | null): number {
   return new Date(value).getTime();
 }
 
+function getOrderStatus(order: OrderDto): OrderStatus {
+  const status = order.status?.trim();
+
+  if (status && ORDER_STATUSES.includes(status as OrderStatus)) {
+    return status as OrderStatus;
+  }
+
+  return 'Nowe';
+}
+
+function isOrderInProgress(order: OrderDto): boolean {
+  const status = getOrderStatus(order);
+
+  return (
+    status === 'Nowe' ||
+    status === 'W realizacji' ||
+    status === 'Gotowe' ||
+    status === 'Wysłane'
+  );
+}
+
 function OrdersScreen({navigation}: Props): React.JSX.Element {
   const [orders, setOrders] = useState<OrderDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,7 +86,9 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+  const [recordFilter, setRecordFilter] = useState<RecordFilter>('active');
+  const [orderStatusFilter, setOrderStatusFilter] =
+    useState<OrderStatusFilter>('all');
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -78,12 +103,18 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
     let result = orders;
 
-    if (statusFilter === 'active') {
+    if (recordFilter === 'active') {
       result = result.filter(order => order.isActive !== false);
     }
 
-    if (statusFilter === 'inactive') {
+    if (recordFilter === 'inactive') {
       result = result.filter(order => order.isActive === false);
+    }
+
+    if (orderStatusFilter !== 'all') {
+      result = result.filter(order => {
+        return getOrderStatus(order) === orderStatusFilter;
+      });
     }
 
     if (search.length > 0) {
@@ -92,12 +123,14 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         const clientName = order.clientName?.toLowerCase() ?? '';
         const workerName = order.workerName?.toLowerCase() ?? '';
         const notes = order.notes?.toLowerCase() ?? '';
+        const status = getOrderStatus(order).toLowerCase();
 
         return (
           idOrder.includes(search) ||
           clientName.includes(search) ||
           workerName.includes(search) ||
-          notes.includes(search)
+          notes.includes(search) ||
+          status.includes(search)
         );
       });
     }
@@ -125,7 +158,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [orders, searchText, sortMode, statusFilter]);
+  }, [orders, searchText, sortMode, recordFilter, orderStatusFilter]);
 
   const activeCount = useMemo(() => {
     return orders.filter(order => order.isActive !== false).length;
@@ -133,6 +166,19 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const inactiveCount = useMemo(() => {
     return orders.filter(order => order.isActive === false).length;
+  }, [orders]);
+
+  const inProgressCount = useMemo(() => {
+    return orders.filter(order => order.isActive !== false && isOrderInProgress(order))
+      .length;
+  }, [orders]);
+
+  const completedCount = useMemo(() => {
+    return orders.filter(order => getOrderStatus(order) === 'Zakończone').length;
+  }, [orders]);
+
+  const cancelledCount = useMemo(() => {
+    return orders.filter(order => getOrderStatus(order) === 'Anulowane').length;
   }, [orders]);
 
   const closeDialog = (): void => {
@@ -249,25 +295,51 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const clearFilters = (): void => {
     setSearchText('');
-    setStatusFilter('active');
+    setRecordFilter('active');
+    setOrderStatusFilter('all');
     setSortMode('newest');
   };
 
-  const renderStatusButton = (
+  const renderRecordFilterButton = (
     label: string,
-    value: StatusFilter,
+    value: RecordFilter,
   ): React.JSX.Element => {
-    const selected = statusFilter === value;
+    const selected = recordFilter === value;
 
     return (
       <TouchableOpacity
         style={[styles.sortButton, selected && styles.sortButtonSelected]}
-        onPress={() => setStatusFilter(value)}
+        onPress={() => setRecordFilter(value)}
         activeOpacity={0.8}>
         <Text
           style={[
             styles.sortButtonText,
             selected && styles.sortButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderOrderStatusFilterButton = (
+    label: string,
+    value: OrderStatusFilter,
+  ): React.JSX.Element => {
+    const selected = orderStatusFilter === value;
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.statusFilterButton,
+          selected && styles.statusFilterButtonSelected,
+        ]}
+        onPress={() => setOrderStatusFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.statusFilterButtonText,
+            selected && styles.statusFilterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -304,7 +376,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.shopName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Zamówienia</Text>
           <Text style={styles.heroSubtitle}>
-            Obsługa zamówień klientów, pozycji zamówienia i wartości sprzedaży.
+            Obsługa zamówień klientów, statusów realizacji i wartości sprzedaży.
           </Text>
         </View>
 
@@ -328,8 +400,25 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
           </View>
 
           <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>W toku</Text>
+            <Text style={styles.summaryProgress}>{inProgressCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
             <Text style={styles.summaryLabel}>Nieaktywne</Text>
             <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+          </View>
+        </View>
+
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Zakończone</Text>
+            <Text style={styles.summaryCompleted}>{completedCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Anulowane</Text>
+            <Text style={styles.summaryCancelled}>{cancelledCount}</Text>
           </View>
         </View>
 
@@ -345,18 +434,29 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj po numerze, kliencie, pracowniku lub notatce..."
+            placeholder="Szukaj po numerze, kliencie, pracowniku, statusie lub notatce..."
             placeholderTextColor="#64748b"
           />
         </View>
 
         <View style={styles.sortBox}>
-          <Text style={styles.sortTitle}>Status</Text>
+          <Text style={styles.sortTitle}>Aktywność rekordu</Text>
 
           <View style={styles.sortButtons}>
-            {renderStatusButton('Wszystkie', 'all')}
-            {renderStatusButton('Aktywne', 'active')}
-            {renderStatusButton('Nieaktywne', 'inactive')}
+            {renderRecordFilterButton('Wszystkie', 'all')}
+            {renderRecordFilterButton('Aktywne', 'active')}
+            {renderRecordFilterButton('Nieaktywne', 'inactive')}
+          </View>
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.sortTitle}>Status realizacji</Text>
+
+          <View style={styles.sortButtons}>
+            {renderOrderStatusFilterButton('Wszystkie', 'all')}
+            {ORDER_STATUSES.map(status =>
+              renderOrderStatusFilterButton(status, status),
+            )}
           </View>
         </View>
 
@@ -374,14 +474,19 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.filterSummaryBox}>
           <Text style={styles.filterSummaryText}>
-            Filtr:{' '}
+            Wyszukiwanie:{' '}
             {searchText.trim().length > 0
               ? searchText.trim()
               : 'brak wyszukiwania'}
           </Text>
 
+          <Text style={styles.filterSummaryText}>
+            Status realizacji:{' '}
+            {orderStatusFilter === 'all' ? 'wszystkie' : orderStatusFilter}
+          </Text>
+
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
-            <Text style={styles.clearFiltersText}>Wyczyść</Text>
+            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
         </View>
       </>
@@ -390,6 +495,8 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const renderItem = ({item}: {item: OrderDto}): React.JSX.Element => {
     const isActive = item.isActive !== false;
+    const orderStatus = getOrderStatus(item);
+    const hasItems = item.orderItemsCount > 0;
 
     return (
       <View style={styles.orderCard}>
@@ -406,12 +513,13 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
               {isActive ? 'Aktywne' : 'Nieaktywne'}
             </Text>
 
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>
-                {item.orderItemsCount > 0 ? 'Z pozycjami' : 'Puste'}
-              </Text>
-            </View>
+            <Text style={styles.orderStatusBadge}>{orderStatus}</Text>
           </View>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Status realizacji</Text>
+          <Text style={styles.statusValue}>{orderStatus}</Text>
         </View>
 
         <View style={styles.infoBox}>
@@ -443,6 +551,14 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.totalBox}>
           <Text style={styles.totalLabel}>Wartość produktów</Text>
           <Text style={styles.totalValue}>{formatMoney(item.totalValue)}</Text>
+        </View>
+
+        <View style={styles.itemStateBox}>
+          <Text style={styles.itemStateText}>
+            {hasItems
+              ? 'Zamówienie ma dodane pozycje'
+              : 'Zamówienie nie ma jeszcze pozycji'}
+          </Text>
         </View>
 
         {item.notes ? (
@@ -539,7 +655,9 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 || statusFilter !== 'active'
+            {searchText.trim().length > 0 ||
+            recordFilter !== 'active' ||
+            orderStatusFilter !== 'all'
               ? 'Brak zamówień pasujących do filtrów'
               : 'Brak aktywnych zamówień w API'}
           </Text>
@@ -694,8 +812,26 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  summaryInactive: {
+  summaryProgress: {
     color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryInactive: {
+    color: '#ef4444',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryCompleted: {
+    color: '#38bdf8',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryCancelled: {
+    color: '#fca5a5',
     fontSize: 22,
     fontWeight: '900',
   },
@@ -774,6 +910,30 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
+  statusFilterButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  statusFilterButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  statusFilterButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  statusFilterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
   filterSummaryBox: {
     backgroundColor: '#111827',
     borderWidth: 1,
@@ -845,6 +1005,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   inactiveBadge: {
@@ -855,20 +1016,18 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
-  statusBadge: {
-    backgroundColor: '#1e293b',
-    borderRadius: 999,
+  orderStatusBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignSelf: 'flex-start',
-  },
-
-  statusBadgeText: {
-    color: '#cbd5e1',
+    paddingVertical: 5,
+    borderRadius: 999,
     fontSize: 11,
     fontWeight: '900',
+    overflow: 'hidden',
   },
 
   infoBox: {
@@ -908,6 +1067,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  statusValue: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
   totalBox: {
     backgroundColor: '#0f172a',
     borderWidth: 1,
@@ -929,6 +1094,19 @@ const styles = StyleSheet.create({
     color: '#f97316',
     fontSize: 20,
     fontWeight: '900',
+  },
+
+  itemStateBox: {
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 8,
+  },
+
+  itemStateText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
   },
 
   orderNotes: {
