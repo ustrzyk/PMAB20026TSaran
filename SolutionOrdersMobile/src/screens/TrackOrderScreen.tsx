@@ -33,6 +33,12 @@ function formatDate(value?: string | null): string {
   return value.substring(0, 10);
 }
 
+function getOrderStatus(order: OrderDto): string {
+  return order.status && order.status.trim().length > 0
+    ? order.status
+    : 'Nowe';
+}
+
 function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
   const {user, isAdmin, isWorker, isCustomer} = useAuth();
 
@@ -153,7 +159,8 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.title}>Sprawdź zamówienie</Text>
 
         <Text style={styles.subtitle}>
-          Wpisz numer zamówienia, aby zobaczyć jego podstawowe dane i pozycje.
+          Wpisz numer zamówienia, aby zobaczyć jego podstawowe dane, status i
+          pozycje.
         </Text>
       </View>
 
@@ -200,6 +207,11 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
 
       {order && (
         <>
+          <View style={styles.statusCard}>
+            <Text style={styles.statusLabel}>Aktualny status</Text>
+            <Text style={styles.statusValue}>{getOrderStatus(order)}</Text>
+          </View>
+
           <View style={styles.orderCard}>
             <Text style={styles.sectionTitle}>Zamówienie #{order.idOrder}</Text>
 
@@ -418,6 +430,30 @@ const styles = StyleSheet.create({
     color: '#fecaca',
     fontSize: 13,
     lineHeight: 18,
+  },
+
+  statusCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 14,
+  },
+
+  statusLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  statusValue: {
+    color: '#f97316',
+    fontSize: 24,
+    fontWeight: '900',
   },
 
   orderCard: {

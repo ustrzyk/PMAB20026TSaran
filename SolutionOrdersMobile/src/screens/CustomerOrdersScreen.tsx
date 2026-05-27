@@ -34,6 +34,12 @@ function formatDate(value?: string | null): string {
   return value.substring(0, 10);
 }
 
+function getOrderStatus(order: OrderDto): string {
+  return order.status && order.status.trim().length > 0
+    ? order.status
+    : 'Nowe';
+}
+
 function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   const {user, isCustomer} = useAuth();
 
@@ -46,6 +52,27 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
     return orders.reduce((sum, order) => {
       return sum + (order.totalValue ?? 0);
     }, 0);
+  }, [orders]);
+
+  const ordersInProgressCount = useMemo(() => {
+    return orders.filter(order => {
+      const status = getOrderStatus(order);
+
+      return (
+        status === 'Nowe' ||
+        status === 'W realizacji' ||
+        status === 'Gotowe' ||
+        status === 'Wysłane'
+      );
+    }).length;
+  }, [orders]);
+
+  const finishedOrdersCount = useMemo(() => {
+    return orders.filter(order => {
+      const status = getOrderStatus(order);
+
+      return status === 'Zakończone' || status === 'Anulowane';
+    }).length;
   }, [orders]);
 
   const loadOrders = useCallback(async (): Promise<void> => {
@@ -84,6 +111,8 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   };
 
   const renderOrder = ({item}: {item: OrderDto}): React.JSX.Element => {
+    const status = getOrderStatus(item);
+
     return (
       <View style={styles.orderCard}>
         <View style={styles.cardTopRow}>
@@ -94,7 +123,12 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             </Text>
           </View>
 
-          <Text style={styles.activeBadge}>Aktywne</Text>
+          <Text style={styles.statusBadge}>{status}</Text>
+        </View>
+
+        <View style={styles.infoBox}>
+          <Text style={styles.infoLabel}>Aktualny etap</Text>
+          <Text style={styles.statusValue}>{status}</Text>
         </View>
 
         <View style={styles.infoBox}>
@@ -217,6 +251,22 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               <View style={styles.summaryColumn}>
                 <Text style={styles.summaryLabel}>Zamówienia</Text>
                 <Text style={styles.summaryValue}>{orders.length}</Text>
+              </View>
+
+              <View style={styles.summaryColumn}>
+                <Text style={styles.summaryLabel}>W toku</Text>
+                <Text style={styles.summaryProgress}>
+                  {ordersInProgressCount}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.summaryBox}>
+              <View style={styles.summaryColumn}>
+                <Text style={styles.summaryLabel}>Zakończone/anulowane</Text>
+                <Text style={styles.summaryFinished}>
+                  {finishedOrdersCount}
+                </Text>
               </View>
 
               <View style={styles.summaryColumn}>
@@ -384,6 +434,18 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  summaryProgress: {
+    color: '#f97316',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
+  summaryFinished: {
+    color: '#16a34a',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
   summaryMoney: {
     color: '#16a34a',
     fontSize: 20,
@@ -438,11 +500,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  activeBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+  statusBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '900',
@@ -451,11 +513,11 @@ const styles = StyleSheet.create({
 
   infoBox: {
     backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 11,
     borderWidth: 1,
     borderColor: '#1e293b',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 8,
+    marginBottom: 9,
   },
 
   infoLabel: {
@@ -471,18 +533,24 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  orderValue: {
+  statusValue: {
     color: '#f97316',
-    fontSize: 18,
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  orderValue: {
+    color: '#16a34a',
+    fontSize: 20,
     fontWeight: '900',
   },
 
   notesBox: {
     backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 11,
     borderWidth: 1,
     borderColor: '#1e293b',
-    borderRadius: 12,
-    padding: 10,
     marginBottom: 10,
   },
 
@@ -497,7 +565,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
 
   detailsButtonText: {
@@ -509,31 +577,31 @@ const styles = StyleSheet.create({
   emptyBox: {
     backgroundColor: '#111827',
     borderRadius: 18,
-    padding: 18,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#334155',
-    alignItems: 'center',
     marginTop: 14,
+    alignItems: 'center',
   },
 
   emptyIcon: {
-    fontSize: 42,
-    marginBottom: 8,
+    fontSize: 44,
+    marginBottom: 10,
   },
 
   emptyTitle: {
     color: '#f8fafc',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
     marginBottom: 6,
   },
 
   emptyText: {
     color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
 
   primaryButton: {
@@ -568,14 +636,14 @@ const styles = StyleSheet.create({
   backButton: {
     backgroundColor: '#334155',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 18,
+    marginTop: 16,
   },
 
   backButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
 });
