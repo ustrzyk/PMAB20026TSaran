@@ -10,6 +10,7 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {useAuth} from '../context/AuthContext.tsx';
 import {useCart} from '../context/CartContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
@@ -33,9 +34,11 @@ function formatMoney(value?: number | null): string {
 function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
   const {item} = route.params;
   const {addToCart, totalQuantity, totalValue} = useCart();
+  const {isAdmin, isWorker, isCustomer} = useAuth();
 
   const availableQuantity = item.quantity ?? 0;
-  const isAvailable = availableQuantity > 0;
+  const isAvailable = availableQuantity > 0 && item.isActive !== false;
+
   const [selectedQuantity, setSelectedQuantity] = useState(
     isAvailable ? 1 : 0,
   );
@@ -54,6 +57,32 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       visible: false,
       loading: false,
     }));
+  };
+
+  const getAccountLabel = (): string => {
+    if (isAdmin || isWorker) {
+      return 'Panel';
+    }
+
+    if (isCustomer) {
+      return 'Konto';
+    }
+
+    return 'Zaloguj';
+  };
+
+  const handleAccountPress = (): void => {
+    if (isAdmin || isWorker) {
+      navigation.navigate('AdminPanel');
+      return;
+    }
+
+    if (isCustomer) {
+      navigation.navigate('ClientPanel');
+      return;
+    }
+
+    navigation.navigate('AuthLogin');
   };
 
   const decreaseQuantity = (): void => {
@@ -77,6 +106,18 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const handleAddToCart = (): void => {
+    if (item.isActive === false) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Produkt nieaktywny',
+        message: 'Tego produktu nie można aktualnie kupić.',
+        loading: false,
+      });
+
+      return;
+    }
+
     if (!isAvailable) {
       setDialog({
         visible: true,
@@ -126,8 +167,24 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         onCancel={closeDialog}
       />
 
+      <View style={styles.topBar}>
+        <TouchableOpacity
+          style={styles.homeButton}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.8}>
+          <Text style={styles.homeButtonText}>3D Print Shop</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.accountButton}
+          onPress={handleAccountPress}
+          activeOpacity={0.8}>
+          <Text style={styles.accountButtonText}>{getAccountLabel()}</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.heroBox}>
-        <Text style={styles.appName}>3D Print Shop</Text>
+        <Text style={styles.productIcon}>🖨️</Text>
 
         <Text style={styles.title}>{item.name}</Text>
 
@@ -148,7 +205,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         <View>
           <Text style={styles.cartTitle}>Koszyk</Text>
           <Text style={styles.cartText}>
-            Produkty: {totalQuantity} | Wartość: {formatMoney(totalValue)}
+            {totalQuantity} szt. | {formatMoney(totalValue)}
           </Text>
         </View>
 
@@ -156,17 +213,22 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
           activeOpacity={0.8}>
-          <Text style={styles.cartButtonText}>Koszyk</Text>
+          <Text style={styles.cartButtonText}>Otwórz</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.priceCard}>
-        <Text style={styles.priceLabel}>Cena</Text>
-        <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
+        <View>
+          <Text style={styles.priceLabel}>Cena</Text>
+          <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
+        </View>
 
-        <Text style={styles.stockText}>
-          Dostępne: {availableQuantity} {item.unitName ?? 'szt'}
-        </Text>
+        <View style={styles.stockBox}>
+          <Text style={styles.stockLabel}>Dostępne</Text>
+          <Text style={styles.stockValue}>
+            {availableQuantity} {item.unitName ?? 'szt'}
+          </Text>
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -236,7 +298,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
 
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => navigation.goBack()}
+        onPress={() => navigation.navigate('Items')}
         activeOpacity={0.8}>
         <Text style={styles.backButtonText}>Wróć do produktów</Text>
       </TouchableOpacity>
@@ -251,25 +313,52 @@ const styles = StyleSheet.create({
   },
 
   content: {
-    padding: 16,
     paddingBottom: 32,
+  },
+
+  topBar: {
+    backgroundColor: '#111827',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  homeButton: {
+    flex: 1,
+  },
+
+  homeButtonText: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+  },
+
+  accountButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+
+  accountButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   heroBox: {
     backgroundColor: '#111827',
-    borderRadius: 18,
     padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
     marginBottom: 14,
   },
 
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
+  productIcon: {
+    fontSize: 44,
     marginBottom: 8,
   },
 
@@ -294,6 +383,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   codeBadge: {
@@ -304,6 +394,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   availableBadge: {
@@ -314,6 +405,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   emptyBadge: {
@@ -324,6 +416,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   cartBox: {
@@ -331,7 +424,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#f97316',
+    borderColor: '#334155',
+    marginHorizontal: 16,
     marginBottom: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -353,7 +447,7 @@ const styles = StyleSheet.create({
   },
 
   cartButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#16a34a',
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 10,
@@ -371,7 +465,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderWidth: 1,
     borderColor: '#334155',
+    marginHorizontal: 16,
     marginBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 
   priceLabel: {
@@ -387,11 +484,22 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  stockText: {
-    color: '#cbd5e1',
+  stockBox: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+
+  stockLabel: {
+    color: '#94a3b8',
     fontSize: 13,
     fontWeight: '800',
-    marginTop: 6,
+    marginBottom: 4,
+  },
+
+  stockValue: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
   },
 
   card: {
@@ -400,6 +508,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
+    marginHorizontal: 16,
     marginBottom: 14,
   },
 
@@ -469,6 +578,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    marginHorizontal: 16,
     marginBottom: 12,
   },
 
@@ -483,6 +593,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
+    marginHorizontal: 16,
     marginBottom: 12,
   },
 
@@ -497,6 +608,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
+    marginHorizontal: 16,
   },
 
   backButtonText: {

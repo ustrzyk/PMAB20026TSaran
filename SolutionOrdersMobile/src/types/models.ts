@@ -101,6 +101,7 @@ export interface ClientDto {
   name: string;
   adress?: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
   isActive?: boolean;
 }
 
@@ -108,6 +109,8 @@ export interface CreateClientCommand {
   name: string;
   adress?: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
+  password?: string | null;
   isActive?: boolean;
 }
 
@@ -116,6 +119,8 @@ export interface UpdateClientCommand {
   name: string;
   adress?: string | null;
   phoneNumber?: string | null;
+  email?: string | null;
+  password?: string | null;
   isActive?: boolean;
 }
 
@@ -124,11 +129,14 @@ export interface CreateClientResponse {
   message?: string;
 }
 
+export type WorkerRole = 'Admin' | 'Worker';
+
 export interface WorkerDto {
   idWorker: number;
   firstName?: string | null;
   lastName?: string | null;
   login: string;
+  role?: WorkerRole | string | null;
   isActive?: boolean;
 }
 
@@ -137,6 +145,7 @@ export interface CreateWorkerCommand {
   lastName?: string | null;
   login: string;
   password?: string | null;
+  role?: WorkerRole | string | null;
   isActive?: boolean;
 }
 
@@ -146,12 +155,46 @@ export interface UpdateWorkerCommand {
   lastName?: string | null;
   login: string;
   password?: string | null;
+  role?: WorkerRole | string | null;
   isActive?: boolean;
 }
 
 export interface CreateWorkerResponse {
   id: number;
   message?: string;
+}
+
+export interface WorkerLoginRequestDto {
+  login: string;
+  password: string;
+}
+
+export interface WorkerLoginResponseDto {
+  idWorker: number;
+  name: string;
+  login: string;
+  role: WorkerRole | string;
+}
+
+export interface CustomerLoginRequestDto {
+  email: string;
+  password: string;
+}
+
+export interface CustomerRegisterRequestDto {
+  name: string;
+  email: string;
+  password: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
+}
+
+export interface CustomerLoginResponseDto {
+  idClient: number;
+  name: string;
+  email: string;
+  adress?: string | null;
+  phoneNumber?: string | null;
 }
 
 export interface OrderDto {
@@ -233,9 +276,11 @@ export interface CreateOrderItemResponse {
 }
 
 export interface CheckoutClientDto {
+  idClient?: number | null;
   name: string;
   address: string;
   phoneNumber: string;
+  email?: string | null;
 }
 
 export interface CheckoutItemDto {

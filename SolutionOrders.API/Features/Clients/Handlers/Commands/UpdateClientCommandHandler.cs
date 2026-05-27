@@ -28,9 +28,33 @@ namespace SolutionOrders.API.Features.Clients.Handlers.Commands
                     $"Klient o ID {request.IdClient} nie istnieje");
             }
 
-            client.Name = request.Name;
+            var email = request.Email?.Trim().ToLower();
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                var emailExists = await context.Clients
+                    .AnyAsync(existingClient =>
+                        existingClient.IdClient != request.IdClient &&
+                        existingClient.Email != null &&
+                        existingClient.Email.ToLower() == email,
+                        cancellationToken);
+
+                if (emailExists)
+                {
+                    throw new ArgumentException("Klient z takim adresem e-mail już istnieje");
+                }
+            }
+
+            client.Name = request.Name.Trim();
             client.Adress = request.Adress;
             client.PhoneNumber = request.PhoneNumber;
+            client.Email = email;
+
+            if (!string.IsNullOrWhiteSpace(request.Password))
+            {
+                client.Password = request.Password.Trim();
+            }
+
             client.IsActive = request.IsActive;
 
             await context.SaveChangesAsync(cancellationToken);

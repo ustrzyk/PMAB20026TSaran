@@ -9,11 +9,24 @@ import type {
 } from '../types/models.ts';
 
 export type RootStackParamList = {
+  AuthLogin: undefined;
+  Register: undefined;
+  ClientPanel: undefined;
+  CustomerProfile: undefined;
+  CustomerOrders: undefined;
+
   Home: undefined;
 
   Dashboard: undefined;
   AdminPanel: undefined;
-  Items: undefined;
+
+  Items:
+    | {
+        initialCategory?: string;
+        initialSearch?: string;
+      }
+    | undefined;
+
   AdminItems: undefined;
 
   TrackOrder:

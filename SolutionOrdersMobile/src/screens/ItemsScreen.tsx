@@ -13,6 +13,7 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {useAuth} from '../context/AuthContext.tsx';
 import {useCart} from '../context/CartContext.tsx';
 import {useItems} from '../context/ItemsContext.tsx';
 
@@ -40,6 +41,7 @@ function formatMoney(value?: number | null): string {
 function ItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems} = useItems();
   const {addToCart, totalQuantity, totalValue} = useCart();
+  const {user, isAdmin, isWorker, isCustomer} = useAuth();
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
@@ -54,9 +56,12 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const activeItems = useMemo(() => {
+    return items.filter(item => item.isActive !== false);
+  }, [items]);
+
   const categories = useMemo(() => {
-    const categoryNames = items
-      .filter(item => item.isActive)
+    const categoryNames = activeItems
       .map(item => item.categoryName ?? 'Brak kategorii')
       .filter((categoryName, index, array) => {
         return array.indexOf(categoryName) === index;
@@ -64,12 +69,12 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       .sort((a, b) => a.localeCompare(b));
 
     return categoryNames;
-  }, [items]);
+  }, [activeItems]);
 
   const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
-    let result = items.filter(item => item.isActive);
+    let result = activeItems;
 
     if (selectedCategory !== 'all') {
       result = result.filter(item => {
@@ -118,7 +123,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [items, searchText, sortMode, selectedCategory, onlyAvailable]);
+  }, [activeItems, searchText, sortMode, selectedCategory, onlyAvailable]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -128,8 +133,46 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     }));
   };
 
+  const getAccountLabel = (): string => {
+    if (isAdmin || isWorker) {
+      return 'Panel';
+    }
+
+    if (isCustomer) {
+      return 'Konto';
+    }
+
+    return 'Zaloguj';
+  };
+
+  const handleAccountPress = (): void => {
+    if (isAdmin || isWorker) {
+      navigation.navigate('AdminPanel');
+      return;
+    }
+
+    if (isCustomer) {
+      navigation.navigate('ClientPanel');
+      return;
+    }
+
+    navigation.navigate('AuthLogin');
+  };
+
   const handleAddToCart = (item: Item): void => {
     const quantity = item.quantity ?? 0;
+
+    if (item.isActive === false) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Produkt nieaktywny',
+        message: 'Tego produktu nie można aktualnie kupić.',
+        loading: false,
+      });
+
+      return;
+    }
 
     if (quantity <= 0) {
       setDialog({
@@ -209,19 +252,27 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   const renderListHeader = (): React.JSX.Element => {
     return (
       <>
-        <View style={styles.heroBox}>
-          <Text style={styles.shopName}>3D Print Shop</Text>
-          <Text style={styles.heroTitle}>Sklep z drukarkami 3D</Text>
-          <Text style={styles.heroSubtitle}>
-            Wybierz produkt, dodaj go do koszyka i złóż zamówienie z dostawą.
-          </Text>
+        <View style={styles.topBar}>
+          <TouchableOpacity
+            style={styles.homeButton}
+            onPress={() => navigation.navigate('Home')}
+            activeOpacity={0.8}>
+            <Text style={styles.homeButtonText}>3D Print Shop</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.accountButton}
+            onPress={handleAccountPress}
+            activeOpacity={0.8}>
+            <Text style={styles.accountButtonText}>{getAccountLabel()}</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.cartBar}>
           <View>
             <Text style={styles.cartBarTitle}>Koszyk</Text>
             <Text style={styles.cartBarText}>
-              Produkty: {totalQuantity} | {formatMoney(totalValue)}
+              {totalQuantity} szt. | {formatMoney(totalValue)}
             </Text>
           </View>
 
@@ -229,7 +280,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             style={styles.cartButton}
             onPress={() => navigation.navigate('Cart')}
             activeOpacity={0.8}>
-            <Text style={styles.cartButtonText}>Przejdź</Text>
+            <Text style={styles.cartButtonText}>Otwórz</Text>
           </TouchableOpacity>
         </View>
 
@@ -237,7 +288,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           <View>
             <Text style={styles.title}>Produkty</Text>
             <Text style={styles.subtitle}>
-              Wyświetlane: {filteredItems.length} / {items.length}
+              Wyświetlane: {filteredItems.length} / {activeItems.length}
             </Text>
           </View>
 
@@ -256,7 +307,10 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           />
 
           <TouchableOpacity
-            style={styles.onlyAvailableButton}
+            style={[
+              styles.onlyAvailableButton,
+              onlyAvailable && styles.onlyAvailableButtonSelected,
+            ]}
             onPress={() => setOnlyAvailable(previous => !previous)}
             activeOpacity={0.8}>
             <Text
@@ -292,11 +346,11 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.filterSummaryBox}>
           <Text style={styles.filterSummaryText}>
-            Filtr:{' '}
             {selectedCategory === 'all'
-              ? 'wszystkie kategorie'
+              ? 'Wszystkie kategorie'
               : selectedCategory}
             {onlyAvailable ? ' | tylko dostępne' : ''}
+            {searchText.trim().length > 0 ? ` | ${searchText.trim()}` : ''}
           </Text>
 
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
@@ -310,37 +364,51 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   const renderItem = ({item}: {item: Item}): React.JSX.Element => {
     const price = item.price ?? 0;
     const quantity = item.quantity ?? 0;
-    const isAvailable = quantity > 0;
+    const isAvailable = quantity > 0 && item.isActive !== false;
 
     return (
       <View style={styles.itemCard}>
-        <View style={styles.itemContent}>
-          <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
-
-          <Text style={styles.itemDescription} numberOfLines={2}>
-            {item.description ?? 'Brak opisu produktu'}
-          </Text>
-
-          <View style={styles.badgeRow}>
-            <Text style={styles.categoryBadge}>
-              {item.categoryName ?? 'Brak kategorii'}
-            </Text>
-
-            <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
-
-            <Text
-              style={
-                isAvailable ? styles.availableBadge : styles.notAvailableBadge
-              }>
-              {isAvailable ? 'Dostępny' : 'Brak na stanie'}
-            </Text>
+        <View style={styles.itemTopRow}>
+          <View style={styles.itemIconBox}>
+            <Text style={styles.itemIcon}>🖨️</Text>
           </View>
 
-          <Text style={styles.itemPrice}>Cena: {formatMoney(price)}</Text>
+          <View style={styles.itemContent}>
+            <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
 
-          <Text style={styles.itemText}>
-            Stan magazynu: {quantity} {item.unitName ?? 'szt'}
+            <Text style={styles.itemDescription} numberOfLines={2}>
+              {item.description ?? 'Brak opisu produktu'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.badgeRow}>
+          <Text style={styles.categoryBadge}>
+            {item.categoryName ?? 'Brak kategorii'}
           </Text>
+
+          <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
+
+          <Text
+            style={
+              isAvailable ? styles.availableBadge : styles.notAvailableBadge
+            }>
+            {isAvailable ? 'Dostępny' : 'Brak na stanie'}
+          </Text>
+        </View>
+
+        <View style={styles.priceRow}>
+          <View>
+            <Text style={styles.priceLabel}>Cena</Text>
+            <Text style={styles.itemPrice}>{formatMoney(price)}</Text>
+          </View>
+
+          <View style={styles.stockBox}>
+            <Text style={styles.stockLabel}>Stan</Text>
+            <Text style={styles.stockValue}>
+              {quantity} {item.unitName ?? 'szt'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.shopActions}>
@@ -353,7 +421,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             activeOpacity={0.8}
             disabled={!isAvailable}>
             <Text style={styles.buttonText}>
-              {isAvailable ? 'Dodaj do koszyka' : 'Brak na stanie'}
+              {isAvailable ? 'Dodaj' : 'Brak'}
             </Text>
           </TouchableOpacity>
 
@@ -414,13 +482,22 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 ||
-            selectedCategory !== 'all' ||
-            onlyAvailable
-              ? 'Brak produktów pasujących do filtrów'
-              : 'Brak produktów w API'}
-          </Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>
+              {searchText.trim().length > 0 ||
+              selectedCategory !== 'all' ||
+              onlyAvailable
+                ? 'Brak produktów pasujących do filtrów'
+                : 'Brak produktów w API'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.clearEmptyButton}
+              onPress={clearFilters}
+              activeOpacity={0.8}>
+              <Text style={styles.clearEmptyButtonText}>Wyczyść filtry</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     </View>
@@ -471,33 +548,37 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
   },
 
-  heroBox: {
+  topBar: {
     backgroundColor: '#111827',
-    padding: 16,
+    padding: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#334155',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
 
-  shopName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 6,
+  homeButton: {
+    flex: 1,
   },
 
-  heroTitle: {
+  homeButtonText: {
     color: '#f8fafc',
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '900',
   },
 
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
+  accountButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 999,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+  },
+
+  accountButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   cartBar: {
@@ -523,7 +604,7 @@ const styles = StyleSheet.create({
   },
 
   cartButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#16a34a',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 10,
@@ -558,7 +639,7 @@ const styles = StyleSheet.create({
   },
 
   refreshButton: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#334155',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 10,
@@ -596,6 +677,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 8,
+  },
+
+  onlyAvailableButtonSelected: {
+    borderColor: '#16a34a',
   },
 
   onlyAvailableText: {
@@ -719,8 +804,29 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
   },
 
+  itemTopRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 10,
+  },
+
+  itemIconBox: {
+    width: 58,
+    height: 58,
+    borderRadius: 14,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  itemIcon: {
+    fontSize: 30,
+  },
+
   itemContent: {
-    marginBottom: 12,
+    flex: 1,
   },
 
   itemName: {
@@ -734,14 +840,13 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 8,
   },
 
   badgeRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 8,
+    marginBottom: 12,
   },
 
   categoryBadge: {
@@ -752,6 +857,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   codeBadge: {
@@ -762,6 +868,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   availableBadge: {
@@ -772,6 +879,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   notAvailableBadge: {
@@ -782,18 +890,48 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
+  },
+
+  priceRow: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+
+  priceLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '800',
+    marginBottom: 3,
   },
 
   itemPrice: {
     color: '#f97316',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
-    marginBottom: 4,
   },
 
-  itemText: {
+  stockBox: {
+    alignItems: 'flex-end',
+  },
+
+  stockLabel: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 11,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  stockValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   shopActions: {
@@ -802,7 +940,7 @@ const styles = StyleSheet.create({
   },
 
   addToCartButton: {
-    flex: 2,
+    flex: 1,
     backgroundColor: '#16a34a',
     paddingVertical: 10,
     borderRadius: 10,
@@ -826,12 +964,35 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  emptyBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+  },
+
   emptyText: {
     color: '#94a3b8',
     textAlign: 'center',
-    marginTop: 40,
-    marginHorizontal: 16,
-    fontSize: 16,
+    fontSize: 15,
+    marginBottom: 12,
+  },
+
+  clearEmptyButton: {
+    backgroundColor: '#f97316',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+
+  clearEmptyButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
   },
 });
 

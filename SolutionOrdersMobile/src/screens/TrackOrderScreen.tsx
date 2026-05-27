@@ -12,6 +12,7 @@ import {
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
+import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 import type {OrderDto, OrderItemDto} from '../types/models.ts';
@@ -33,6 +34,8 @@ function formatDate(value?: string | null): string {
 }
 
 function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
+  const {user, isAdmin, isWorker, isCustomer} = useAuth();
+
   const initialOrderId = route.params?.idOrder;
 
   const [orderNumber, setOrderNumber] = useState(
@@ -50,6 +53,22 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     setError(null);
   };
 
+  const checkCustomerAccess = (foundOrder: OrderDto): void => {
+    if (!isCustomer) {
+      return;
+    }
+
+    if (!user?.id) {
+      throw new Error('Nie udało się rozpoznać konta klienta.');
+    }
+
+    if (foundOrder.idClient !== user.id) {
+      throw new Error(
+        'To zamówienie nie jest przypisane do Twojego konta klienta.',
+      );
+    }
+  };
+
   const loadOrder = async (idOrder: number): Promise<void> => {
     try {
       setLoading(true);
@@ -58,8 +77,10 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
       const foundOrder = await apiService.getOrder(idOrder);
 
       if (foundOrder.isActive === false) {
-        throw new Error('Zamówienie jest nieaktywne');
+        throw new Error('Zamówienie jest nieaktywne.');
       }
+
+      checkCustomerAccess(foundOrder);
 
       const foundItems = await apiService.getOrderItemsByOrder(idOrder);
       const activeItems = foundItems.filter(item => item.isActive !== false);
@@ -69,6 +90,12 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     } catch (err) {
       setOrder(null);
       setOrderItems([]);
+
+      if (err instanceof Error && err.message.length > 0) {
+        setError(err.message);
+        return;
+      }
+
       setError(
         'Nie znaleziono aktywnego zamówienia albo wystąpił błąd pobierania danych.',
       );
@@ -236,6 +263,24 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
           )}
         </>
       )}
+
+      {isCustomer ? (
+        <TouchableOpacity
+          style={styles.customerPanelButton}
+          onPress={() => navigation.navigate('ClientPanel')}
+          activeOpacity={0.8}>
+          <Text style={styles.customerPanelButtonText}>Moje konto</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {isAdmin || isWorker ? (
+        <TouchableOpacity
+          style={styles.adminPanelButton}
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.8}>
+          <Text style={styles.adminPanelButtonText}>Panel pracownika</Text>
+        </TouchableOpacity>
+      ) : null}
 
       <TouchableOpacity
         style={styles.shopButton}
@@ -480,6 +525,36 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 14,
     textAlign: 'center',
+  },
+
+  customerPanelButton: {
+    backgroundColor: '#2563eb',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  customerPanelButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  adminPanelButton: {
+    backgroundColor: '#a855f7',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  adminPanelButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   shopButton: {

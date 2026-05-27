@@ -22,6 +22,7 @@ namespace SolutionOrders.API.Features.Clients.Handlers.Queries
                     Name = client.Name,
                     Adress = client.Adress,
                     PhoneNumber = client.PhoneNumber,
+                    Email = client.Email,
                     IsActive = client.IsActive
                 })
                 .ToListAsync(cancellationToken);

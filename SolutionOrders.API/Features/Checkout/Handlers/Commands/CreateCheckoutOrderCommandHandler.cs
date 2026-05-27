@@ -19,21 +19,6 @@ namespace SolutionOrders.API.Features.Checkout.Handlers.Commands
                 throw new ArgumentException("Dane klienta są wymagane");
             }
 
-            if (string.IsNullOrWhiteSpace(request.Client.Name))
-            {
-                throw new ArgumentException("Imię i nazwisko klienta jest wymagane");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Client.Address))
-            {
-                throw new ArgumentException("Adres dostawy jest wymagany");
-            }
-
-            if (string.IsNullOrWhiteSpace(request.Client.PhoneNumber))
-            {
-                throw new ArgumentException("Numer telefonu jest wymagany");
-            }
-
             if (request.Items == null || request.Items.Count == 0)
             {
                 throw new ArgumentException("Koszyk jest pusty");
@@ -91,17 +76,57 @@ namespace SolutionOrders.API.Features.Checkout.Handlers.Commands
 
             try
             {
-                var client = new Client
+                var client = await FindExistingClient(
+                    request.Client,
+                    cancellationToken);
+
+                if (client == null)
                 {
-                    Name = request.Client.Name.Trim(),
-                    Adress = request.Client.Address.Trim(),
-                    PhoneNumber = request.Client.PhoneNumber.Trim(),
-                    IsActive = true
-                };
+                    ValidateGuestClient(request.Client);
 
-                context.Clients.Add(client);
+                    client = new Client
+                    {
+                        Name = request.Client.Name?.Trim(),
+                        Adress = request.Client.Address?.Trim(),
+                        PhoneNumber = request.Client.PhoneNumber?.Trim(),
+                        Email = NormalizeEmail(request.Client.Email),
+                        IsActive = true
+                    };
 
-                await context.SaveChangesAsync(cancellationToken);
+                    context.Clients.Add(client);
+
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    UpdateClientDeliveryData(client, request.Client);
+
+                    await context.SaveChangesAsync(cancellationToken);
+                }
+
+                var deliveryAddress = request.Client.Address?.Trim();
+
+                if (string.IsNullOrWhiteSpace(deliveryAddress))
+                {
+                    deliveryAddress = client.Adress;
+                }
+
+                var phoneNumber = request.Client.PhoneNumber?.Trim();
+
+                if (string.IsNullOrWhiteSpace(phoneNumber))
+                {
+                    phoneNumber = client.PhoneNumber;
+                }
+
+                if (string.IsNullOrWhiteSpace(deliveryAddress))
+                {
+                    throw new ArgumentException("Adres dostawy jest wymagany");
+                }
+
+                if (string.IsNullOrWhiteSpace(phoneNumber))
+                {
+                    throw new ArgumentException("Numer telefonu jest wymagany");
+                }
 
                 var order = new Order
                 {
@@ -163,6 +188,89 @@ namespace SolutionOrders.API.Features.Checkout.Handlers.Commands
             {
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
+            }
+        }
+
+        private async Task<Client?> FindExistingClient(
+            CheckoutClientDto checkoutClient,
+            CancellationToken cancellationToken)
+        {
+            if (checkoutClient.IdClient.HasValue && checkoutClient.IdClient.Value > 0)
+            {
+                return await context.Clients
+                    .FirstOrDefaultAsync(client =>
+                        client.IdClient == checkoutClient.IdClient.Value &&
+                        client.IsActive,
+                        cancellationToken);
+            }
+
+            var email = NormalizeEmail(checkoutClient.Email);
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                return await context.Clients
+                    .FirstOrDefaultAsync(client =>
+                        client.Email != null &&
+                        client.Email.ToLower() == email &&
+                        client.IsActive,
+                        cancellationToken);
+            }
+
+            return null;
+        }
+
+        private static string? NormalizeEmail(string? email)
+        {
+            if (string.IsNullOrWhiteSpace(email))
+            {
+                return null;
+            }
+
+            return email.Trim().ToLower();
+        }
+
+        private static void ValidateGuestClient(CheckoutClientDto client)
+        {
+            if (string.IsNullOrWhiteSpace(client.Name))
+            {
+                throw new ArgumentException("Imię i nazwisko klienta jest wymagane");
+            }
+
+            if (string.IsNullOrWhiteSpace(client.Address))
+            {
+                throw new ArgumentException("Adres dostawy jest wymagany");
+            }
+
+            if (string.IsNullOrWhiteSpace(client.PhoneNumber))
+            {
+                throw new ArgumentException("Numer telefonu jest wymagany");
+            }
+        }
+
+        private static void UpdateClientDeliveryData(
+            Client client,
+            CheckoutClientDto checkoutClient)
+        {
+            if (!string.IsNullOrWhiteSpace(checkoutClient.Name))
+            {
+                client.Name = checkoutClient.Name.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(checkoutClient.Address))
+            {
+                client.Adress = checkoutClient.Address.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(checkoutClient.PhoneNumber))
+            {
+                client.PhoneNumber = checkoutClient.PhoneNumber.Trim();
+            }
+
+            var email = NormalizeEmail(checkoutClient.Email);
+
+            if (!string.IsNullOrWhiteSpace(email))
+            {
+                client.Email = email;
             }
         }
     }

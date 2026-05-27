@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SolutionOrders.API.Features.Workers.Messages.Commands;
 using SolutionOrders.API.Models;
 using SolutionOrders.API.Models.Data;
@@ -27,12 +28,30 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
                 throw new ArgumentException("Login pracownika jest wymagany");
             }
 
+            if (string.IsNullOrWhiteSpace(request.Password))
+            {
+                throw new ArgumentException("Hasło pracownika jest wymagane");
+            }
+
+            var loginExists = await context.Workers
+                .AnyAsync(worker =>
+                    worker.Login == request.Login.Trim(),
+                    cancellationToken);
+
+            if (loginExists)
+            {
+                throw new ArgumentException("Pracownik z takim loginem już istnieje");
+            }
+
+            var role = NormalizeRole(request.Role);
+
             var worker = new Worker
             {
-                FirstName = request.FirstName,
-                LastName = request.LastName,
-                Login = request.Login,
-                Password = request.Password,
+                FirstName = request.FirstName.Trim(),
+                LastName = request.LastName.Trim(),
+                Login = request.Login.Trim(),
+                Password = request.Password.Trim(),
+                Role = role,
                 IsActive = request.IsActive
             };
 
@@ -41,6 +60,16 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Commands
             await context.SaveChangesAsync(cancellationToken);
 
             return worker.IdWorker;
+        }
+
+        private static string NormalizeRole(string? role)
+        {
+            if (string.Equals(role, "Admin", StringComparison.OrdinalIgnoreCase))
+            {
+                return "Admin";
+            }
+
+            return "Worker";
         }
     }
 }

@@ -22,6 +22,7 @@ namespace SolutionOrders.API.Features.Workers.Handlers.Queries
                     FirstName = worker.FirstName,
                     LastName = worker.LastName,
                     Login = worker.Login,
+                    Role = worker.Role,
                     IsActive = worker.IsActive
                 })
                 .FirstOrDefaultAsync(cancellationToken);

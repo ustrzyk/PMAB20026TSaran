@@ -9,146 +9,168 @@ import {
 
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
+import {useAuth} from '../context/AuthContext.tsx';
+
 import type {RootStackParamList} from '../navigation/types.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AdminPanel'>;
 
 function AdminPanelScreen({navigation}: Props): React.JSX.Element {
+  const {user, isAdmin, isWorker, logout} = useAuth();
+
+  const roleName = isAdmin ? 'Administrator' : 'Pracownik';
+  const hasAccess = isAdmin || isWorker;
+
+  const handleLogout = (): void => {
+    logout();
+
+    navigation.reset({
+      index: 0,
+      routes: [{name: 'Home'}],
+    });
+  };
+
+  if (!hasAccess) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.lockIcon}>🔒</Text>
+        <Text style={styles.accessTitle}>Brak dostępu</Text>
+        <Text style={styles.accessText}>
+          Panel pracownika jest dostępny tylko po zalogowaniu jako pracownik albo
+          administrator.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.primaryAccessButton}
+          onPress={() => navigation.reset({index: 0, routes: [{name: 'Home'}]})}
+          activeOpacity={0.85}>
+          <Text style={styles.primaryAccessButtonText}>Wróć do sklepu</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryAccessButton}
+          onPress={() =>
+            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+          }
+          activeOpacity={0.85}>
+          <Text style={styles.secondaryAccessButtonText}>Zaloguj</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
-        <Text style={styles.appName}>3D Print Shop</Text>
+        <View style={styles.heroTopRow}>
+          <View style={styles.heroTextBox}>
+            <Text style={styles.appName}>3D Print Shop</Text>
+            <Text style={styles.title}>Panel pracownika</Text>
+            <Text style={styles.userText}>
+              {user?.name ?? roleName} | {roleName}
+            </Text>
+          </View>
 
-        <Text style={styles.title}>Panel administracyjny</Text>
-
-        <Text style={styles.subtitle}>
-          Zarządzanie sklepem, produktami, kategoriami, klientami,
-          zamówieniami oraz raportami sprzedaży.
-        </Text>
+          <TouchableOpacity
+            style={styles.logoutButton}
+            onPress={handleLogout}
+            activeOpacity={0.85}>
+            <Text style={styles.logoutButtonText}>Wyloguj</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Raporty</Text>
-
       <TouchableOpacity
-        style={[styles.menuCard, styles.dashboardCard]}
+        style={[styles.bigCard, styles.dashboardCard]}
         onPress={() => navigation.navigate('Dashboard')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Dashboard</Text>
-          <Text style={styles.menuDescription}>
-            Sprzedaż, TOP produkty, niskie stany magazynowe, sprzedaż według
-            kategorii i najnowsze zamówienia.
-          </Text>
+        activeOpacity={0.85}>
+        <Text style={styles.bigIcon}>📊</Text>
+
+        <View style={styles.bigTextBox}>
+          <Text style={styles.bigTitle}>Dashboard</Text>
+          <Text style={styles.bigDescription}>Sprzedaż, magazyn i raporty</Text>
         </View>
 
-        <Text style={styles.menuArrow}>{'>'}</Text>
+        <Text style={styles.arrow}>{'>'}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>Zarządzanie asortymentem</Text>
+      <Text style={styles.sectionTitle}>Sprzedaż</Text>
 
-      <TouchableOpacity
-        style={[styles.menuCard, styles.productsCard]}
-        onPress={() => navigation.navigate('AdminItems')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Produkty - administracja</Text>
-          <Text style={styles.menuDescription}>
-            Dodawanie, edycja i usuwanie produktów oraz kontrola stanów
-            magazynowych.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Categories')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Kategorie</Text>
-          <Text style={styles.menuDescription}>
-            Zarządzanie kategoriami produktów, np. drukarki 3D, filamenty,
-            części i akcesoria.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Units')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Jednostki miary</Text>
-          <Text style={styles.menuDescription}>
-            Jednostki używane przy produktach i magazynie, np. sztuki,
-            kilogramy albo rolki.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.sectionTitle}>Obsługa sprzedaży</Text>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Clients')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Klienci</Text>
-          <Text style={styles.menuDescription}>
-            Klienci utworzeni ręcznie lub automatycznie podczas finalizacji
-            koszyka.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Workers')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Pracownicy</Text>
-          <Text style={styles.menuDescription}>
-            Pracownicy przypisywani do obsługi zamówień składanych w sklepie.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('Orders')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
+      <View style={styles.grid}>
+        <TouchableOpacity
+          style={[styles.menuCard, styles.salesCard]}
+          onPress={() => navigation.navigate('Orders')}
+          activeOpacity={0.85}>
+          <Text style={styles.icon}>📦</Text>
           <Text style={styles.menuTitle}>Zamówienia</Text>
-          <Text style={styles.menuDescription}>
-            Lista zamówień z klientem, pracownikiem, datą dostawy, notatką i
-            wartością.
-          </Text>
-        </View>
+        </TouchableOpacity>
 
-        <Text style={styles.menuArrow}>{'>'}</Text>
-      </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.menuCard, styles.salesCard]}
+          onPress={() => navigation.navigate('OrderItems')}
+          activeOpacity={0.85}>
+          <Text style={styles.icon}>🧾</Text>
+          <Text style={styles.menuTitle}>Pozycje</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuCard, styles.salesCard]}
+          onPress={() => navigation.navigate('Clients')}
+          activeOpacity={0.85}>
+          <Text style={styles.icon}>👥</Text>
+          <Text style={styles.menuTitle}>Klienci</Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text style={styles.sectionTitle}>Asortyment</Text>
+
+      <View style={styles.grid}>
+        <TouchableOpacity
+          style={[styles.menuCard, styles.stockCard]}
+          onPress={() => navigation.navigate('AdminItems')}
+          activeOpacity={0.85}>
+          <Text style={styles.icon}>🖨️</Text>
+          <Text style={styles.menuTitle}>Produkty</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuCard, styles.stockCard]}
+          onPress={() => navigation.navigate('Categories')}
+          activeOpacity={0.85}>
+          <Text style={styles.icon}>🏷️</Text>
+          <Text style={styles.menuTitle}>Kategorie</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuCard, styles.stockCard]}
+          onPress={() => navigation.navigate('Units')}
+          activeOpacity={0.85}>
+          <Text style={styles.icon}>📏</Text>
+          <Text style={styles.menuTitle}>Jednostki</Text>
+        </TouchableOpacity>
+      </View>
+
+      {isAdmin ? (
+        <>
+          <Text style={styles.sectionTitle}>Administracja</Text>
+
+          <View style={styles.grid}>
+            <TouchableOpacity
+              style={[styles.menuCard, styles.adminCard]}
+              onPress={() => navigation.navigate('Workers')}
+              activeOpacity={0.85}>
+              <Text style={styles.icon}>🛠️</Text>
+              <Text style={styles.menuTitle}>Pracownicy</Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : null}
 
       <TouchableOpacity
-        style={styles.menuCard}
-        onPress={() => navigation.navigate('OrderItems')}
-        activeOpacity={0.8}>
-        <View style={styles.menuTextBox}>
-          <Text style={styles.menuTitle}>Pozycje zamówienia</Text>
-          <Text style={styles.menuDescription}>
-            Produkty przypisane do zamówień przez tabelę pośrednią OrderItem.
-          </Text>
-        </View>
-
-        <Text style={styles.menuArrow}>{'>'}</Text>
+        style={styles.shopButton}
+        onPress={() => navigation.navigate('Home')}
+        activeOpacity={0.85}>
+        <Text style={styles.shopButtonText}>Przejdź do sklepu</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -160,6 +182,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
   },
 
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+
+  lockIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+
+  accessTitle: {
+    color: '#f8fafc',
+    fontSize: 25,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  accessText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+
+  primaryAccessButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginBottom: 10,
+  },
+
+  primaryAccessButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  secondaryAccessButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+
+  secondaryAccessButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
   content: {
     padding: 16,
     paddingBottom: 32,
@@ -167,11 +247,22 @@ const styles = StyleSheet.create({
 
   heroBox: {
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
+  },
+
+  heroTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'flex-start',
+  },
+
+  heroTextBox: {
+    flex: 1,
   },
 
   appName: {
@@ -180,72 +271,138 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   title: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '900',
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+  userText: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '800',
+    marginTop: 6,
   },
 
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
+  logoutButton: {
+    backgroundColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+
+  logoutButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '900',
-    marginTop: 8,
-    marginBottom: 12,
   },
 
-  menuCard: {
+  bigCard: {
     backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
+    marginBottom: 18,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 12,
   },
 
   dashboardCard: {
     borderColor: '#38bdf8',
   },
 
-  productsCard: {
+  bigIcon: {
+    fontSize: 38,
+  },
+
+  bigTextBox: {
+    flex: 1,
+  },
+
+  bigTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  bigDescription: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  arrow: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  sectionTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 12,
+  },
+
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 18,
+  },
+
+  menuCard: {
+    width: '30.8%',
+    minHeight: 120,
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  salesCard: {
+    borderColor: '#f97316',
+  },
+
+  stockCard: {
+    borderColor: '#16a34a',
+  },
+
+  adminCard: {
     borderColor: '#a855f7',
   },
 
-  menuTextBox: {
-    flex: 1,
+  icon: {
+    fontSize: 33,
+    marginBottom: 8,
   },
 
   menuTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 14,
     fontWeight: '900',
-    marginBottom: 5,
+    textAlign: 'center',
   },
 
-  menuDescription: {
-    color: '#94a3b8',
-    fontSize: 13,
-    lineHeight: 18,
+  shopButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
   },
 
-  menuArrow: {
-    color: '#f97316',
-    fontSize: 18,
+  shopButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
-    marginLeft: 12,
   },
 });
 

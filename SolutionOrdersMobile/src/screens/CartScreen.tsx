@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -14,6 +14,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {useAuth} from '../context/AuthContext.tsx';
 import {useCart} from '../context/CartContext.tsx';
 import {useItems} from '../context/ItemsContext.tsx';
 
@@ -107,6 +108,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     clearCart,
   } = useCart();
 
+  const {user, isCustomer} = useAuth();
   const {refreshItems} = useItems();
 
   const [clientName, setClientName] = useState('');
@@ -132,6 +134,30 @@ function CartScreen({navigation}: Props): React.JSX.Element {
   const deliveryPrice = getDeliveryPrice(deliveryMethod);
   const finalValue = totalValue + deliveryPrice;
   const estimatedDeliveryDate = getEstimatedDeliveryDate(deliveryMethod);
+
+  useEffect(() => {
+    if (!isCustomer || !user) {
+      return;
+    }
+
+    if (user.name && clientName.trim().length === 0) {
+      setClientName(user.name);
+    }
+
+    if (user.adress && clientAddress.trim().length === 0) {
+      setClientAddress(user.adress);
+    }
+
+    if (user.phoneNumber && clientPhone.trim().length === 0) {
+      setClientPhone(user.phoneNumber);
+    }
+  }, [
+    clientAddress,
+    clientName,
+    clientPhone,
+    isCustomer,
+    user,
+  ]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -177,6 +203,9 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     const userNotes = notes.trim();
 
     const noteParts = [
+      user
+        ? `Zamówienie z konta: ${user.name} (${user.login})`
+        : 'Zamówienie złożone jako gość',
       `Metoda dostawy: ${getDeliveryMethodLabel(deliveryMethod)}`,
       `Koszt dostawy: ${formatMoney(deliveryPrice)}`,
       `Metoda płatności: ${getPaymentMethodLabel(paymentMethod)}`,
@@ -222,9 +251,11 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
       const result = await apiService.createCheckoutOrder({
         client: {
+          idClient: isCustomer ? user?.id ?? null : null,
           name: clientName.trim(),
           address: clientAddress.trim(),
           phoneNumber: clientPhone.trim(),
+          email: isCustomer ? user?.login ?? null : null,
         },
         items: cartItems.map(cartItem => ({
           idItem: cartItem.item.idItem,
@@ -418,6 +449,11 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.summaryBox}>
+          <Text style={styles.summaryLabel}>Tryb zamówienia</Text>
+          <Text style={styles.customerModeText}>
+            {user ? `${user.name} (${user.login})` : 'Gość bez logowania'}
+          </Text>
+
           <Text style={styles.summaryLabel}>Liczba produktów w koszyku</Text>
           <Text style={styles.summaryValue}>{totalQuantity}</Text>
 
@@ -460,134 +496,131 @@ function CartScreen({navigation}: Props): React.JSX.Element {
               disabled={submitting}>
               <Text style={styles.clearCartButtonText}>Wyczyść koszyk</Text>
             </TouchableOpacity>
+
+            <Text style={styles.sectionTitle}>Metoda dostawy</Text>
+
+            <View style={styles.formCard}>
+              {renderDeliveryOption(
+                'courier',
+                'Kurier',
+                'Dostawa pod wskazany adres. Przewidywany czas: 2-3 dni.',
+              )}
+
+              {renderDeliveryOption(
+                'parcelLocker',
+                'Paczkomat',
+                'Dostawa do paczkomatu. Przewidywany czas: 1-2 dni.',
+              )}
+
+              {renderDeliveryOption(
+                'pickup',
+                'Odbiór osobisty',
+                'Odbiór w punkcie sklepu. Bez kosztu dostawy.',
+              )}
+
+              <Text style={styles.deliveryDateText}>
+                Przewidywana data dostawy: {formatDate(estimatedDeliveryDate)}
+              </Text>
+            </View>
+
+            <Text style={styles.sectionTitle}>Metoda płatności</Text>
+
+            <View style={styles.formCard}>
+              {renderPaymentOption(
+                'blik',
+                'BLIK',
+                'Szybka płatność kodem BLIK.',
+              )}
+
+              {renderPaymentOption(
+                'card',
+                'Karta płatnicza',
+                'Płatność kartą online.',
+              )}
+
+              {renderPaymentOption(
+                'transfer',
+                'Przelew bankowy',
+                'Dane do przelewu zostaną przekazane po złożeniu zamówienia.',
+              )}
+
+              {renderPaymentOption(
+                'cashOnDelivery',
+                'Płatność przy odbiorze',
+                'Płatność kurierowi albo przy odbiorze osobistym.',
+              )}
+            </View>
+
+            <Text style={styles.sectionTitle}>Dane dostawy</Text>
+
+            <View style={styles.formCard}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Imię i nazwisko</Text>
+
+                <TextInput
+                  style={styles.input}
+                  value={clientName}
+                  onChangeText={setClientName}
+                  placeholder="Np. Jan Kowalski"
+                  placeholderTextColor="#64748b"
+                  editable={!submitting}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Adres dostawy</Text>
+
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={clientAddress}
+                  onChangeText={setClientAddress}
+                  placeholder="Np. ul. Testowa 1, Warszawa"
+                  placeholderTextColor="#64748b"
+                  multiline
+                  editable={!submitting}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Numer telefonu</Text>
+
+                <TextInput
+                  style={styles.input}
+                  value={clientPhone}
+                  onChangeText={setClientPhone}
+                  placeholder="Np. 500-111-222"
+                  placeholderTextColor="#64748b"
+                  keyboardType="phone-pad"
+                  editable={!submitting}
+                />
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Notatka do zamówienia</Text>
+
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={notes}
+                  onChangeText={setNotes}
+                  placeholder="Opcjonalnie"
+                  placeholderTextColor="#64748b"
+                  multiline
+                  editable={!submitting}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.checkoutButton, submitting && styles.disabledButton]}
+              onPress={handleCheckoutPress}
+              activeOpacity={0.8}
+              disabled={submitting}>
+              <Text style={styles.checkoutButtonText}>
+                {submitting ? 'Składanie zamówienia...' : 'Złóż zamówienie'}
+              </Text>
+            </TouchableOpacity>
           </>
         )}
-
-        <Text style={styles.sectionTitle}>Metoda dostawy</Text>
-
-        <View style={styles.formCard}>
-          {renderDeliveryOption(
-            'courier',
-            'Kurier',
-            'Dostawa pod wskazany adres. Przewidywany czas: 2-3 dni.',
-          )}
-
-          {renderDeliveryOption(
-            'parcelLocker',
-            'Paczkomat',
-            'Dostawa do paczkomatu. Przewidywany czas: 1-2 dni.',
-          )}
-
-          {renderDeliveryOption(
-            'pickup',
-            'Odbiór osobisty',
-            'Odbiór w punkcie sklepu. Bez kosztu dostawy.',
-          )}
-
-          <Text style={styles.deliveryDateText}>
-            Przewidywana data dostawy: {formatDate(estimatedDeliveryDate)}
-          </Text>
-        </View>
-
-        <Text style={styles.sectionTitle}>Metoda płatności</Text>
-
-        <View style={styles.formCard}>
-          {renderPaymentOption(
-            'blik',
-            'BLIK',
-            'Szybka płatność kodem BLIK.',
-          )}
-
-          {renderPaymentOption(
-            'card',
-            'Karta płatnicza',
-            'Płatność kartą online.',
-          )}
-
-          {renderPaymentOption(
-            'transfer',
-            'Przelew bankowy',
-            'Dane do przelewu zostaną przekazane po złożeniu zamówienia.',
-          )}
-
-          {renderPaymentOption(
-            'cashOnDelivery',
-            'Płatność przy odbiorze',
-            'Płatność kurierowi albo przy odbiorze osobistym.',
-          )}
-        </View>
-
-        <Text style={styles.sectionTitle}>Dane dostawy</Text>
-
-        <View style={styles.formCard}>
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Imię i nazwisko</Text>
-
-            <TextInput
-              style={styles.input}
-              value={clientName}
-              onChangeText={setClientName}
-              placeholder="Np. Jan Kowalski"
-              placeholderTextColor="#64748b"
-              editable={!submitting}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Adres dostawy</Text>
-
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={clientAddress}
-              onChangeText={setClientAddress}
-              placeholder="Np. ul. Testowa 1, Warszawa"
-              placeholderTextColor="#64748b"
-              multiline
-              editable={!submitting}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Numer telefonu</Text>
-
-            <TextInput
-              style={styles.input}
-              value={clientPhone}
-              onChangeText={setClientPhone}
-              placeholder="Np. 500-111-222"
-              placeholderTextColor="#64748b"
-              keyboardType="phone-pad"
-              editable={!submitting}
-            />
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Notatka do zamówienia</Text>
-
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={notes}
-              onChangeText={setNotes}
-              placeholder="Opcjonalnie"
-              placeholderTextColor="#64748b"
-              multiline
-              editable={!submitting}
-            />
-          </View>
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.checkoutButton,
-            (cartItems.length === 0 || submitting) && styles.disabledButton,
-          ]}
-          onPress={handleCheckoutPress}
-          activeOpacity={0.8}
-          disabled={cartItems.length === 0 || submitting}>
-          <Text style={styles.checkoutButtonText}>
-            {submitting ? 'Składanie zamówienia...' : 'Złóż zamówienie'}
-          </Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.backToShopButton}
@@ -657,6 +690,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     marginTop: 4,
+  },
+
+  customerModeText: {
+    color: '#38bdf8',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 8,
   },
 
   summaryValue: {
@@ -770,6 +810,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   codeBadge: {
@@ -780,6 +821,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '800',
+    overflow: 'hidden',
   },
 
   cartItemText: {

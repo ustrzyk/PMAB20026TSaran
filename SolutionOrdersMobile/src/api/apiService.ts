@@ -19,6 +19,9 @@ import type {
   CreateUnitOfMeasurementResponse,
   CreateWorkerCommand,
   CreateWorkerResponse,
+  CustomerLoginRequestDto,
+  CustomerLoginResponseDto,
+  CustomerRegisterRequestDto,
   DashboardDto,
   Item,
   OrderDto,
@@ -32,6 +35,8 @@ import type {
   UpdateUnitOfMeasurementCommand,
   UpdateWorkerCommand,
   WorkerDto,
+  WorkerLoginRequestDto,
+  WorkerLoginResponseDto,
 } from '../types/models.ts';
 
 class ApiService {
@@ -41,7 +46,55 @@ class ApiService {
     this.baseUrl = API_BASE_URL;
   }
 
-  // Wspólna metoda do obsługi zapytań HTTP.
+  private getFriendlyErrorMessage(status: number, errorText: string): string {
+    if (status === 400) {
+      return errorText.length > 0
+        ? `Niepoprawne dane: ${errorText}`
+        : 'Niepoprawne dane wysłane do API.';
+    }
+
+    if (status === 401) {
+      return 'Nieprawidłowy login/e-mail albo hasło.';
+    }
+
+    if (status === 403) {
+      return 'Brak uprawnień do wykonania tej operacji.';
+    }
+
+    if (status === 404) {
+      return 'Nie znaleziono danych w API.';
+    }
+
+    if (status === 409) {
+      return errorText.length > 0
+        ? `Konflikt danych: ${errorText}`
+        : 'Nie można zapisać danych, bo istnieje konflikt w bazie.';
+    }
+
+    if (status >= 500) {
+      return 'Błąd serwera API. Sprawdź, czy backend i baza danych działają poprawnie.';
+    }
+
+    return errorText.length > 0
+      ? `Błąd API ${status}: ${errorText}`
+      : `Błąd API ${status}.`;
+  }
+
+  private getNetworkErrorMessage(error: unknown): string {
+    if (!(error instanceof Error)) {
+      return 'Wystąpił nieznany błąd połączenia z API.';
+    }
+
+    if (
+      error.message.includes('Network request failed') ||
+      error.message.includes('Failed to fetch')
+    ) {
+      return `Nie można połączyć się z API. Sprawdź, czy backend działa oraz czy adres API jest poprawny: ${this.baseUrl}`;
+    }
+
+    return error.message;
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {},
@@ -54,8 +107,6 @@ class ApiService {
     };
 
     try {
-      console.log(`API Request: ${options.method || 'GET'} ${url}`);
-
       const response = await fetch(url, {
         ...options,
         headers,
@@ -63,29 +114,47 @@ class ApiService {
 
       if (!response.ok) {
         const errorText = await response.text();
+        const message = this.getFriendlyErrorMessage(response.status, errorText);
 
-        throw new Error(
-          `HTTP ${response.status}: ${errorText || response.statusText}`,
-        );
+        throw new Error(message);
       }
 
-      // PUT / DELETE często zwracają 204 No Content.
       if (response.status === 204) {
         return {} as T;
       }
 
-      const data = await response.json();
-
-      console.log('API Response:', data);
-
-      return data;
+      return (await response.json()) as T;
     } catch (error) {
-      console.error('API Error:', error);
-      throw error;
+      throw new Error(this.getNetworkErrorMessage(error));
     }
   }
 
-  // ========== CHECKOUT / KOSZYK ==========
+  async loginWorker(
+    data: WorkerLoginRequestDto,
+  ): Promise<WorkerLoginResponseDto> {
+    return this.request<WorkerLoginResponseDto>('/Auth/worker-login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async loginCustomer(
+    data: CustomerLoginRequestDto,
+  ): Promise<CustomerLoginResponseDto> {
+    return this.request<CustomerLoginResponseDto>('/Auth/customer-login', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async registerCustomer(
+    data: CustomerRegisterRequestDto,
+  ): Promise<CustomerLoginResponseDto> {
+    return this.request<CustomerLoginResponseDto>('/Auth/customer-register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
 
   async createCheckoutOrder(
     data: CreateCheckoutOrderCommand,
@@ -96,13 +165,9 @@ class ApiService {
     });
   }
 
-  // ========== DASHBOARD / RAPORTY ==========
-
   async getDashboard(): Promise<DashboardDto> {
     return this.request<DashboardDto>('/Dashboard');
   }
-
-  // ========== PRODUKTY / ITEMS ==========
 
   async getItems(): Promise<Item[]> {
     return this.request<Item[]>('/Item');
@@ -134,8 +199,6 @@ class ApiService {
       method: 'DELETE',
     });
   }
-
-  // ========== KATEGORIE ==========
 
   async getCategories(): Promise<CategoryDto[]> {
     return this.request<CategoryDto[]>('/Category');
@@ -173,8 +236,6 @@ class ApiService {
     });
   }
 
-  // ========== JEDNOSTKI MIARY ==========
-
   async getUnits(): Promise<UnitOfMeasurementDto[]> {
     return this.request<UnitOfMeasurementDto[]>('/UnitOfMeasurement');
   }
@@ -188,13 +249,10 @@ class ApiService {
   async createUnit(
     data: CreateUnitOfMeasurementCommand,
   ): Promise<CreateUnitOfMeasurementResponse> {
-    return this.request<CreateUnitOfMeasurementResponse>(
-      '/UnitOfMeasurement',
-      {
-        method: 'POST',
-        body: JSON.stringify(data),
-      },
-    );
+    return this.request<CreateUnitOfMeasurementResponse>('/UnitOfMeasurement', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   }
 
   async updateUnit(
@@ -216,8 +274,6 @@ class ApiService {
     });
   }
 
-  // ========== KLIENCI ==========
-
   async getClients(): Promise<ClientDto[]> {
     return this.request<ClientDto[]>('/Client');
   }
@@ -226,9 +282,7 @@ class ApiService {
     return this.request<ClientDto>(`/Client/${idClient}`);
   }
 
-  async createClient(
-    data: CreateClientCommand,
-  ): Promise<CreateClientResponse> {
+  async createClient(data: CreateClientCommand): Promise<CreateClientResponse> {
     return this.request<CreateClientResponse>('/Client', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -253,8 +307,6 @@ class ApiService {
       method: 'DELETE',
     });
   }
-
-  // ========== PRACOWNICY ==========
 
   async getWorkers(): Promise<WorkerDto[]> {
     return this.request<WorkerDto[]>('/Worker');
@@ -292,10 +344,12 @@ class ApiService {
     });
   }
 
-  // ========== ZAMÓWIENIA ==========
-
   async getOrders(): Promise<OrderDto[]> {
     return this.request<OrderDto[]>('/Order');
+  }
+
+  async getOrdersByClient(idClient: number): Promise<OrderDto[]> {
+    return this.request<OrderDto[]>(`/Order/Client/${idClient}`);
   }
 
   async getOrder(idOrder: number): Promise<OrderDto> {
@@ -327,8 +381,6 @@ class ApiService {
       method: 'DELETE',
     });
   }
-
-  // ========== POZYCJE ZAMÓWIENIA ==========
 
   async getOrderItems(): Promise<OrderItemDto[]> {
     return this.request<OrderItemDto[]>('/OrderItem');
@@ -371,5 +423,4 @@ class ApiService {
   }
 }
 
-// Singleton używany w całej aplikacji.
 export default new ApiService();
