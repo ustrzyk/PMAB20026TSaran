@@ -17,7 +17,8 @@ import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {ClientDto, WorkerDto} from '../types/models.ts';
+import type {ClientDto, OrderStatus, WorkerDto} from '../types/models.ts';
+import {ORDER_STATUSES} from '../types/models.ts';
 
 type CreateProps = NativeStackScreenProps<RootStackParamList, 'CreateOrder'>;
 type EditProps = NativeStackScreenProps<RootStackParamList, 'EditOrder'>;
@@ -66,6 +67,16 @@ function getWorkerName(worker: WorkerDto): string {
   return name.length > 0 ? name : worker.login ?? 'Brak nazwy';
 }
 
+function normalizeOrderStatus(value?: string | null): OrderStatus {
+  const status = value?.trim();
+
+  if (status && ORDER_STATUSES.includes(status as OrderStatus)) {
+    return status as OrderStatus;
+  }
+
+  return 'Nowe';
+}
+
 function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditOrder';
   const editedOrder = isEditMode ? route.params.order : undefined;
@@ -84,6 +95,9 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     dateToInputValue(editedOrder?.deliveryDate),
   );
   const [notes, setNotes] = useState(editedOrder?.notes ?? '');
+  const [orderStatus, setOrderStatus] = useState<OrderStatus>(
+    normalizeOrderStatus(editedOrder?.status),
+  );
   const [isActive, setIsActive] = useState(editedOrder?.isActive ?? true);
 
   const [clients, setClients] = useState<ClientDto[]>([]);
@@ -210,6 +224,10 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
       return 'Data dostawy musi mieć format RRRR-MM-DD';
     }
 
+    if (!ORDER_STATUSES.includes(orderStatus)) {
+      return 'Wybierz poprawny status zamówienia';
+    }
+
     return null;
   };
 
@@ -249,6 +267,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           idWorker: Number(idWorker),
           notes: notes.trim().length > 0 ? notes.trim() : null,
           deliveryDate: inputDateToApiValue(deliveryDate),
+          status: orderStatus,
           isActive,
         });
 
@@ -265,6 +284,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           idWorker: Number(idWorker),
           notes: notes.trim().length > 0 ? notes.trim() : null,
           deliveryDate: inputDateToApiValue(deliveryDate),
+          status: orderStatus,
           isActive,
         });
 
@@ -361,6 +381,30 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     );
   };
 
+  const renderOrderStatusButton = (status: OrderStatus): React.JSX.Element => {
+    const isSelected = orderStatus === status;
+
+    return (
+      <TouchableOpacity
+        key={status}
+        style={[
+          styles.orderStatusButton,
+          isSelected && styles.orderStatusButtonSelected,
+        ]}
+        onPress={() => setOrderStatus(status)}
+        activeOpacity={0.8}
+        disabled={submitting}>
+        <Text
+          style={[
+            styles.orderStatusButtonText,
+            isSelected && styles.orderStatusButtonTextSelected,
+          ]}>
+          {status}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -392,7 +436,8 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Wybierz klienta, pracownika oraz uzupełnij daty i notatki.
+            Wybierz klienta, pracownika, status realizacji oraz uzupełnij daty i
+            notatki.
           </Text>
         </View>
 
@@ -460,6 +505,17 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Etap realizacji</Text>
+          <Text style={styles.helperText}>
+            Ten status będzie widoczny dla klienta w panelu „Moje zamówienia”.
+          </Text>
+
+          <View style={styles.orderStatusButtons}>
+            {ORDER_STATUSES.map(renderOrderStatusButton)}
+          </View>
+        </View>
+
+        <View style={styles.card}>
           <Text style={styles.sectionTitle}>Notatki</Text>
 
           <TextInput
@@ -474,7 +530,11 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Status zamówienia</Text>
+          <Text style={styles.sectionTitle}>Aktywność rekordu</Text>
+          <Text style={styles.helperText}>
+            Nieaktywne zamówienie jest ukrywane z podstawowej listy, ale zostaje
+            w systemie.
+          </Text>
 
           <View style={styles.statusButtons}>
             <TouchableOpacity
@@ -597,6 +657,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
+  helperText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+
   label: {
     color: '#cbd5e1',
     fontSize: 14,
@@ -688,6 +756,36 @@ const styles = StyleSheet.create({
   },
 
   optionButtonSubtextSelected: {
+    color: '#ffffff',
+  },
+
+  orderStatusButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+
+  orderStatusButton: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+
+  orderStatusButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  orderStatusButtonText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  orderStatusButtonTextSelected: {
     color: '#ffffff',
   },
 

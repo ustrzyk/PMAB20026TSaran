@@ -197,6 +197,23 @@ export interface CustomerLoginResponseDto {
   phoneNumber?: string | null;
 }
 
+export type OrderStatus =
+  | 'Nowe'
+  | 'W realizacji'
+  | 'Gotowe'
+  | 'Wysłane'
+  | 'Zakończone'
+  | 'Anulowane';
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  'Nowe',
+  'W realizacji',
+  'Gotowe',
+  'Wysłane',
+  'Zakończone',
+  'Anulowane',
+];
+
 export interface OrderDto {
   idOrder: number;
   dataOrder?: string | null;
@@ -209,6 +226,7 @@ export interface OrderDto {
 
   notes?: string | null;
   deliveryDate?: string | null;
+  status?: OrderStatus | string | null;
 
   orderItemsCount: number;
   totalValue: number;
@@ -222,6 +240,7 @@ export interface CreateOrderCommand {
   idWorker?: number | null;
   notes?: string | null;
   deliveryDate?: string | null;
+  status?: OrderStatus | string | null;
   isActive?: boolean;
 }
 
@@ -232,6 +251,7 @@ export interface UpdateOrderCommand {
   idWorker?: number | null;
   notes?: string | null;
   deliveryDate?: string | null;
+  status?: OrderStatus | string | null;
   isActive?: boolean;
 }
 
@@ -358,29 +378,16 @@ export interface DashboardDto {
   workersCount: number;
 
   ordersCount: number;
+  activeOrdersCount: number;
+  inactiveOrdersCount: number;
+
   orderItemsCount: number;
 
-  productsStockValue: number;
-  ordersTotalValue: number;
+  productsValue: number;
+  ordersValue: number;
 
   latestOrders: DashboardLatestOrderDto[];
-
   lowStockProducts: DashboardLowStockProductDto[];
-
   categorySales: DashboardCategorySalesDto[];
-
   topProducts: DashboardTopProductDto[];
-}
-
-export interface CartItemModel {
-  item: ItemDto;
-  quantity: number;
-}
-
-export type ApiStatus = 'idle' | 'loading' | 'success' | 'error';
-
-export interface ApiState<T> {
-  data: T | null;
-  status: ApiStatus;
-  error: string | null;
 }
