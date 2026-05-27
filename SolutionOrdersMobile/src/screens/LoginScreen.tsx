@@ -26,6 +26,9 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const isEmployeeLogin = loginOrEmail.trim().length > 0 &&
+    !loginOrEmail.includes('@');
+
   const handleLogin = async (): Promise<void> => {
     try {
       setSubmitting(true);
@@ -53,6 +56,16 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
     }
   };
 
+  const updateLoginOrEmail = (value: string): void => {
+    setLoginOrEmail(value);
+    setError(null);
+  };
+
+  const updatePassword = (value: string): void => {
+    setPassword(value);
+    setError(null);
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -62,6 +75,31 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.logo}>🖨️</Text>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.title}>Logowanie</Text>
+
+          <Text style={styles.subtitle}>
+            Klient loguje się adresem e-mail, a pracownik lub administrator
+            loginem bez znaku @.
+          </Text>
+        </View>
+
+        <View style={styles.helpBox}>
+          <Text style={styles.helpTitle}>Jak się logować?</Text>
+
+          <View style={styles.helpRow}>
+            <Text style={styles.helpIcon}>👤</Text>
+            <View style={styles.helpTextBox}>
+              <Text style={styles.helpLabel}>Klient</Text>
+              <Text style={styles.helpText}>Wpisuje adres e-mail i hasło.</Text>
+            </View>
+          </View>
+
+          <View style={styles.helpRow}>
+            <Text style={styles.helpIcon}>🛠️</Text>
+            <View style={styles.helpTextBox}>
+              <Text style={styles.helpLabel}>Pracownik/Admin</Text>
+              <Text style={styles.helpText}>Wpisuje login systemowy i hasło.</Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -71,25 +109,38 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
           <TextInput
             style={styles.input}
             value={loginOrEmail}
-            onChangeText={setLoginOrEmail}
-            placeholder="e-mail"
+            onChangeText={updateLoginOrEmail}
+            placeholder="np. jan@3dshop.pl albo tsaran"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
             editable={!submitting}
           />
 
+          <View style={isEmployeeLogin ? styles.modeBoxEmployee : styles.modeBoxCustomer}>
+            <Text style={styles.modeText}>
+              {isEmployeeLogin
+                ? 'Tryb: logowanie pracownika / administratora'
+                : 'Tryb: logowanie klienta e-mailem'}
+            </Text>
+          </View>
+
           <Text style={styles.label}>Hasło</Text>
           <TextInput
             style={styles.input}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={updatePassword}
             placeholder="Hasło"
             placeholderTextColor="#64748b"
             secureTextEntry
             editable={!submitting}
           />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorTitle}>Błąd logowania</Text>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.loginButton, submitting && styles.disabledButton]}
@@ -116,6 +167,14 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
             disabled={submitting}>
             <Text style={styles.guestButtonText}>Wróć do sklepu</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.statusBox}>
+          <Text style={styles.statusTitle}>Po zalogowaniu klient może:</Text>
+
+          <Text style={styles.statusText}>• przeglądać swoje zamówienia,</Text>
+          <Text style={styles.statusText}>• sprawdzać status realizacji,</Text>
+          <Text style={styles.statusText}>• edytować dane konta i dostawy.</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -164,6 +223,64 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  subtitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  helpBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  helpTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+
+  helpRow: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
+  },
+
+  helpIcon: {
+    fontSize: 25,
+  },
+
+  helpTextBox: {
+    flex: 1,
+  },
+
+  helpLabel: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  helpText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
   card: {
     backgroundColor: '#111827',
     borderRadius: 18,
@@ -199,11 +316,51 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  errorText: {
-    color: '#fca5a5',
-    fontSize: 13,
+  modeBoxCustomer: {
+    backgroundColor: '#052e16',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 12,
+  },
+
+  modeBoxEmployee: {
+    backgroundColor: '#1e1b4b',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginBottom: 12,
+  },
+
+  modeText: {
+    color: '#f8fafc',
+    fontSize: 12,
     fontWeight: '800',
-    marginBottom: 10,
+  },
+
+  errorBox: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    marginBottom: 12,
+  },
+
+  errorTitle: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  errorText: {
+    color: '#fecaca',
+    fontSize: 12,
+    fontWeight: '800',
+    lineHeight: 17,
   },
 
   loginButton: {
@@ -250,6 +407,28 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  statusBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+  },
+
+  statusTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  statusText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 });
 

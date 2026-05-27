@@ -29,6 +29,15 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  const isAccountPartReady =
+    name.trim().length >= 3 &&
+    email.trim().includes('@') &&
+    password.trim().length >= 4;
+
+  const isDeliveryPartReady =
+    adress.trim().length > 0 &&
+    phoneNumber.trim().length > 0;
+
   const handleRegister = async (): Promise<void> => {
     try {
       setSubmitting(true);
@@ -47,6 +56,31 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
     }
   };
 
+  const updateName = (value: string): void => {
+    setName(value);
+    setError(null);
+  };
+
+  const updateEmail = (value: string): void => {
+    setEmail(value);
+    setError(null);
+  };
+
+  const updatePassword = (value: string): void => {
+    setPassword(value);
+    setError(null);
+  };
+
+  const updateAdress = (value: string): void => {
+    setAdress(value);
+    setError(null);
+  };
+
+  const updatePhoneNumber = (value: string): void => {
+    setPhoneNumber(value);
+    setError(null);
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -56,6 +90,41 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.logo}>👤</Text>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.title}>Rejestracja klienta</Text>
+
+          <Text style={styles.subtitle}>
+            Konto klienta pozwala zapisywać dane dostawy i śledzić statusy
+            zamówień.
+          </Text>
+        </View>
+
+        <View style={styles.progressBox}>
+          <Text style={styles.progressTitle}>Postęp formularza</Text>
+
+          <View style={styles.progressRow}>
+            <Text style={isAccountPartReady ? styles.progressDone : styles.progressTodo}>
+              {isAccountPartReady ? '✓' : '1'}
+            </Text>
+
+            <View style={styles.progressTextBox}>
+              <Text style={styles.progressLabel}>Dane konta</Text>
+              <Text style={styles.progressText}>
+                Imię i nazwisko, e-mail oraz hasło.
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.progressRow}>
+            <Text style={isDeliveryPartReady ? styles.progressDone : styles.progressTodo}>
+              {isDeliveryPartReady ? '✓' : '2'}
+            </Text>
+
+            <View style={styles.progressTextBox}>
+              <Text style={styles.progressLabel}>Dane dostawy</Text>
+              <Text style={styles.progressText}>
+                Adres i telefon ułatwią składanie zamówień.
+              </Text>
+            </View>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -65,7 +134,7 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <TextInput
             style={styles.input}
             value={name}
-            onChangeText={setName}
+            onChangeText={updateName}
             placeholder="np. Jan Kowalski"
             placeholderTextColor="#64748b"
             editable={!submitting}
@@ -75,7 +144,7 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <TextInput
             style={styles.input}
             value={email}
-            onChangeText={setEmail}
+            onChangeText={updateEmail}
             placeholder="np. jan@test.pl"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
@@ -87,12 +156,24 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <TextInput
             style={styles.input}
             value={password}
-            onChangeText={setPassword}
+            onChangeText={updatePassword}
             placeholder="Minimum 4 znaki"
             placeholderTextColor="#64748b"
             secureTextEntry
             editable={!submitting}
           />
+
+          <View style={isAccountPartReady ? styles.readyBox : styles.warningBox}>
+            <Text style={isAccountPartReady ? styles.readyTitle : styles.warningTitle}>
+              {isAccountPartReady ? 'Dane konta wyglądają poprawnie' : 'Uzupełnij dane konta'}
+            </Text>
+
+            <Text style={isAccountPartReady ? styles.readyText : styles.warningText}>
+              {isAccountPartReady
+                ? 'Możesz przejść do danych dostawy albo utworzyć konto.'
+                : 'Wpisz minimum 3 znaki w nazwie, poprawny e-mail i hasło minimum 4 znaki.'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.card}>
@@ -102,7 +183,7 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <TextInput
             style={[styles.input, styles.textArea]}
             value={adress}
-            onChangeText={setAdress}
+            onChangeText={updateAdress}
             placeholder="np. ul. Testowa 1, Warszawa"
             placeholderTextColor="#64748b"
             multiline
@@ -113,14 +194,31 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <TextInput
             style={styles.input}
             value={phoneNumber}
-            onChangeText={setPhoneNumber}
+            onChangeText={updatePhoneNumber}
             placeholder="np. 500111222"
             placeholderTextColor="#64748b"
             keyboardType="phone-pad"
             editable={!submitting}
           />
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <View style={isDeliveryPartReady ? styles.readyBox : styles.infoBox}>
+            <Text style={isDeliveryPartReady ? styles.readyTitle : styles.infoTitle}>
+              {isDeliveryPartReady ? 'Dane dostawy uzupełnione' : 'Dane dostawy są opcjonalne'}
+            </Text>
+
+            <Text style={isDeliveryPartReady ? styles.readyText : styles.infoText}>
+              {isDeliveryPartReady
+                ? 'Te dane będą mogły być użyte podczas składania zamówienia.'
+                : 'Możesz je uzupełnić teraz albo później w panelu klienta.'}
+            </Text>
+          </View>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorTitle}>Błąd rejestracji</Text>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
 
           <TouchableOpacity
             style={[styles.registerButton, submitting && styles.disabledButton]}
@@ -147,6 +245,15 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
             disabled={submitting}>
             <Text style={styles.guestButtonText}>Wróć do sklepu</Text>
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.statusBox}>
+          <Text style={styles.statusTitle}>Co zyskujesz po rejestracji?</Text>
+
+          <Text style={styles.statusText}>• panel klienta,</Text>
+          <Text style={styles.statusText}>• historię zamówień,</Text>
+          <Text style={styles.statusText}>• śledzenie statusu realizacji,</Text>
+          <Text style={styles.statusText}>• zapisane dane dostawy.</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -195,6 +302,86 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
+  subtitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+
+  progressBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  progressTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+
+  progressRow: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
+  },
+
+  progressDone: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 28,
+    overflow: 'hidden',
+  },
+
+  progressTodo: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#334155',
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 28,
+    overflow: 'hidden',
+  },
+
+  progressTextBox: {
+    flex: 1,
+  },
+
+  progressLabel: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  progressText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
   card: {
     backgroundColor: '#111827',
     borderRadius: 18,
@@ -235,11 +422,96 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
 
-  errorText: {
-    color: '#fca5a5',
+  readyBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 12,
+  },
+
+  readyTitle: {
+    color: '#bbf7d0',
     fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  readyText: {
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  warningBox: {
+    backgroundColor: '#431407',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 12,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  infoBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 12,
+  },
+
+  infoTitle: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  infoText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  errorBox: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    marginBottom: 12,
+  },
+
+  errorTitle: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  errorText: {
+    color: '#fecaca',
+    fontSize: 12,
     fontWeight: '800',
-    marginBottom: 10,
+    lineHeight: 17,
   },
 
   registerButton: {
@@ -288,6 +560,28 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  statusBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+  },
+
+  statusTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  statusText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 });
 

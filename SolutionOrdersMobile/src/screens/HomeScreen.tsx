@@ -115,6 +115,18 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     return result.slice(0, 6);
   }, [activeItems, searchText]);
 
+  const availableProductsCount = useMemo(() => {
+    return activeItems.filter(item => (item.quantity ?? 0) > 0).length;
+  }, [activeItems]);
+
+  const lowStockProductsCount = useMemo(() => {
+    return activeItems.filter(item => {
+      const quantity = item.quantity ?? 0;
+
+      return quantity > 0 && quantity <= 5;
+    }).length;
+  }, [activeItems]);
+
   const handleAccountPress = (): void => {
     if (isAdmin || isWorker) {
       navigation.navigate('AdminPanel');
@@ -148,6 +160,18 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     }
 
     return 'Zaloguj';
+  };
+
+  const getWelcomeText = (): string => {
+    if (isAdmin || isWorker) {
+      return 'Panel obsługi sklepu jest dostępny z przycisku Panel.';
+    }
+
+    if (isCustomer) {
+      return 'Możesz sprawdzić zamówienia, koszyk i dane konta.';
+    }
+
+    return 'Zaloguj się jako klient albo przejdź do sklepu bez logowania.';
   };
 
   const handleSearchPress = (): void => {
@@ -225,7 +249,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.brandBox}>
           <Text style={styles.logo}>🖨️</Text>
 
-          <View>
+          <View style={styles.brandTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
             <Text style={styles.appSubtitle}>
               {user ? user.name : 'Sklep z drukiem 3D'}
@@ -242,7 +266,13 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.heroBox}>
-        <Text style={styles.heroTitle}>Drukarki 3D, filamenty i akcesoria</Text>
+        <Text style={styles.heroBadge}>Sklep + panel zamówień</Text>
+
+        <Text style={styles.heroTitle}>
+          Drukarki 3D, filamenty, akcesoria i obsługa zamówień
+        </Text>
+
+        <Text style={styles.heroDescription}>{getWelcomeText()}</Text>
 
         <View style={styles.heroActions}>
           <TouchableOpacity
@@ -254,10 +284,27 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => navigation.navigate('Cart')}
+            onPress={() => navigation.navigate('TrackOrder')}
             activeOpacity={0.85}>
-            <Text style={styles.secondaryButtonText}>Koszyk</Text>
+            <Text style={styles.secondaryButtonText}>Sprawdź status</Text>
           </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.summaryBox}>
+        <View style={styles.summaryColumn}>
+          <Text style={styles.summaryLabel}>Produkty</Text>
+          <Text style={styles.summaryValue}>{activeItems.length}</Text>
+        </View>
+
+        <View style={styles.summaryColumn}>
+          <Text style={styles.summaryLabel}>Dostępne</Text>
+          <Text style={styles.summaryAvailable}>{availableProductsCount}</Text>
+        </View>
+
+        <View style={styles.summaryColumn}>
+          <Text style={styles.summaryLabel}>Niski stan</Text>
+          <Text style={styles.summaryWarning}>{lowStockProductsCount}</Text>
         </View>
       </View>
 
@@ -283,12 +330,59 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.quickRow}>
+        <TouchableOpacity
+          style={styles.quickCard}
+          onPress={handleAccountPress}
+          activeOpacity={0.85}>
+          <Text style={styles.quickIcon}>👤</Text>
+          <Text style={styles.quickTitle}>
+            {isCustomer ? 'Moje konto' : isAdmin || isWorker ? 'Panel' : 'Logowanie'}
+          </Text>
+          <Text style={styles.quickText}>
+            {isCustomer
+              ? 'Profil i zamówienia'
+              : isAdmin || isWorker
+                ? 'Obsługa sklepu'
+                : 'Klient / pracownik'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.quickCard}
+          onPress={() => navigation.navigate('Items')}
+          activeOpacity={0.85}>
+          <Text style={styles.quickIcon}>🏷️</Text>
+          <Text style={styles.quickTitle}>Oferta</Text>
+          <Text style={styles.quickText}>Kategorie i produkty</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.workflowBox}>
+        <Text style={styles.workflowTitle}>Statusy zamówienia</Text>
+
+        <View style={styles.workflowRow}>
+          <Text style={styles.workflowBadge}>1</Text>
+          <Text style={styles.workflowText}>Nowe</Text>
+        </View>
+
+        <View style={styles.workflowRow}>
+          <Text style={styles.workflowBadge}>2</Text>
+          <Text style={styles.workflowText}>W realizacji / Gotowe</Text>
+        </View>
+
+        <View style={styles.workflowRow}>
+          <Text style={styles.workflowBadge}>3</Text>
+          <Text style={styles.workflowText}>Wysłane / Zakończone</Text>
+        </View>
+      </View>
+
       <View style={styles.searchBox}>
         <TextInput
           style={styles.searchInput}
           value={searchText}
           onChangeText={setSearchText}
-          placeholder="Szukaj produktu..."
+          placeholder="Szukaj produktu, kodu albo kategorii..."
           placeholderTextColor="#64748b"
           onSubmitEditing={handleSearchPress}
         />
@@ -310,7 +404,8 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
       {error ? (
         <View style={styles.errorBox}>
-          <Text style={styles.errorText}>Nie udało się pobrać oferty</Text>
+          <Text style={styles.errorTitle}>Nie udało się pobrać oferty</Text>
+          <Text style={styles.errorText}>{error}</Text>
 
           <TouchableOpacity
             style={styles.retryButton}
@@ -343,12 +438,12 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {searchText.trim().length > 0 ? 'Wyniki wyszukiwania' : 'Polecane produkty'}
+              {searchText.trim().length > 0
+                ? 'Wyniki wyszukiwania'
+                : 'Polecane produkty'}
             </Text>
 
-            <TouchableOpacity
-              onPress={handleSearchPress}
-              activeOpacity={0.85}>
+            <TouchableOpacity onPress={handleSearchPress} activeOpacity={0.85}>
               <Text style={styles.sectionLink}>Więcej</Text>
             </TouchableOpacity>
           </View>
@@ -407,6 +502,10 @@ const styles = StyleSheet.create({
     fontSize: 34,
   },
 
+  brandTextBox: {
+    flex: 1,
+  },
+
   appName: {
     color: '#f8fafc',
     fontSize: 19,
@@ -429,7 +528,7 @@ const styles = StyleSheet.create({
 
   accountButtonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
   },
 
@@ -442,17 +541,33 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  heroBadge: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 8,
+  },
+
   heroTitle: {
     color: '#f8fafc',
     fontSize: 25,
-    lineHeight: 31,
     fontWeight: '900',
-    marginBottom: 14,
+    lineHeight: 31,
+  },
+
+  heroDescription: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
   },
 
   heroActions: {
     flexDirection: 'row',
     gap: 10,
+    marginTop: 16,
   },
 
   primaryButton: {
@@ -483,24 +598,64 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  summaryColumn: {
+    flex: 1,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  summaryValue: {
+    color: '#38bdf8',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryAvailable: {
+    color: '#16a34a',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryWarning: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
   quickRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 14,
+    gap: 10,
+    marginBottom: 10,
   },
 
   quickCard: {
     flex: 1,
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
   },
 
   quickIcon: {
-    fontSize: 26,
-    marginBottom: 7,
+    fontSize: 29,
+    marginBottom: 8,
   },
 
   quickTitle: {
@@ -516,10 +671,52 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
-  searchBox: {
+  workflowBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
     marginBottom: 14,
+  },
+
+  workflowTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+
+  workflowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    marginBottom: 8,
+  },
+
+  workflowBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 999,
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 26,
+    overflow: 'hidden',
+  },
+
+  workflowText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+
+  searchBox: {
     flexDirection: 'row',
     gap: 10,
+    marginBottom: 14,
   },
 
   searchInput: {
@@ -528,17 +725,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
   },
 
   searchButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 14,
-    paddingHorizontal: 16,
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingHorizontal: 14,
     justifyContent: 'center',
+    alignItems: 'center',
   },
 
   searchButtonText: {
@@ -549,13 +747,13 @@ const styles = StyleSheet.create({
 
   loadingBox: {
     backgroundColor: '#111827',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
+    alignItems: 'center',
     marginBottom: 14,
   },
 
@@ -567,24 +765,31 @@ const styles = StyleSheet.create({
 
   errorBox: {
     backgroundColor: '#7f1d1d',
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: '#ef4444',
     marginBottom: 14,
   },
 
+  errorTitle: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
   errorText: {
     color: '#fecaca',
     fontSize: 13,
-    fontWeight: '800',
+    lineHeight: 18,
     marginBottom: 10,
   },
 
   retryButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 10,
-    paddingVertical: 9,
+    backgroundColor: '#ef4444',
+    borderRadius: 12,
+    paddingVertical: 10,
     alignItems: 'center',
   },
 
@@ -597,9 +802,10 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 10,
     alignItems: 'center',
-    marginBottom: 10,
     marginTop: 4,
+    marginBottom: 12,
   },
 
   sectionTitle: {
@@ -615,17 +821,14 @@ const styles = StyleSheet.create({
   },
 
   categoryGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 10,
     marginBottom: 18,
   },
 
   categoryCard: {
-    width: '47.8%',
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 14,
+    padding: 13,
     borderWidth: 1,
     borderColor: '#334155',
     flexDirection: 'row',
@@ -634,7 +837,7 @@ const styles = StyleSheet.create({
   },
 
   categoryIcon: {
-    fontSize: 25,
+    fontSize: 26,
   },
 
   categoryTextBox: {
@@ -643,91 +846,91 @@ const styles = StyleSheet.create({
 
   categoryName: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
   },
 
   categoryHint: {
     color: '#94a3b8',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: 3,
   },
 
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
   },
 
   productCard: {
-    width: '47.8%',
+    width: '48%',
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 16,
     padding: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    minHeight: 170,
   },
 
   productIconBox: {
+    height: 46,
+    borderRadius: 12,
     backgroundColor: '#0f172a',
-    borderRadius: 14,
-    height: 78,
-    alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    alignItems: 'center',
+    marginBottom: 9,
   },
 
   productIcon: {
-    fontSize: 38,
+    fontSize: 28,
   },
 
   productName: {
     color: '#f8fafc',
     fontSize: 14,
     fontWeight: '900',
-    minHeight: 38,
-    lineHeight: 19,
+    lineHeight: 18,
+    minHeight: 37,
   },
 
   productCategory: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '700',
-    marginTop: 3,
-    marginBottom: 8,
+    marginTop: 5,
   },
 
   productBottomRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#1e293b',
+    marginTop: 'auto',
     paddingTop: 8,
   },
 
   productPrice: {
     color: '#f97316',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
+    marginBottom: 4,
   },
 
   productStock: {
-    color: '#94a3b8',
+    color: '#bbf7d0',
     fontSize: 11,
-    fontWeight: '700',
-    marginTop: 3,
+    fontWeight: '800',
   },
 
   productStockEmpty: {
     color: '#fca5a5',
     fontSize: 11,
     fontWeight: '800',
-    marginTop: 3,
   },
 
   emptyText: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
+    textAlign: 'center',
+    marginVertical: 16,
   },
 
   logoutButton: {
