@@ -26,6 +26,12 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
   const {user, isCustomer, isAdmin, isWorker, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
 
+  const hasDeliveryAddress =
+    !!user?.adress && user.adress.trim().length > 0;
+
+  const hasPhoneNumber =
+    !!user?.phoneNumber && user.phoneNumber.trim().length > 0;
+
   const handleLogout = (): void => {
     logout();
 
@@ -54,7 +60,9 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>👤</Text>
+
         <Text style={styles.accessTitle}>Panel klienta</Text>
+
         <Text style={styles.accessText}>
           Ten ekran jest dostępny po zalogowaniu albo rejestracji konta klienta.
         </Text>
@@ -101,6 +109,22 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.emailText}>{user?.login}</Text>
       </View>
 
+      <View style={styles.statusInfoBox}>
+        <Text style={styles.statusInfoTitle}>Statusy zamówień</Text>
+
+        <Text style={styles.statusInfoText}>
+          W zakładce „Moje zamówienia” możesz sprawdzić, czy zamówienie jest
+          nowe, w realizacji, gotowe, wysłane, zakończone albo anulowane.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.statusInfoButton}
+          onPress={() => navigation.navigate('CustomerOrders')}
+          activeOpacity={0.85}>
+          <Text style={styles.statusInfoButtonText}>Pokaż moje zamówienia</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.cartBox}>
         <Text style={styles.cartIcon}>🛒</Text>
 
@@ -108,6 +132,12 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.cartTitle}>Koszyk</Text>
           <Text style={styles.cartText}>
             {totalQuantity} szt. | {formatMoney(totalValue)}
+          </Text>
+
+          <Text style={styles.cartHint}>
+            {totalQuantity > 0
+              ? 'Możesz przejść do koszyka i złożyć zamówienie.'
+              : 'Dodaj produkty ze sklepu, aby rozpocząć zamówienie.'}
           </Text>
         </View>
 
@@ -120,25 +150,49 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.detailsBox}>
-        <Text style={styles.detailsTitle}>Dane dostawy</Text>
+        <View style={styles.detailsHeaderRow}>
+          <Text style={styles.detailsTitle}>Dane dostawy</Text>
+
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => navigation.navigate('CustomerProfile')}
+            activeOpacity={0.85}>
+            <Text style={styles.editProfileButtonText}>Edytuj</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.detailsRow}>
           <Text style={styles.detailsLabel}>Adres</Text>
           <Text style={styles.detailsValue}>
-            {user?.adress && user.adress.length > 0
-              ? user.adress
-              : 'Brak adresu w koncie'}
+            {hasDeliveryAddress ? user?.adress : 'Brak adresu w koncie'}
           </Text>
         </View>
 
         <View style={styles.detailsRow}>
           <Text style={styles.detailsLabel}>Telefon</Text>
           <Text style={styles.detailsValue}>
-            {user?.phoneNumber && user.phoneNumber.length > 0
-              ? user.phoneNumber
-              : 'Brak telefonu w koncie'}
+            {hasPhoneNumber ? user?.phoneNumber : 'Brak telefonu w koncie'}
           </Text>
         </View>
+
+        {!hasDeliveryAddress || !hasPhoneNumber ? (
+          <View style={styles.warningBox}>
+            <Text style={styles.warningTitle}>Uzupełnij dane</Text>
+
+            <Text style={styles.warningText}>
+              Adres i telefon przyspieszają składanie zamówienia oraz ułatwiają
+              obsługę dostawy.
+            </Text>
+          </View>
+        ) : (
+          <View style={styles.readyBox}>
+            <Text style={styles.readyTitle}>Dane gotowe</Text>
+
+            <Text style={styles.readyText}>
+              Dane dostawy są uzupełnione i mogą zostać użyte podczas zakupu.
+            </Text>
+          </View>
+        )}
       </View>
 
       <Text style={styles.sectionTitle}>Szybkie akcje</Text>
@@ -150,6 +204,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.actionIcon}>🖨️</Text>
           <Text style={styles.actionTitle}>Sklep</Text>
+          <Text style={styles.actionDescription}>Produkty i kategorie</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -158,6 +213,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.actionIcon}>🛒</Text>
           <Text style={styles.actionTitle}>Koszyk</Text>
+          <Text style={styles.actionDescription}>Podsumowanie zakupu</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -166,6 +222,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.actionIcon}>📋</Text>
           <Text style={styles.actionTitle}>Moje zamówienia</Text>
+          <Text style={styles.actionDescription}>Statusy i historia</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -174,6 +231,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.actionIcon}>👤</Text>
           <Text style={styles.actionTitle}>Dane konta</Text>
+          <Text style={styles.actionDescription}>E-mail, adres, telefon</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -182,7 +240,42 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.actionIcon}>📦</Text>
           <Text style={styles.actionTitle}>Sprawdź zamówienie</Text>
+          <Text style={styles.actionDescription}>Po numerze zamówienia</Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.workflowBox}>
+        <Text style={styles.workflowTitle}>Jak działa realizacja?</Text>
+
+        <View style={styles.workflowStep}>
+          <Text style={styles.workflowNumber}>1</Text>
+          <View style={styles.workflowTextBox}>
+            <Text style={styles.workflowStepTitle}>Składasz zamówienie</Text>
+            <Text style={styles.workflowStepText}>
+              Po zakupie zamówienie otrzymuje status „Nowe”.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.workflowStep}>
+          <Text style={styles.workflowNumber}>2</Text>
+          <View style={styles.workflowTextBox}>
+            <Text style={styles.workflowStepTitle}>Pracownik realizuje</Text>
+            <Text style={styles.workflowStepText}>
+              Status może zmienić się na „W realizacji” albo „Gotowe”.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.workflowStep}>
+          <Text style={styles.workflowNumber}>3</Text>
+          <View style={styles.workflowTextBox}>
+            <Text style={styles.workflowStepTitle}>Dostawa lub zakończenie</Text>
+            <Text style={styles.workflowStepText}>
+              Zamówienie może zostać wysłane, zakończone albo anulowane.
+            </Text>
+          </View>
+        </View>
       </View>
 
       <TouchableOpacity
@@ -326,6 +419,43 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  statusInfoBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
+  },
+
+  statusInfoTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  statusInfoText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+
+  statusInfoButton: {
+    backgroundColor: '#38bdf8',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusInfoButtonText: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
   cartBox: {
     backgroundColor: '#111827',
     borderRadius: 18,
@@ -359,6 +489,14 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  cartHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    marginTop: 4,
+  },
+
   smallButton: {
     backgroundColor: '#f97316',
     borderRadius: 10,
@@ -381,11 +519,31 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
 
+  detailsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 10,
+  },
+
   detailsTitle: {
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    marginBottom: 10,
+  },
+
+  editProfileButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+
+  editProfileButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
   },
 
   detailsRow: {
@@ -410,6 +568,52 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  warningBox: {
+    backgroundColor: '#431407',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginTop: 4,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  readyBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginTop: 4,
+  },
+
+  readyTitle: {
+    color: '#bbf7d0',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  readyText: {
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
   sectionTitle: {
     color: '#f8fafc',
     fontSize: 18,
@@ -425,7 +629,7 @@ const styles = StyleSheet.create({
 
   actionCard: {
     width: '47.8%',
-    minHeight: 118,
+    minHeight: 134,
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 12,
@@ -464,6 +668,74 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     textAlign: 'center',
+    marginBottom: 5,
+  },
+
+  actionDescription: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '700',
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+
+  workflowBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginTop: 18,
+    marginBottom: 18,
+  },
+
+  workflowTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+
+  workflowStep: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 9,
+  },
+
+  workflowNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+    textAlign: 'center',
+    lineHeight: 28,
+    overflow: 'hidden',
+  },
+
+  workflowTextBox: {
+    flex: 1,
+  },
+
+  workflowStepTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  workflowStepText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
   },
 
   homeButton: {
@@ -471,7 +743,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
-    marginTop: 18,
   },
 
   homeButtonText: {
