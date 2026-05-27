@@ -172,16 +172,19 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
   }, [orders]);
 
   const inProgressCount = useMemo(() => {
-    return orders.filter(order => order.isActive !== false && isOrderInProgress(order))
-      .length;
+    return orders.filter(order => {
+      return order.isActive !== false && isOrderInProgress(order);
+    }).length;
   }, [orders]);
 
   const completedCount = useMemo(() => {
-    return orders.filter(order => getOrderStatus(order) === 'Zakończone').length;
+    return orders.filter(order => getOrderStatus(order) === 'Zakończone')
+      .length;
   }, [orders]);
 
   const cancelledCount = useMemo(() => {
-    return orders.filter(order => getOrderStatus(order) === 'Anulowane').length;
+    return orders.filter(order => getOrderStatus(order) === 'Anulowane')
+      .length;
   }, [orders]);
 
   const closeDialog = (): void => {
@@ -385,6 +388,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
+        key={`record-filter-${value}`}
         style={[styles.sortButton, selected && styles.sortButtonSelected]}
         onPress={() => setRecordFilter(value)}
         activeOpacity={0.8}>
@@ -407,6 +411,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
+        key={`order-status-filter-${value}`}
         style={[
           styles.statusFilterButton,
           selected && styles.statusFilterButtonSelected,
@@ -432,6 +437,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
+        key={`sort-mode-${value}`}
         style={[styles.sortButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.8}>
@@ -456,7 +462,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
-        key={status}
+        key={`quick-status-${order.idOrder}-${status}`}
         style={[
           styles.quickStatusButton,
           selected && styles.quickStatusButtonSelected,
