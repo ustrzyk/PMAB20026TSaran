@@ -37,12 +37,8 @@ function getCategoryIcon(categoryName: string): string {
     return '🧵';
   }
 
-  if (name.includes('czę') || name.includes('czes') || name.includes('akces')) {
+  if (name.includes('akces') || name.includes('czę') || name.includes('czes')) {
     return '⚙️';
-  }
-
-  if (name.includes('serwis') || name.includes('narz')) {
-    return '🧰';
   }
 
   return '🏷️';
@@ -90,13 +86,15 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
   }, [categories]);
 
   const visibleCategories = useMemo(() => {
-    return activeCategories.slice(0, 6);
+    return activeCategories.slice(0, 8);
   }, [activeCategories]);
 
-  const visibleProducts = useMemo(() => {
+  const popularProducts = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
-    let result = activeItems;
+    let result = activeItems.filter(item => {
+      return (item.quantity ?? 0) > 0;
+    });
 
     if (search.length > 0) {
       result = result.filter(item => {
@@ -117,14 +115,6 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
   const availableProductsCount = useMemo(() => {
     return activeItems.filter(item => (item.quantity ?? 0) > 0).length;
-  }, [activeItems]);
-
-  const lowStockProductsCount = useMemo(() => {
-    return activeItems.filter(item => {
-      const quantity = item.quantity ?? 0;
-
-      return quantity > 0 && quantity <= 5;
-    }).length;
   }, [activeItems]);
 
   const handleAccountPress = (): void => {
@@ -150,7 +140,20 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     });
   };
 
-  const getAccountLabel = (): string => {
+  const handleSearch = (): void => {
+    const search = searchText.trim();
+
+    if (search.length === 0) {
+      navigation.navigate('Items');
+      return;
+    }
+
+    navigation.navigate('Items', {
+      initialSearch: search,
+    });
+  };
+
+  const getAccountButtonText = (): string => {
     if (isAdmin || isWorker) {
       return 'Panel';
     }
@@ -164,27 +167,14 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
   const getWelcomeText = (): string => {
     if (isAdmin || isWorker) {
-      return 'Panel obsługi sklepu jest dostępny z przycisku Panel.';
+      return 'Jesteś zalogowany. Możesz przejść do panelu obsługi sklepu.';
     }
 
     if (isCustomer) {
-      return 'Możesz sprawdzić zamówienia, koszyk i dane konta.';
+      return 'Witaj ponownie. Sprawdź koszyk, zamówienia albo przejdź do zakupów.';
     }
 
-    return 'Zaloguj się jako klient albo przejdź do sklepu bez logowania.';
-  };
-
-  const handleSearchPress = (): void => {
-    const search = searchText.trim();
-
-    if (search.length === 0) {
-      navigation.navigate('Items');
-      return;
-    }
-
-    navigation.navigate('Items', {
-      initialSearch: search,
-    });
+    return 'Znajdź produkt, dodaj do koszyka i złóż zamówienie w kilku krokach.';
   };
 
   const renderCategory = (category: CategoryDto): React.JSX.Element => {
@@ -200,43 +190,41 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         activeOpacity={0.85}>
         <Text style={styles.categoryIcon}>{getCategoryIcon(category.name)}</Text>
 
-        <View style={styles.categoryTextBox}>
-          <Text style={styles.categoryName} numberOfLines={1}>
-            {category.name}
-          </Text>
-
-          <Text style={styles.categoryHint}>Zobacz produkty</Text>
-        </View>
+        <Text style={styles.categoryName} numberOfLines={1}>
+          {category.name}
+        </Text>
       </TouchableOpacity>
     );
   };
 
   const renderProduct = (item: Item): React.JSX.Element => {
-    const isAvailable = (item.quantity ?? 0) > 0;
-
     return (
       <TouchableOpacity
         key={item.idItem}
         style={styles.productCard}
         onPress={() => navigation.navigate('ItemDetails', {item})}
         activeOpacity={0.85}>
-        <View style={styles.productIconBox}>
-          <Text style={styles.productIcon}>🖨️</Text>
+        <View style={styles.productTopRow}>
+          <Text style={styles.productIcon}>
+            {getCategoryIcon(item.categoryName)}
+          </Text>
+
+          <View style={styles.productTextBox}>
+            <Text style={styles.productName} numberOfLines={2}>
+              {item.name}
+            </Text>
+
+            <Text style={styles.productCategory} numberOfLines={1}>
+              {item.categoryName ?? 'Produkt'}
+            </Text>
+          </View>
         </View>
-
-        <Text style={styles.productName} numberOfLines={2}>
-          {item.name}
-        </Text>
-
-        <Text style={styles.productCategory} numberOfLines={1}>
-          {item.categoryName ?? 'Produkt'}
-        </Text>
 
         <View style={styles.productBottomRow}>
           <Text style={styles.productPrice}>{formatMoney(item.price)}</Text>
 
-          <Text style={isAvailable ? styles.productStock : styles.productStockEmpty}>
-            {isAvailable ? `Stan: ${item.quantity ?? 0}` : 'Brak na stanie'}
+          <Text style={styles.productStock}>
+            Stan: {item.quantity ?? 0} {item.unitName ?? 'szt'}
           </Text>
         </View>
       </TouchableOpacity>
@@ -246,69 +234,83 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.topBar}>
-        <View style={styles.brandBox}>
+        <TouchableOpacity
+          style={styles.brandBox}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.85}>
           <Text style={styles.logo}>🖨️</Text>
 
           <View style={styles.brandTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
             <Text style={styles.appSubtitle}>
-              {user ? user.name : 'Sklep z drukiem 3D'}
+              {user ? user.name : 'Sklep mobilny'}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.accountButton}
           onPress={handleAccountPress}
           activeOpacity={0.85}>
-          <Text style={styles.accountButtonText}>{getAccountLabel()}</Text>
+          <Text style={styles.accountButtonText}>{getAccountButtonText()}</Text>
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchCard}>
+        <Text style={styles.searchTitle}>Czego szukasz?</Text>
+
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchText}
+            onChangeText={setSearchText}
+            placeholder="Wpisz nazwę produktu..."
+            placeholderTextColor="#64748b"
+            returnKeyType="search"
+            onSubmitEditing={handleSearch}
+          />
+
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={handleSearch}
+            activeOpacity={0.85}>
+            <Text style={styles.searchButtonText}>Szukaj</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       <View style={styles.heroBox}>
-        <Text style={styles.heroBadge}>Sklep + panel zamówień</Text>
+        <Text style={styles.heroTitle}>Zakupy prosto z telefonu</Text>
 
-        <Text style={styles.heroTitle}>
-          Drukarki 3D, filamenty, akcesoria i obsługa zamówień
-        </Text>
+        <Text style={styles.heroText}>{getWelcomeText()}</Text>
 
-        <Text style={styles.heroDescription}>{getWelcomeText()}</Text>
-
-        <View style={styles.heroActions}>
+        <View style={styles.mainActions}>
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigation.navigate('Items')}
             activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>Zobacz ofertę</Text>
+            <Text style={styles.primaryButtonText}>Produkty</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.secondaryButton}
-            onPress={() => navigation.navigate('TrackOrder')}
+            onPress={() => navigation.navigate('Cart')}
             activeOpacity={0.85}>
-            <Text style={styles.secondaryButtonText}>Sprawdź status</Text>
+            <Text style={styles.secondaryButtonText}>Koszyk</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.summaryBox}>
-        <View style={styles.summaryColumn}>
-          <Text style={styles.summaryLabel}>Produkty</Text>
-          <Text style={styles.summaryValue}>{activeItems.length}</Text>
-        </View>
+      <View style={styles.quickGrid}>
+        <TouchableOpacity
+          style={styles.quickCard}
+          onPress={() => navigation.navigate('Items')}
+          activeOpacity={0.85}>
+          <Text style={styles.quickIcon}>🛍️</Text>
+          <Text style={styles.quickTitle}>Sklep</Text>
+          <Text style={styles.quickText}>{availableProductsCount} dostępnych</Text>
+        </TouchableOpacity>
 
-        <View style={styles.summaryColumn}>
-          <Text style={styles.summaryLabel}>Dostępne</Text>
-          <Text style={styles.summaryAvailable}>{availableProductsCount}</Text>
-        </View>
-
-        <View style={styles.summaryColumn}>
-          <Text style={styles.summaryLabel}>Niski stan</Text>
-          <Text style={styles.summaryWarning}>{lowStockProductsCount}</Text>
-        </View>
-      </View>
-
-      <View style={styles.quickRow}>
         <TouchableOpacity
           style={styles.quickCard}
           onPress={() => navigation.navigate('Cart')}
@@ -325,75 +327,55 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           onPress={() => navigation.navigate('TrackOrder')}
           activeOpacity={0.85}>
           <Text style={styles.quickIcon}>📦</Text>
-          <Text style={styles.quickTitle}>Zamówienie</Text>
-          <Text style={styles.quickText}>Sprawdź status</Text>
+          <Text style={styles.quickTitle}>Status</Text>
+          <Text style={styles.quickText}>Sprawdź zamówienie</Text>
         </TouchableOpacity>
-      </View>
 
-      <View style={styles.quickRow}>
         <TouchableOpacity
           style={styles.quickCard}
           onPress={handleAccountPress}
           activeOpacity={0.85}>
           <Text style={styles.quickIcon}>👤</Text>
           <Text style={styles.quickTitle}>
-            {isCustomer ? 'Moje konto' : isAdmin || isWorker ? 'Panel' : 'Logowanie'}
+            {isCustomer ? 'Moje konto' : isAdmin || isWorker ? 'Panel' : 'Konto'}
           </Text>
           <Text style={styles.quickText}>
-            {isCustomer
-              ? 'Profil i zamówienia'
-              : isAdmin || isWorker
-                ? 'Obsługa sklepu'
-                : 'Klient / pracownik'}
+            {user ? 'Otwórz' : 'Zaloguj się'}
           </Text>
         </TouchableOpacity>
+      </View>
 
+      {isCustomer ? (
         <TouchableOpacity
-          style={styles.quickCard}
-          onPress={() => navigation.navigate('Items')}
+          style={styles.customerOrderButton}
+          onPress={() => navigation.navigate('CustomerOrders')}
           activeOpacity={0.85}>
-          <Text style={styles.quickIcon}>🏷️</Text>
-          <Text style={styles.quickTitle}>Oferta</Text>
-          <Text style={styles.quickText}>Kategorie i produkty</Text>
+          <View>
+            <Text style={styles.customerOrderTitle}>Moje zamówienia</Text>
+            <Text style={styles.customerOrderText}>
+              Zobacz historię i aktualny status realizacji.
+            </Text>
+          </View>
+
+          <Text style={styles.customerOrderArrow}>{'>'}</Text>
         </TouchableOpacity>
-      </View>
+      ) : null}
 
-      <View style={styles.workflowBox}>
-        <Text style={styles.workflowTitle}>Statusy zamówienia</Text>
-
-        <View style={styles.workflowRow}>
-          <Text style={styles.workflowBadge}>1</Text>
-          <Text style={styles.workflowText}>Nowe</Text>
-        </View>
-
-        <View style={styles.workflowRow}>
-          <Text style={styles.workflowBadge}>2</Text>
-          <Text style={styles.workflowText}>W realizacji / Gotowe</Text>
-        </View>
-
-        <View style={styles.workflowRow}>
-          <Text style={styles.workflowBadge}>3</Text>
-          <Text style={styles.workflowText}>Wysłane / Zakończone</Text>
-        </View>
-      </View>
-
-      <View style={styles.searchBox}>
-        <TextInput
-          style={styles.searchInput}
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="Szukaj produktu, kodu albo kategorii..."
-          placeholderTextColor="#64748b"
-          onSubmitEditing={handleSearchPress}
-        />
-
+      {isAdmin || isWorker ? (
         <TouchableOpacity
-          style={styles.searchButton}
-          onPress={handleSearchPress}
+          style={styles.workerPanelButton}
+          onPress={() => navigation.navigate('AdminPanel')}
           activeOpacity={0.85}>
-          <Text style={styles.searchButtonText}>Szukaj</Text>
+          <View>
+            <Text style={styles.workerPanelTitle}>Panel obsługi</Text>
+            <Text style={styles.workerPanelText}>
+              Zamówienia, produkty, klienci i dashboard.
+            </Text>
+          </View>
+
+          <Text style={styles.workerPanelArrow}>{'>'}</Text>
         </TouchableOpacity>
-      </View>
+      ) : null}
 
       {loading ? (
         <View style={styles.loadingBox}>
@@ -432,29 +414,25 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
             {visibleCategories.length > 0 ? (
               visibleCategories.map(renderCategory)
             ) : (
-              <Text style={styles.emptyText}>Brak aktywnych kategorii</Text>
+              <Text style={styles.emptyText}>Brak kategorii</Text>
             )}
           </View>
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {searchText.trim().length > 0
-                ? 'Wyniki wyszukiwania'
-                : 'Polecane produkty'}
+              {searchText.trim().length > 0 ? 'Znalezione produkty' : 'Popularne produkty'}
             </Text>
 
-            <TouchableOpacity onPress={handleSearchPress} activeOpacity={0.85}>
+            <TouchableOpacity onPress={handleSearch} activeOpacity={0.85}>
               <Text style={styles.sectionLink}>Więcej</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.productsGrid}>
-            {visibleProducts.length > 0 ? (
-              visibleProducts.map(renderProduct)
+          <View style={styles.productsList}>
+            {popularProducts.length > 0 ? (
+              popularProducts.map(renderProduct)
             ) : (
-              <Text style={styles.emptyText}>
-                Brak produktów pasujących do wyszukiwania
-              </Text>
+              <Text style={styles.emptyText}>Brak produktów do wyświetlenia</Text>
             )}
           </View>
         </>
@@ -485,17 +463,17 @@ const styles = StyleSheet.create({
 
   topBar: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 12,
+    justifyContent: 'space-between',
     marginBottom: 14,
+    gap: 12,
   },
 
   brandBox: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    flex: 1,
   },
 
   logo: {
@@ -522,7 +500,7 @@ const styles = StyleSheet.create({
   accountButton: {
     backgroundColor: '#f97316',
     borderRadius: 999,
-    paddingHorizontal: 13,
+    paddingHorizontal: 14,
     paddingVertical: 9,
   },
 
@@ -532,196 +510,30 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  heroBox: {
+  searchCard: {
     backgroundColor: '#111827',
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 18,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
   },
 
-  heroBadge: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 8,
-  },
-
-  heroTitle: {
+  searchTitle: {
     color: '#f8fafc',
-    fontSize: 25,
-    fontWeight: '900',
-    lineHeight: 31,
-  },
-
-  heroDescription: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-
-  heroActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-
-  primaryButton: {
-    flex: 1,
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  secondaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  summaryBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-
-  summaryColumn: {
-    flex: 1,
-  },
-
-  summaryLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-
-  summaryValue: {
-    color: '#38bdf8',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  summaryAvailable: {
-    color: '#16a34a',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  summaryWarning: {
-    color: '#f97316',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  quickRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-  },
-
-  quickCard: {
-    flex: 1,
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-
-  quickIcon: {
-    fontSize: 29,
-    marginBottom: 8,
-  },
-
-  quickTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  quickText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  workflowBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  workflowTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     marginBottom: 10,
   },
 
-  workflowRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    marginBottom: 8,
-  },
-
-  workflowBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 26,
-    overflow: 'hidden',
-  },
-
-  workflowText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '800',
-  },
-
-  searchBox: {
+  searchRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 14,
   },
 
   searchInput: {
     flex: 1,
-    backgroundColor: '#111827',
+    backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
@@ -742,6 +554,161 @@ const styles = StyleSheet.create({
   searchButtonText: {
     color: '#ffffff',
     fontSize: 13,
+    fontWeight: '900',
+  },
+
+  heroBox: {
+    backgroundColor: '#111827',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  heroTitle: {
+    color: '#f8fafc',
+    fontSize: 25,
+    fontWeight: '900',
+    lineHeight: 31,
+  },
+
+  heroText: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+  },
+
+  mainActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 16,
+  },
+
+  primaryButton: {
+    flex: 1,
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  primaryButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  quickGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  quickCard: {
+    width: '48%',
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    minHeight: 118,
+  },
+
+  quickIcon: {
+    fontSize: 30,
+    marginBottom: 8,
+  },
+
+  quickTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  quickText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  customerOrderButton: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  customerOrderTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  customerOrderText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  customerOrderArrow: {
+    color: '#38bdf8',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  workerPanelButton: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#a855f7',
+    marginBottom: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  workerPanelTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  workerPanelText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  workerPanelArrow: {
+    color: '#a855f7',
+    fontSize: 22,
     fontWeight: '900',
   },
 
@@ -821,11 +788,14 @@ const styles = StyleSheet.create({
   },
 
   categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginBottom: 18,
   },
 
   categoryCard: {
+    width: '48%',
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 13,
@@ -837,91 +807,72 @@ const styles = StyleSheet.create({
   },
 
   categoryIcon: {
-    fontSize: 26,
-  },
-
-  categoryTextBox: {
-    flex: 1,
+    fontSize: 24,
   },
 
   categoryName: {
+    flex: 1,
     color: '#f8fafc',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 
-  categoryHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  productsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+  productsList: {
     gap: 10,
   },
 
   productCard: {
-    width: '48%',
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 12,
+    padding: 13,
     borderWidth: 1,
     borderColor: '#334155',
-    minHeight: 170,
   },
 
-  productIconBox: {
-    height: 46,
-    borderRadius: 12,
-    backgroundColor: '#0f172a',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 9,
+  productTopRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
   },
 
   productIcon: {
-    fontSize: 28,
+    fontSize: 30,
+  },
+
+  productTextBox: {
+    flex: 1,
   },
 
   productName: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
-    lineHeight: 18,
-    minHeight: 37,
+    lineHeight: 19,
   },
 
   productCategory: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '700',
-    marginTop: 5,
+    marginTop: 3,
   },
 
   productBottomRow: {
-    marginTop: 'auto',
-    paddingTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center',
   },
 
   productPrice: {
     color: '#f97316',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
-    marginBottom: 4,
   },
 
   productStock: {
     color: '#bbf7d0',
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  productStockEmpty: {
-    color: '#fca5a5',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
   },
 
