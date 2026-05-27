@@ -110,6 +110,23 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     );
   };
 
+  const renderStatusCard = (
+    title: string,
+    value: number,
+    description: string,
+  ): React.JSX.Element => {
+    return (
+      <TouchableOpacity
+        style={styles.statusCard}
+        onPress={() => navigation.navigate('Orders')}
+        activeOpacity={0.85}>
+        <Text style={styles.statusCardTitle}>{title}</Text>
+        <Text style={styles.statusCardValue}>{value}</Text>
+        <Text style={styles.statusCardText}>{description}</Text>
+      </TouchableOpacity>
+    );
+  };
+
   const renderCategorySale = (
     category: DashboardCategorySalesDto,
   ): React.JSX.Element => {
@@ -311,7 +328,7 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.title}>Dashboard</Text>
 
         <Text style={styles.subtitle}>
-          Podsumowanie sprzedaży, zamówień, magazynu i produktów.
+          Podsumowanie sprzedaży, zamówień, magazynu, statusów i produktów.
         </Text>
       </View>
 
@@ -329,6 +346,46 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
             {formatMoney(dashboard.productsStockValue)}
           </Text>
         </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Statusy zamówień</Text>
+
+      <View style={styles.statusGrid}>
+        {renderStatusCard(
+          'Nowe',
+          dashboard.newOrdersCount,
+          'Zamówienia przyjęte do systemu.',
+        )}
+
+        {renderStatusCard(
+          'W realizacji',
+          dashboard.inProgressOrdersCount,
+          'Zamówienia aktualnie obsługiwane.',
+        )}
+
+        {renderStatusCard(
+          'Gotowe',
+          dashboard.readyOrdersCount,
+          'Zamówienia przygotowane.',
+        )}
+
+        {renderStatusCard(
+          'Wysłane',
+          dashboard.shippedOrdersCount,
+          'Zamówienia przekazane do dostawy.',
+        )}
+
+        {renderStatusCard(
+          'Zakończone',
+          dashboard.completedOrdersCount,
+          'Zamówienia zakończone poprawnie.',
+        )}
+
+        {renderStatusCard(
+          'Anulowane',
+          dashboard.cancelledOrdersCount,
+          'Zamówienia anulowane.',
+        )}
       </View>
 
       <Text style={styles.sectionTitle}>Liczniki</Text>
@@ -520,6 +577,43 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginTop: 12,
     marginBottom: 12,
+  },
+
+  statusGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 4,
+  },
+
+  statusCard: {
+    width: '48%',
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+  },
+
+  statusCardTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  statusCardValue: {
+    color: '#f97316',
+    fontSize: 28,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  statusCardText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
   },
 
   metricsGrid: {

@@ -382,6 +382,13 @@ export interface DashboardDto {
   ordersCount: number;
   orderItemsCount: number;
 
+  newOrdersCount: number;
+  inProgressOrdersCount: number;
+  readyOrdersCount: number;
+  shippedOrdersCount: number;
+  completedOrdersCount: number;
+  cancelledOrdersCount: number;
+
   productsStockValue: number;
   ordersTotalValue: number;
 

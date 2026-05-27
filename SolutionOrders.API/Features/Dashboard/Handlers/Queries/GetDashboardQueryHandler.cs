@@ -38,6 +38,48 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                 .AsNoTracking()
                 .CountAsync(order => order.IsActive, cancellationToken);
 
+            var newOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    (order.Status == null || order.Status == OrderStatusHelper.New),
+                    cancellationToken);
+
+            var inProgressOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.InProgress,
+                    cancellationToken);
+
+            var readyOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Ready,
+                    cancellationToken);
+
+            var shippedOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Shipped,
+                    cancellationToken);
+
+            var completedOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Completed,
+                    cancellationToken);
+
+            var cancelledOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Cancelled,
+                    cancellationToken);
+
             var orderItemsCount = await context.OrderItems
                 .AsNoTracking()
                 .CountAsync(orderItem =>
@@ -197,6 +239,13 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
                 OrdersCount = ordersCount,
                 OrderItemsCount = orderItemsCount,
+
+                NewOrdersCount = newOrdersCount,
+                InProgressOrdersCount = inProgressOrdersCount,
+                ReadyOrdersCount = readyOrdersCount,
+                ShippedOrdersCount = shippedOrdersCount,
+                CompletedOrdersCount = completedOrdersCount,
+                CancelledOrdersCount = cancelledOrdersCount,
 
                 ProductsStockValue = productsStockValue,
                 OrdersTotalValue = ordersTotalValue,
