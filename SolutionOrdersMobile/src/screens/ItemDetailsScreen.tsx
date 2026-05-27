@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -33,14 +33,30 @@ function formatMoney(value?: number | null): string {
 
 function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
   const {item} = route.params;
-  const {addToCart, totalQuantity, totalValue} = useCart();
+  const {
+    addToCart,
+    cartItems,
+    totalQuantity,
+    totalValue,
+  } = useCart();
+
   const {isAdmin, isWorker, isCustomer} = useAuth();
 
   const availableQuantity = item.quantity ?? 0;
   const isAvailable = availableQuantity > 0 && item.isActive !== false;
+  const isLowStock = isAvailable && availableQuantity <= 5;
+
+  const cartItem = useMemo(() => {
+    return cartItems.find(currentItem => {
+      return currentItem.item.idItem === item.idItem;
+    });
+  }, [cartItems, item.idItem]);
+
+  const quantityAlreadyInCart = cartItem?.quantity ?? 0;
+  const maxCanAddNow = Math.max(availableQuantity - quantityAlreadyInCart, 0);
 
   const [selectedQuantity, setSelectedQuantity] = useState(
-    isAvailable ? 1 : 0,
+    isAvailable && maxCanAddNow > 0 ? 1 : 0,
   );
 
   const [dialog, setDialog] = useState<DialogState>({
@@ -50,6 +66,9 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  const selectedLineValue = selectedQuantity * (item.price ?? 0);
+  const valueIfAdded = totalValue + selectedLineValue;
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -97,12 +116,20 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
 
   const increaseQuantity = (): void => {
     setSelectedQuantity(previous => {
-      if (previous >= availableQuantity) {
+      if (previous >= maxCanAddNow) {
         return previous;
       }
 
       return previous + 1;
     });
+  };
+
+  const setQuickQuantity = (quantity: number): void => {
+    if (!isAvailable || maxCanAddNow <= 0) {
+      return;
+    }
+
+    setSelectedQuantity(Math.min(quantity, maxCanAddNow));
   };
 
   const handleAddToCart = (): void => {
@@ -130,6 +157,19 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       return;
     }
 
+    if (maxCanAddNow <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Maksymalna ilość w koszyku',
+        message:
+          'W koszyku masz już maksymalną dostępną ilość tego produktu.',
+        loading: false,
+      });
+
+      return;
+    }
+
     if (selectedQuantity <= 0) {
       setDialog({
         visible: true,
@@ -148,9 +188,45 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       visible: true,
       type: 'success',
       title: 'Dodano do koszyka',
-      message: `Dodano "${item.name}" w ilości ${selectedQuantity}.`,
+      message:
+        `Dodano "${item.name}" w ilości ${selectedQuantity}.\n\n` +
+        `Aktualna wartość koszyka po dodaniu: ${formatMoney(valueIfAdded)}.`,
       loading: false,
     });
+
+    const newMax = maxCanAddNow - selectedQuantity;
+
+    if (newMax <= 0) {
+      setSelectedQuantity(0);
+    } else {
+      setSelectedQuantity(Math.min(selectedQuantity, newMax));
+    }
+  };
+
+  const renderQuickQuantityButton = (quantity: number): React.JSX.Element => {
+    const disabled = !isAvailable || maxCanAddNow <= 0;
+    const selected = selectedQuantity === quantity;
+
+    return (
+      <TouchableOpacity
+        key={`quick-quantity-${quantity}`}
+        style={[
+          styles.quickQuantityButton,
+          selected && styles.quickQuantityButtonSelected,
+          disabled && styles.disabledButton,
+        ]}
+        onPress={() => setQuickQuantity(quantity)}
+        activeOpacity={0.8}
+        disabled={disabled}>
+        <Text
+          style={[
+            styles.quickQuantityText,
+            selected && styles.quickQuantityTextSelected,
+          ]}>
+          {quantity}
+        </Text>
+      </TouchableOpacity>
+    );
   };
 
   return (
@@ -198,6 +274,10 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           <Text style={isAvailable ? styles.availableBadge : styles.emptyBadge}>
             {isAvailable ? 'Dostępny' : 'Brak na stanie'}
           </Text>
+
+          {isLowStock ? (
+            <Text style={styles.lowStockBadge}>Niski stan</Text>
+          ) : null}
         </View>
       </View>
 
@@ -218,7 +298,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.priceCard}>
-        <View>
+        <View style={styles.priceBox}>
           <Text style={styles.priceLabel}>Cena</Text>
           <Text style={styles.priceValue}>{formatMoney(item.price)}</Text>
         </View>
@@ -231,6 +311,27 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         </View>
       </View>
 
+      {quantityAlreadyInCart > 0 ? (
+        <View style={styles.cartInfoBox}>
+          <Text style={styles.cartInfoTitle}>Ten produkt jest już w koszyku</Text>
+          <Text style={styles.cartInfoText}>
+            W koszyku masz już {quantityAlreadyInCart} {item.unitName ?? 'szt'}.
+            Możesz dodać jeszcze maksymalnie {maxCanAddNow}{' '}
+            {item.unitName ?? 'szt'}.
+          </Text>
+        </View>
+      ) : null}
+
+      {isLowStock ? (
+        <View style={styles.warningBox}>
+          <Text style={styles.warningTitle}>Niski stan magazynowy</Text>
+          <Text style={styles.warningText}>
+            Produkt ma małą dostępność. Jeżeli chcesz go zamówić, dodaj go do
+            koszyka przed zmianą stanu magazynowego.
+          </Text>
+        </View>
+      ) : null}
+
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Opis produktu</Text>
 
@@ -240,13 +341,13 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Ilość</Text>
+        <Text style={styles.sectionTitle}>Ilość do dodania</Text>
 
         <View style={styles.quantityRow}>
           <TouchableOpacity
             style={[
               styles.quantityButton,
-              selectedQuantity <= 1 && styles.disabledButton,
+              (selectedQuantity <= 1 || !isAvailable) && styles.disabledButton,
             ]}
             onPress={decreaseQuantity}
             activeOpacity={0.8}
@@ -262,30 +363,53 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           <TouchableOpacity
             style={[
               styles.quantityButton,
-              selectedQuantity >= availableQuantity && styles.disabledButton,
+              (selectedQuantity >= maxCanAddNow || !isAvailable) &&
+                styles.disabledButton,
             ]}
             onPress={increaseQuantity}
             activeOpacity={0.8}
-            disabled={selectedQuantity >= availableQuantity || !isAvailable}>
+            disabled={selectedQuantity >= maxCanAddNow || !isAvailable}>
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>
         </View>
 
+        <View style={styles.quickQuantityRow}>
+          {renderQuickQuantityButton(1)}
+          {renderQuickQuantityButton(2)}
+          {renderQuickQuantityButton(3)}
+          {renderQuickQuantityButton(5)}
+        </View>
+
         <Text style={styles.lineValue}>
-          Wartość: {formatMoney(selectedQuantity * (item.price ?? 0))}
+          Wartość wybranej ilości: {formatMoney(selectedLineValue)}
+        </Text>
+
+        <Text style={styles.lineHint}>
+          Po dodaniu koszyk będzie miał wartość około {formatMoney(valueIfAdded)}.
+        </Text>
+      </View>
+
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>Co dalej?</Text>
+
+        <Text style={styles.infoText}>
+          Po dodaniu produktu przejdź do koszyka, wybierz dostawę i płatność.
+          Po złożeniu zamówienia otrzyma ono status „Nowe”.
         </Text>
       </View>
 
       <TouchableOpacity
         style={[
           styles.addToCartButton,
-          !isAvailable && styles.disabledButton,
+          (!isAvailable || maxCanAddNow <= 0) && styles.disabledButton,
         ]}
         onPress={handleAddToCart}
         activeOpacity={0.8}
-        disabled={!isAvailable}>
+        disabled={!isAvailable || maxCanAddNow <= 0}>
         <Text style={styles.addToCartButtonText}>
-          {isAvailable ? 'Dodaj do koszyka' : 'Brak na stanie'}
+          {isAvailable && maxCanAddNow > 0
+            ? 'Dodaj do koszyka'
+            : 'Nie można dodać'}
         </Text>
       </TouchableOpacity>
 
@@ -419,6 +543,17 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+  lowStockBadge: {
+    backgroundColor: '#431407',
+    color: '#fed7aa',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+    overflow: 'hidden',
+  },
+
   cartBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -462,36 +597,44 @@ const styles = StyleSheet.create({
   priceCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
     marginHorizontal: 16,
     marginBottom: 14,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
+  },
+
+  priceBox: {
+    flex: 1,
   },
 
   priceLabel: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     marginBottom: 4,
   },
 
   priceValue: {
     color: '#f97316',
-    fontSize: 30,
+    fontSize: 28,
     fontWeight: '900',
   },
 
   stockBox: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    minWidth: 105,
   },
 
   stockLabel: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     marginBottom: 4,
   },
@@ -500,6 +643,54 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
+  },
+
+  cartInfoBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginHorizontal: 16,
+    marginBottom: 14,
+  },
+
+  cartInfoTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  cartInfoText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+
+  warningBox: {
+    backgroundColor: '#431407',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginHorizontal: 16,
+    marginBottom: 14,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 
   card: {
@@ -514,7 +705,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     marginBottom: 10,
   },
@@ -522,13 +713,15 @@ const styles = StyleSheet.create({
   description: {
     color: '#cbd5e1',
     fontSize: 14,
-    lineHeight: 20,
+    lineHeight: 21,
   },
 
   quantityRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    gap: 18,
+    marginBottom: 12,
   },
 
   quantityButton: {
@@ -540,21 +733,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 
+  disabledButton: {
+    opacity: 0.55,
+  },
+
   quantityButtonText: {
     color: '#ffffff',
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
   },
 
   quantityValueBox: {
-    minWidth: 90,
+    minWidth: 74,
     alignItems: 'center',
-    marginHorizontal: 16,
   },
 
   quantityValue: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 30,
     fontWeight: '900',
   },
 
@@ -562,23 +758,87 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginTop: 2,
+  },
+
+  quickQuantityRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+
+  quickQuantityButton: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  quickQuantityButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  quickQuantityText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  quickQuantityTextSelected: {
+    color: '#ffffff',
   },
 
   lineValue: {
-    color: '#16a34a',
-    fontSize: 18,
+    color: '#f97316',
+    fontSize: 17,
     fontWeight: '900',
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: 4,
+  },
+
+  lineHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 5,
+  },
+
+  infoCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginHorizontal: 16,
+    marginBottom: 14,
+  },
+
+  infoTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  infoText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
   },
 
   addToCartButton: {
     backgroundColor: '#16a34a',
+    marginHorizontal: 16,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 16,
     marginBottom: 12,
   },
 
@@ -590,10 +850,10 @@ const styles = StyleSheet.create({
 
   goToCartButton: {
     backgroundColor: '#f97316',
+    marginHorizontal: 16,
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 16,
     marginBottom: 12,
   },
 
@@ -605,20 +865,16 @@ const styles = StyleSheet.create({
 
   backButton: {
     backgroundColor: '#334155',
+    marginHorizontal: 16,
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
-    marginHorizontal: 16,
   },
 
   backButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
-  },
-
-  disabledButton: {
-    opacity: 0.55,
   },
 });
 
