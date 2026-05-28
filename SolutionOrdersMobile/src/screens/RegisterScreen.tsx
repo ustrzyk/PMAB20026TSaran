@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -26,19 +26,34 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
   const [password, setPassword] = useState('');
   const [adress, setAdress] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const isAccountPartReady =
-    name.trim().length >= 3 &&
-    email.trim().includes('@') &&
-    password.trim().length >= 4;
+  const accountReady = useMemo(() => {
+    return (
+      name.trim().length >= 3 &&
+      email.trim().includes('@') &&
+      password.trim().length >= 4
+    );
+  }, [email, name, password]);
 
-  const isDeliveryPartReady =
-    adress.trim().length > 0 &&
-    phoneNumber.trim().length > 0;
+  const deliveryReady = useMemo(() => {
+    return adress.trim().length >= 5 && phoneNumber.trim().length >= 6;
+  }, [adress, phoneNumber]);
+
+  const canSubmit = accountReady;
+
+  const clearError = (): void => {
+    setError(null);
+  };
 
   const handleRegister = async (): Promise<void> => {
+    if (!canSubmit) {
+      setError('Uzupełnij imię i nazwisko, e-mail oraz hasło.');
+      return;
+    }
+
     try {
       setSubmitting(true);
       setError(null);
@@ -56,31 +71,6 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
     }
   };
 
-  const updateName = (value: string): void => {
-    setName(value);
-    setError(null);
-  };
-
-  const updateEmail = (value: string): void => {
-    setEmail(value);
-    setError(null);
-  };
-
-  const updatePassword = (value: string): void => {
-    setPassword(value);
-    setError(null);
-  };
-
-  const updateAdress = (value: string): void => {
-    setAdress(value);
-    setError(null);
-  };
-
-  const updatePhoneNumber = (value: string): void => {
-    setPhoneNumber(value);
-    setError(null);
-  };
-
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -88,40 +78,38 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroBox}>
           <Text style={styles.logo}>👤</Text>
-          <Text style={styles.appName}>3D Print Shop</Text>
-          <Text style={styles.title}>Rejestracja klienta</Text>
+
+          <Text style={styles.title}>Utwórz konto</Text>
 
           <Text style={styles.subtitle}>
-            Konto klienta pozwala zapisywać dane dostawy i śledzić statusy
-            zamówień.
+            Konto pozwala szybciej zamawiać produkty i sprawdzać status
+            realizacji.
           </Text>
         </View>
 
         <View style={styles.progressBox}>
-          <Text style={styles.progressTitle}>Postęp formularza</Text>
-
           <View style={styles.progressRow}>
-            <Text style={isAccountPartReady ? styles.progressDone : styles.progressTodo}>
-              {isAccountPartReady ? '✓' : '1'}
-            </Text>
+            <View style={accountReady ? styles.stepDone : styles.stepTodo}>
+              <Text style={styles.stepNumber}>{accountReady ? '✓' : '1'}</Text>
+            </View>
 
-            <View style={styles.progressTextBox}>
-              <Text style={styles.progressLabel}>Dane konta</Text>
-              <Text style={styles.progressText}>
+            <View style={styles.stepTextBox}>
+              <Text style={styles.stepTitle}>Konto</Text>
+              <Text style={styles.stepText}>
                 Imię i nazwisko, e-mail oraz hasło.
               </Text>
             </View>
           </View>
 
           <View style={styles.progressRow}>
-            <Text style={isDeliveryPartReady ? styles.progressDone : styles.progressTodo}>
-              {isDeliveryPartReady ? '✓' : '2'}
-            </Text>
+            <View style={deliveryReady ? styles.stepDone : styles.stepTodo}>
+              <Text style={styles.stepNumber}>{deliveryReady ? '✓' : '2'}</Text>
+            </View>
 
-            <View style={styles.progressTextBox}>
-              <Text style={styles.progressLabel}>Dane dostawy</Text>
-              <Text style={styles.progressText}>
-                Adres i telefon ułatwią składanie zamówień.
+            <View style={styles.stepTextBox}>
+              <Text style={styles.stepTitle}>Dostawa</Text>
+              <Text style={styles.stepText}>
+                Adres i telefon możesz uzupełnić teraz albo później.
               </Text>
             </View>
           </View>
@@ -131,47 +119,62 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.sectionTitle}>Dane konta</Text>
 
           <Text style={styles.label}>Imię i nazwisko</Text>
+
           <TextInput
             style={styles.input}
             value={name}
-            onChangeText={updateName}
+            onChangeText={value => {
+              setName(value);
+              clearError();
+            }}
             placeholder="np. Jan Kowalski"
             placeholderTextColor="#64748b"
             editable={!submitting}
+            returnKeyType="next"
           />
 
           <Text style={styles.label}>E-mail</Text>
+
           <TextInput
             style={styles.input}
             value={email}
-            onChangeText={updateEmail}
-            placeholder="np. jan@test.pl"
+            onChangeText={value => {
+              setEmail(value);
+              clearError();
+            }}
+            placeholder="np. jan@3dshop.pl"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
             keyboardType="email-address"
             editable={!submitting}
+            returnKeyType="next"
           />
 
           <Text style={styles.label}>Hasło</Text>
+
           <TextInput
             style={styles.input}
             value={password}
-            onChangeText={updatePassword}
+            onChangeText={value => {
+              setPassword(value);
+              clearError();
+            }}
             placeholder="Minimum 4 znaki"
             placeholderTextColor="#64748b"
             secureTextEntry
             editable={!submitting}
+            returnKeyType="next"
           />
 
-          <View style={isAccountPartReady ? styles.readyBox : styles.warningBox}>
-            <Text style={isAccountPartReady ? styles.readyTitle : styles.warningTitle}>
-              {isAccountPartReady ? 'Dane konta wyglądają poprawnie' : 'Uzupełnij dane konta'}
+          <View style={accountReady ? styles.readyBox : styles.warningBox}>
+            <Text style={accountReady ? styles.readyTitle : styles.warningTitle}>
+              {accountReady ? 'Dane konta są gotowe' : 'Uzupełnij dane konta'}
             </Text>
 
-            <Text style={isAccountPartReady ? styles.readyText : styles.warningText}>
-              {isAccountPartReady
-                ? 'Możesz przejść do danych dostawy albo utworzyć konto.'
-                : 'Wpisz minimum 3 znaki w nazwie, poprawny e-mail i hasło minimum 4 znaki.'}
+            <Text style={accountReady ? styles.readyText : styles.warningText}>
+              {accountReady
+                ? 'Możesz utworzyć konto albo dopisać dane dostawy.'
+                : 'Wpisz imię i nazwisko, poprawny e-mail oraz hasło minimum 4 znaki.'}
             </Text>
           </View>
         </View>
@@ -180,51 +183,63 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.sectionTitle}>Dane dostawy</Text>
 
           <Text style={styles.label}>Adres</Text>
+
           <TextInput
             style={[styles.input, styles.textArea]}
             value={adress}
-            onChangeText={updateAdress}
-            placeholder="np. ul. Testowa 1, Warszawa"
+            onChangeText={value => {
+              setAdress(value);
+              clearError();
+            }}
+            placeholder="np. ul. Testowa 1, Berlin"
             placeholderTextColor="#64748b"
             multiline
             editable={!submitting}
           />
 
           <Text style={styles.label}>Telefon</Text>
+
           <TextInput
             style={styles.input}
             value={phoneNumber}
-            onChangeText={updatePhoneNumber}
+            onChangeText={value => {
+              setPhoneNumber(value);
+              clearError();
+            }}
             placeholder="np. 500111222"
             placeholderTextColor="#64748b"
             keyboardType="phone-pad"
             editable={!submitting}
+            returnKeyType="done"
+            onSubmitEditing={handleRegister}
           />
 
-          <View style={isDeliveryPartReady ? styles.readyBox : styles.infoBox}>
-            <Text style={isDeliveryPartReady ? styles.readyTitle : styles.infoTitle}>
-              {isDeliveryPartReady ? 'Dane dostawy uzupełnione' : 'Dane dostawy są opcjonalne'}
+          <View style={deliveryReady ? styles.readyBox : styles.infoBox}>
+            <Text style={deliveryReady ? styles.readyTitle : styles.infoTitle}>
+              {deliveryReady ? 'Dane dostawy uzupełnione' : 'Dane dostawy są opcjonalne'}
             </Text>
 
-            <Text style={isDeliveryPartReady ? styles.readyText : styles.infoText}>
-              {isDeliveryPartReady
-                ? 'Te dane będą mogły być użyte podczas składania zamówienia.'
-                : 'Możesz je uzupełnić teraz albo później w panelu klienta.'}
+            <Text style={deliveryReady ? styles.readyText : styles.infoText}>
+              {deliveryReady
+                ? 'Te dane będą dostępne przy składaniu zamówienia.'
+                : 'Możesz je dopisać teraz albo później w panelu klienta.'}
             </Text>
           </View>
 
           {error ? (
             <View style={styles.errorBox}>
-              <Text style={styles.errorTitle}>Błąd rejestracji</Text>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           ) : null}
 
           <TouchableOpacity
-            style={[styles.registerButton, submitting && styles.disabledButton]}
+            style={[
+              styles.registerButton,
+              (!canSubmit || submitting) && styles.disabledButton,
+            ]}
             onPress={handleRegister}
             activeOpacity={0.85}
-            disabled={submitting}>
+            disabled={!canSubmit || submitting}>
             <Text style={styles.registerButtonText}>
               {submitting ? 'Tworzenie konta...' : 'Utwórz konto'}
             </Text>
@@ -247,13 +262,12 @@ function RegisterScreen({navigation}: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.statusBox}>
-          <Text style={styles.statusTitle}>Co zyskujesz po rejestracji?</Text>
+        <View style={styles.infoPanel}>
+          <Text style={styles.infoPanelTitle}>Po co konto?</Text>
 
-          <Text style={styles.statusText}>• panel klienta,</Text>
-          <Text style={styles.statusText}>• historię zamówień,</Text>
-          <Text style={styles.statusText}>• śledzenie statusu realizacji,</Text>
-          <Text style={styles.statusText}>• zapisane dane dostawy.</Text>
+          <Text style={styles.infoPanelText}>• szybki dostęp do zamówień,</Text>
+          <Text style={styles.infoPanelText}>• aktualny status realizacji,</Text>
+          <Text style={styles.infoPanelText}>• zapisany adres i telefon.</Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -274,7 +288,7 @@ const styles = StyleSheet.create({
   heroBox: {
     backgroundColor: '#111827',
     borderRadius: 22,
-    padding: 20,
+    padding: 22,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
@@ -282,31 +296,22 @@ const styles = StyleSheet.create({
   },
 
   logo: {
-    fontSize: 46,
-    marginBottom: 8,
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
+    fontSize: 48,
+    marginBottom: 10,
   },
 
   title: {
     color: '#f8fafc',
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: '900',
     textAlign: 'center',
   },
 
   subtitle: {
     color: '#cbd5e1',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 19,
+    lineHeight: 20,
     textAlign: 'center',
     marginTop: 8,
   },
@@ -320,62 +325,49 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  progressTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 10,
   },
 
-  progressRow: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 8,
-  },
-
-  progressDone: {
-    width: 28,
-    height: 28,
+  stepDone: {
+    width: 32,
+    height: 32,
     borderRadius: 999,
     backgroundColor: '#16a34a',
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 28,
-    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
-  progressTodo: {
-    width: 28,
-    height: 28,
+  stepTodo: {
+    width: 32,
+    height: 32,
     borderRadius: 999,
     backgroundColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  stepNumber: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 28,
-    overflow: 'hidden',
   },
 
-  progressTextBox: {
+  stepTextBox: {
     flex: 1,
   },
 
-  progressLabel: {
+  stepTitle: {
     color: '#f8fafc',
     fontSize: 14,
     fontWeight: '900',
     marginBottom: 3,
   },
 
-  progressText: {
+  stepText: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '700',
@@ -393,7 +385,7 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     marginBottom: 12,
   },
@@ -412,13 +404,13 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 15,
     marginBottom: 12,
   },
 
   textArea: {
-    minHeight: 78,
+    minHeight: 86,
     textAlignVertical: 'top',
   },
 
@@ -435,7 +427,7 @@ const styles = StyleSheet.create({
     color: '#bbf7d0',
     fontSize: 13,
     fontWeight: '900',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   readyText: {
@@ -458,7 +450,7 @@ const styles = StyleSheet.create({
     color: '#fed7aa',
     fontSize: 13,
     fontWeight: '900',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   warningText: {
@@ -481,7 +473,7 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 13,
     fontWeight: '900',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   infoText: {
@@ -500,23 +492,16 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  errorTitle: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
   errorText: {
     color: '#fecaca',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
-    lineHeight: 17,
+    lineHeight: 18,
   },
 
   registerButton: {
     backgroundColor: '#16a34a',
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 2,
@@ -543,7 +528,7 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
   },
 
   guestButton: {
@@ -559,10 +544,10 @@ const styles = StyleSheet.create({
   guestButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
   },
 
-  statusBox: {
+  infoPanel: {
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 14,
@@ -570,14 +555,14 @@ const styles = StyleSheet.create({
     borderColor: '#38bdf8',
   },
 
-  statusTitle: {
+  infoPanelTitle: {
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
     marginBottom: 8,
   },
 
-  statusText: {
+  infoPanelText: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '700',

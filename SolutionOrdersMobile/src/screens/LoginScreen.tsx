@@ -82,8 +82,8 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.title}>Zaloguj się</Text>
 
           <Text style={styles.subtitle}>
-            Wejdź do swojego konta, sprawdź zamówienia i szybciej składaj nowe
-            zakupy.
+            Wejdź do swojego konta, sprawdź zamówienia i szybciej składaj
+            kolejne zakupy.
           </Text>
         </View>
 
@@ -147,10 +147,11 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.quickBox}>
-          <Text style={styles.quickTitle}>Nie chcesz się logować?</Text>
+          <Text style={styles.quickTitle}>Chcesz tylko kupić produkt?</Text>
 
           <Text style={styles.quickText}>
-            Możesz przeglądać produkty i dodać je do koszyka bez konta.
+            Możesz przejść do sklepu bez logowania. Konto przyda się później do
+            historii zamówień i zapisanych danych dostawy.
           </Text>
 
           <TouchableOpacity
@@ -170,10 +171,18 @@ function LoginScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.infoBox}>
           <Text style={styles.infoTitle}>Po zalogowaniu możesz:</Text>
 
-          <Text style={styles.infoText}>• szybko sprawdzić swoje zamówienia,</Text>
+          <Text style={styles.infoText}>• sprawdzić swoje zamówienia,</Text>
           <Text style={styles.infoText}>• zobaczyć aktualny status realizacji,</Text>
-          <Text style={styles.infoText}>• korzystać z zapisanych danych dostawy.</Text>
+          <Text style={styles.infoText}>• szybciej uzupełnić dane dostawy.</Text>
         </View>
+
+        <TouchableOpacity
+          style={styles.homeButton}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.85}
+          disabled={submitting}>
+          <Text style={styles.homeButtonText}>Wróć na start</Text>
+        </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -347,6 +356,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#38bdf8',
+    marginBottom: 14,
   },
 
   infoTitle: {
@@ -361,6 +371,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
+  },
+
+  homeButton: {
+    backgroundColor: '#1e293b',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+
+  homeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 
