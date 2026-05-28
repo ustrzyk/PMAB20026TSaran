@@ -17,13 +17,16 @@ import apiService from '../api/apiService.ts';
 import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {OrderDto, OrderStatus} from '../types/models.ts';
-import {ORDER_STATUSES} from '../types/models.ts';
+import type {OrderDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CustomerOrders'>;
 
-type CustomerOrderFilter = 'all' | OrderStatus;
-type CustomerOrderSort = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc';
+type OrderStatusFilter = 'all' | 'active' | 'finished' | 'cancelled';
+type OrderSortMode = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc';
+
+type OrderWithStatus = OrderDto & {
+  status?: string | null;
+};
 
 function formatMoney(value?: number | null): string {
   const safeValue = value ?? 0;
@@ -47,25 +50,26 @@ function getDateTime(value?: string | null): number {
   return new Date(value).getTime();
 }
 
-function getOrderStatus(order: OrderDto): OrderStatus {
-  const status = order.status?.trim();
+function getOrderStatus(order: OrderDto): string {
+  const status = (order as OrderWithStatus).status?.trim();
 
-  if (status && ORDER_STATUSES.includes(status as OrderStatus)) {
-    return status as OrderStatus;
+  if (!status || status.length === 0) {
+    return 'Nowe';
   }
 
-  return 'Nowe';
+  return status;
 }
 
-function isOrderInProgress(order: OrderDto): boolean {
-  const status = getOrderStatus(order);
+function isFinishedStatus(status: string): boolean {
+  return status === 'Zakończone';
+}
 
-  return (
-    status === 'Nowe' ||
-    status === 'W realizacji' ||
-    status === 'Gotowe' ||
-    status === 'Wysłane'
-  );
+function isCancelledStatus(status: string): boolean {
+  return status === 'Anulowane';
+}
+
+function isActiveStatus(status: string): boolean {
+  return !isFinishedStatus(status) && !isCancelledStatus(status);
 }
 
 function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
@@ -77,29 +81,57 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<CustomerOrderFilter>('all');
-  const [sortMode, setSortMode] = useState<CustomerOrderSort>('newest');
+  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all');
+  const [sortMode, setSortMode] = useState<OrderSortMode>('newest');
+
+  const totalOrdersValue = useMemo(() => {
+    return orders.reduce((sum, order) => {
+      return sum + (order.totalValue ?? 0);
+    }, 0);
+  }, [orders]);
+
+  const activeOrdersCount = useMemo(() => {
+    return orders.filter(order => isActiveStatus(getOrderStatus(order))).length;
+  }, [orders]);
+
+  const finishedOrdersCount = useMemo(() => {
+    return orders.filter(order => isFinishedStatus(getOrderStatus(order))).length;
+  }, [orders]);
+
+  const cancelledOrdersCount = useMemo(() => {
+    return orders.filter(order => isCancelledStatus(getOrderStatus(order))).length;
+  }, [orders]);
 
   const filteredOrders = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
     let result = orders;
 
-    if (statusFilter !== 'all') {
-      result = result.filter(order => getOrderStatus(order) === statusFilter);
+    if (statusFilter === 'active') {
+      result = result.filter(order => isActiveStatus(getOrderStatus(order)));
+    }
+
+    if (statusFilter === 'finished') {
+      result = result.filter(order => isFinishedStatus(getOrderStatus(order)));
+    }
+
+    if (statusFilter === 'cancelled') {
+      result = result.filter(order => isCancelledStatus(getOrderStatus(order)));
     }
 
     if (search.length > 0) {
       result = result.filter(order => {
-        const idOrder = order.idOrder.toString();
+        const orderNumber = order.idOrder.toString();
         const status = getOrderStatus(order).toLowerCase();
         const notes = order.notes?.toLowerCase() ?? '';
+        const date = order.dataOrder?.toLowerCase() ?? '';
         const deliveryDate = order.deliveryDate?.toLowerCase() ?? '';
 
         return (
-          idOrder.includes(search) ||
+          orderNumber.includes(search) ||
           status.includes(search) ||
           notes.includes(search) ||
+          date.includes(search) ||
           deliveryDate.includes(search)
         );
       });
@@ -124,31 +156,13 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [orders, searchText, statusFilter, sortMode]);
-
-  const totalOrdersValue = useMemo(() => {
-    return orders.reduce((sum, order) => {
-      return sum + (order.totalValue ?? 0);
-    }, 0);
-  }, [orders]);
+  }, [orders, searchText, sortMode, statusFilter]);
 
   const visibleOrdersValue = useMemo(() => {
     return filteredOrders.reduce((sum, order) => {
       return sum + (order.totalValue ?? 0);
     }, 0);
   }, [filteredOrders]);
-
-  const ordersInProgressCount = useMemo(() => {
-    return orders.filter(order => isOrderInProgress(order)).length;
-  }, [orders]);
-
-  const finishedOrdersCount = useMemo(() => {
-    return orders.filter(order => {
-      const status = getOrderStatus(order);
-
-      return status === 'Zakończone' || status === 'Anulowane';
-    }).length;
-  }, [orders]);
 
   const loadOrders = useCallback(async (): Promise<void> => {
     try {
@@ -191,19 +205,16 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
     setSortMode('newest');
   };
 
-  const renderStatusFilterButton = (
+  const renderFilterButton = (
     label: string,
-    value: CustomerOrderFilter,
+    value: OrderStatusFilter,
   ): React.JSX.Element => {
     const selected = statusFilter === value;
 
     return (
       <TouchableOpacity
-        key={`customer-status-filter-${value}`}
-        style={[
-          styles.filterButton,
-          selected && styles.filterButtonSelected,
-        ]}
+        key={`order-filter-${value}`}
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
         onPress={() => setStatusFilter(value)}
         activeOpacity={0.85}>
         <Text
@@ -219,13 +230,13 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
 
   const renderSortButton = (
     label: string,
-    value: CustomerOrderSort,
+    value: OrderSortMode,
   ): React.JSX.Element => {
     const selected = sortMode === value;
 
     return (
       <TouchableOpacity
-        key={`customer-order-sort-${value}`}
+        key={`order-sort-${value}`}
         style={[styles.sortButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.85}>
@@ -242,6 +253,8 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
 
   const renderOrder = ({item}: {item: OrderDto}): React.JSX.Element => {
     const status = getOrderStatus(item);
+    const cancelled = isCancelledStatus(status);
+    const finished = isFinishedStatus(status);
 
     return (
       <View style={styles.orderCard}>
@@ -249,37 +262,50 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.cardTitleBox}>
             <Text style={styles.orderTitle}>Zamówienie #{item.idOrder}</Text>
             <Text style={styles.orderDate}>
-              Data: {formatDate(item.dataOrder)}
+              {formatDate(item.dataOrder)}
             </Text>
           </View>
 
-          <Text style={styles.statusBadge}>{status}</Text>
+          <Text
+            style={
+              cancelled
+                ? styles.cancelledBadge
+                : finished
+                  ? styles.finishedBadge
+                  : styles.activeBadge
+            }>
+            {status}
+          </Text>
         </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Aktualny etap</Text>
-          <Text style={styles.statusValue}>{status}</Text>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Wartość</Text>
+            <Text style={styles.orderValue}>{formatMoney(item.totalValue)}</Text>
+          </View>
+
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Pozycje</Text>
+            <Text style={styles.infoValue}>{item.orderItemsCount}</Text>
+          </View>
         </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Wartość produktów</Text>
-          <Text style={styles.orderValue}>{formatMoney(item.totalValue)}</Text>
-        </View>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Dostawa</Text>
+            <Text style={styles.infoValue}>{formatDate(item.deliveryDate)}</Text>
+          </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Liczba pozycji</Text>
-          <Text style={styles.infoValue}>{item.orderItemsCount}</Text>
-        </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Data dostawy</Text>
-          <Text style={styles.infoValue}>{formatDate(item.deliveryDate)}</Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Status</Text>
+            <Text style={styles.statusValue}>{status}</Text>
+          </View>
         </View>
 
         {item.notes ? (
           <View style={styles.notesBox}>
             <Text style={styles.infoLabel}>Informacje</Text>
-            <Text style={styles.notesText} numberOfLines={5}>
+            <Text style={styles.notesText} numberOfLines={4}>
               {item.notes}
             </Text>
           </View>
@@ -303,9 +329,11 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>🔒</Text>
-        <Text style={styles.accessTitle}>Brak dostępu</Text>
+
+        <Text style={styles.accessTitle}>Moje zamówienia</Text>
+
         <Text style={styles.accessText}>
-          Lista zamówień jest dostępna tylko po zalogowaniu jako klient.
+          Zaloguj się, aby zobaczyć swoją historię zamówień.
         </Text>
 
         <TouchableOpacity
@@ -317,7 +345,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             })
           }
           activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>Zaloguj</Text>
+          <Text style={styles.primaryButtonText}>Zaloguj się</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -353,6 +381,13 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
         <TouchableOpacity style={styles.primaryButton} onPress={loadOrders}>
           <Text style={styles.primaryButtonText}>Spróbuj ponownie</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => navigation.navigate('ClientPanel')}
+          activeOpacity={0.85}>
+          <Text style={styles.secondaryButtonText}>Wróć do konta</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -374,7 +409,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               <Text style={styles.appName}>3D Print Shop</Text>
               <Text style={styles.title}>Moje zamówienia</Text>
               <Text style={styles.subtitle}>
-                Historia zamówień przypisana do Twojego konta klienta.
+                Szybko sprawdź status, datę i wartość swoich zamówień.
               </Text>
             </View>
 
@@ -385,41 +420,33 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               </View>
 
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Wyświetlane</Text>
-                <Text style={styles.summaryVisible}>
-                  {filteredOrders.length}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.summaryBox}>
-              <View style={styles.summaryColumn}>
                 <Text style={styles.summaryLabel}>W toku</Text>
-                <Text style={styles.summaryProgress}>
-                  {ordersInProgressCount}
-                </Text>
+                <Text style={styles.summaryActive}>{activeOrdersCount}</Text>
               </View>
 
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Zakończone/anulowane</Text>
-                <Text style={styles.summaryFinished}>
-                  {finishedOrdersCount}
-                </Text>
+                <Text style={styles.summaryLabel}>Zakończone</Text>
+                <Text style={styles.summaryFinished}>{finishedOrdersCount}</Text>
               </View>
             </View>
 
             <View style={styles.summaryBox}>
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Łączna wartość</Text>
-                <Text style={styles.summaryMoney}>
-                  {formatMoney(totalOrdersValue)}
-                </Text>
+                <Text style={styles.summaryLabel}>Anulowane</Text>
+                <Text style={styles.summaryCancelled}>{cancelledOrdersCount}</Text>
               </View>
 
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Widoczna wartość</Text>
+                <Text style={styles.summaryLabel}>Wartość widoczna</Text>
                 <Text style={styles.summaryMoney}>
                   {formatMoney(visibleOrdersValue)}
+                </Text>
+              </View>
+
+              <View style={styles.summaryColumn}>
+                <Text style={styles.summaryLabel}>Razem</Text>
+                <Text style={styles.summaryMoney}>
+                  {formatMoney(totalOrdersValue)}
                 </Text>
               </View>
             </View>
@@ -429,8 +456,9 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
                 style={styles.searchInput}
                 value={searchText}
                 onChangeText={setSearchText}
-                placeholder="Szukaj po numerze, statusie, dacie lub notatce..."
+                placeholder="Szukaj po numerze, statusie lub dacie..."
                 placeholderTextColor="#64748b"
+                keyboardType="default"
               />
             </View>
 
@@ -438,10 +466,10 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               <Text style={styles.filterTitle}>Status</Text>
 
               <View style={styles.filterButtons}>
-                {renderStatusFilterButton('Wszystkie', 'all')}
-                {ORDER_STATUSES.map(status =>
-                  renderStatusFilterButton(status, status),
-                )}
+                {renderFilterButton('Wszystkie', 'all')}
+                {renderFilterButton('W toku', 'active')}
+                {renderFilterButton('Zakończone', 'finished')}
+                {renderFilterButton('Anulowane', 'cancelled')}
               </View>
             </View>
 
@@ -458,8 +486,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
 
             <View style={styles.filterSummaryBox}>
               <Text style={styles.filterSummaryText}>
-                Status:{' '}
-                {statusFilter === 'all' ? 'wszystkie' : statusFilter}
+                Wyświetlane: {filteredOrders.length} / {orders.length}
               </Text>
 
               <Text style={styles.filterSummaryText}>
@@ -486,36 +513,39 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>📦</Text>
             <Text style={styles.emptyTitle}>Brak zamówień</Text>
+
             <Text style={styles.emptyText}>
               {orders.length === 0
-                ? 'Złóż pierwsze zamówienie w sklepie, a pojawi się na tej liście.'
+                ? 'Złóż pierwsze zamówienie w sklepie, a pojawi się tutaj.'
                 : 'Brak zamówień pasujących do filtrów.'}
             </Text>
 
-            {orders.length === 0 ? (
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={() => navigation.navigate('Items')}
-                activeOpacity={0.85}>
-                <Text style={styles.primaryButtonText}>Przejdź do sklepu</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={styles.primaryButton}
-                onPress={clearFilters}
-                activeOpacity={0.85}>
-                <Text style={styles.primaryButtonText}>Wyczyść filtry</Text>
-              </TouchableOpacity>
-            )}
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={orders.length === 0 ? () => navigation.navigate('Items') : clearFilters}
+              activeOpacity={0.85}>
+              <Text style={styles.primaryButtonText}>
+                {orders.length === 0 ? 'Przejdź do sklepu' : 'Wyczyść filtry'}
+              </Text>
+            </TouchableOpacity>
           </View>
         }
         ListFooterComponent={
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.navigate('ClientPanel')}
-            activeOpacity={0.85}>
-            <Text style={styles.backButtonText}>Wróć do konta</Text>
-          </TouchableOpacity>
+          <View style={styles.footerBox}>
+            <TouchableOpacity
+              style={styles.footerPrimaryButton}
+              onPress={() => navigation.navigate('ClientPanel')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerPrimaryButtonText}>Moje konto</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerSecondaryButton}
+              onPress={() => navigation.navigate('Items')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerSecondaryButtonText}>Produkty</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     </View>
@@ -622,7 +652,7 @@ const styles = StyleSheet.create({
     borderColor: '#334155',
     marginBottom: 12,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
 
   summaryColumn: {
@@ -631,38 +661,38 @@ const styles = StyleSheet.create({
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
     marginBottom: 4,
   },
 
   summaryValue: {
     color: '#38bdf8',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
   },
 
-  summaryVisible: {
+  summaryActive: {
     color: '#f97316',
-    fontSize: 24,
-    fontWeight: '900',
-  },
-
-  summaryProgress: {
-    color: '#f97316',
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '900',
   },
 
   summaryFinished: {
     color: '#16a34a',
-    fontSize: 24,
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  summaryCancelled: {
+    color: '#ef4444',
+    fontSize: 22,
     fontWeight: '900',
   },
 
   summaryMoney: {
     color: '#16a34a',
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '900',
   },
 
@@ -816,7 +846,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 
-  statusBadge: {
+  activeBadge: {
     backgroundColor: '#f97316',
     color: '#ffffff',
     paddingHorizontal: 10,
@@ -827,13 +857,41 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+  finishedBadge: {
+    backgroundColor: '#052e16',
+    color: '#bbf7d0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  cancelledBadge: {
+    backgroundColor: '#7f1d1d',
+    color: '#fecaca',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 9,
+    marginBottom: 9,
+  },
+
   infoBox: {
+    flex: 1,
     backgroundColor: '#0f172a',
     borderRadius: 12,
-    padding: 11,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
-    marginBottom: 9,
   },
 
   infoLabel: {
@@ -845,26 +903,26 @@ const styles = StyleSheet.create({
 
   infoValue: {
     color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
   },
 
   statusValue: {
     color: '#f97316',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '900',
   },
 
   orderValue: {
     color: '#16a34a',
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '900',
   },
 
   notesBox: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
-    padding: 11,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
     marginBottom: 10,
@@ -872,8 +930,9 @@ const styles = StyleSheet.create({
 
   notesText: {
     color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
   },
 
   detailsButton: {
@@ -949,17 +1008,34 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  backButton: {
+  footerBox: {
+    paddingTop: 16,
+    gap: 10,
+  },
+
+  footerPrimaryButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerPrimaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  footerSecondaryButton: {
     backgroundColor: '#334155',
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 16,
   },
 
-  backButtonText: {
+  footerSecondaryButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 });

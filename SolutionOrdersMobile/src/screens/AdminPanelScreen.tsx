@@ -18,7 +18,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AdminPanel'>;
 function AdminPanelScreen({navigation}: Props): React.JSX.Element {
   const {user, isAdmin, isWorker, logout} = useAuth();
 
-  const roleName = isAdmin ? 'Administrator' : 'Pracownik';
   const hasAccess = isAdmin || isWorker;
 
   const handleLogout = (): void => {
@@ -35,27 +34,34 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>🔒</Text>
 
-        <Text style={styles.accessTitle}>Brak dostępu</Text>
+        <Text style={styles.accessTitle}>Zaloguj się</Text>
 
         <Text style={styles.accessText}>
-          Panel pracownika jest dostępny tylko po zalogowaniu jako pracownik albo
-          administrator.
+          Zaloguj się, aby przejść dalej.
         </Text>
 
         <TouchableOpacity
           style={styles.primaryAccessButton}
-          onPress={() => navigation.reset({index: 0, routes: [{name: 'Home'}]})}
+          onPress={() =>
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'AuthLogin'}],
+            })
+          }
           activeOpacity={0.85}>
-          <Text style={styles.primaryAccessButtonText}>Wróć do sklepu</Text>
+          <Text style={styles.primaryAccessButtonText}>Zaloguj</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryAccessButton}
           onPress={() =>
-            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'Home'}],
+            })
           }
           activeOpacity={0.85}>
-          <Text style={styles.secondaryAccessButtonText}>Zaloguj</Text>
+          <Text style={styles.secondaryAccessButtonText}>Wróć do sklepu</Text>
         </TouchableOpacity>
       </View>
     );
@@ -67,10 +73,11 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroTopRow}>
           <View style={styles.heroTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
-            <Text style={styles.title}>Panel pracownika</Text>
+
+            <Text style={styles.title}>Panel obsługi</Text>
 
             <Text style={styles.userText}>
-              {user?.name ?? roleName} | {roleName}
+              {user?.name ?? 'Zalogowany użytkownik'}
             </Text>
           </View>
 
@@ -79,41 +86,6 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
             onPress={handleLogout}
             activeOpacity={0.85}>
             <Text style={styles.logoutButtonText}>Wyloguj</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.roleBox}>
-          <Text style={styles.roleLabel}>Uprawnienia</Text>
-
-          <Text style={styles.roleText}>
-            {isAdmin
-              ? 'Administrator może zarządzać całym sklepem, zamówieniami, pracownikami i danymi słownikowymi.'
-              : 'Pracownik może obsługiwać produkty, klientów, zamówienia i pozycje zamówień.'}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.priorityBox}>
-        <Text style={styles.priorityTitle}>Najważniejsze zadania</Text>
-
-        <Text style={styles.priorityText}>
-          Zacznij od Dashboardu, sprawdź nowe zamówienia, zmień ich status i
-          dopilnuj stanów magazynowych.
-        </Text>
-
-        <View style={styles.priorityButtons}>
-          <TouchableOpacity
-            style={styles.priorityButton}
-            onPress={() => navigation.navigate('Dashboard')}
-            activeOpacity={0.85}>
-            <Text style={styles.priorityButtonText}>Dashboard</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.priorityButtonSecondary}
-            onPress={() => navigation.navigate('Orders')}
-            activeOpacity={0.85}>
-            <Text style={styles.priorityButtonText}>Zamówienia</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -127,105 +99,42 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.bigTextBox}>
           <Text style={styles.bigTitle}>Dashboard</Text>
           <Text style={styles.bigDescription}>
-            Sprzedaż, magazyn, statusy zamówień, najnowsze zamówienia i TOP
-            produkty.
+            Podsumowanie sprzedaży, zamówień i magazynu
           </Text>
         </View>
 
         <Text style={styles.arrow}>{'>'}</Text>
       </TouchableOpacity>
 
-      <Text style={styles.sectionTitle}>Obsługa zamówień</Text>
+      <Text style={styles.sectionTitle}>Sprzedaż</Text>
 
-      <View style={styles.wideGrid}>
+      <View style={styles.grid}>
         <TouchableOpacity
-          style={[styles.wideCard, styles.salesCard]}
+          style={[styles.menuCard, styles.salesCard]}
           onPress={() => navigation.navigate('Orders')}
           activeOpacity={0.85}>
-          <Text style={styles.wideIcon}>📦</Text>
-
-          <View style={styles.wideTextBox}>
-            <Text style={styles.wideTitle}>Zamówienia</Text>
-            <Text style={styles.wideDescription}>
-              Lista, filtry, statusy, szybka zmiana etapu i edycja zamówień.
-            </Text>
-          </View>
+          <Text style={styles.icon}>📦</Text>
+          <Text style={styles.menuTitle}>Zamówienia</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.wideCard, styles.salesCard]}
+          style={[styles.menuCard, styles.salesCard]}
           onPress={() => navigation.navigate('OrderItems')}
           activeOpacity={0.85}>
-          <Text style={styles.wideIcon}>🧾</Text>
-
-          <View style={styles.wideTextBox}>
-            <Text style={styles.wideTitle}>Pozycje zamówień</Text>
-            <Text style={styles.wideDescription}>
-              Produkty przypisane do zamówień, ilości i wartości pozycji.
-            </Text>
-          </View>
+          <Text style={styles.icon}>🧾</Text>
+          <Text style={styles.menuTitle}>Pozycje</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.wideCard, styles.salesCard]}
+          style={[styles.menuCard, styles.salesCard]}
           onPress={() => navigation.navigate('Clients')}
           activeOpacity={0.85}>
-          <Text style={styles.wideIcon}>👥</Text>
-
-          <View style={styles.wideTextBox}>
-            <Text style={styles.wideTitle}>Klienci</Text>
-            <Text style={styles.wideDescription}>
-              Lista klientów, dane kontaktowe, adresy i aktywność kont.
-            </Text>
-          </View>
+          <Text style={styles.icon}>👥</Text>
+          <Text style={styles.menuTitle}>Klienci</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.workflowBox}>
-        <Text style={styles.workflowTitle}>Proces realizacji zamówienia</Text>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>1</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>Nowe</Text>
-            <Text style={styles.workflowStepText}>
-              Zamówienie zostało złożone i czeka na obsługę.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>2</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>W realizacji</Text>
-            <Text style={styles.workflowStepText}>
-              Pracownik przygotowuje produkty albo wydruk.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>3</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>Gotowe / Wysłane</Text>
-            <Text style={styles.workflowStepText}>
-              Zamówienie jest gotowe lub przekazane do dostawy.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>4</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>Zakończone / Anulowane</Text>
-            <Text style={styles.workflowStepText}>
-              Zamówienie kończy proces albo zostaje anulowane.
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Asortyment i magazyn</Text>
+      <Text style={styles.sectionTitle}>Asortyment</Text>
 
       <View style={styles.grid}>
         <TouchableOpacity
@@ -234,7 +143,6 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.icon}>🖨️</Text>
           <Text style={styles.menuTitle}>Produkty</Text>
-          <Text style={styles.menuDescription}>Ceny, stany, zdjęcia</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -243,7 +151,6 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.icon}>🏷️</Text>
           <Text style={styles.menuTitle}>Kategorie</Text>
-          <Text style={styles.menuDescription}>Grupy produktów</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -252,51 +159,54 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.icon}>📏</Text>
           <Text style={styles.menuTitle}>Jednostki</Text>
-          <Text style={styles.menuDescription}>szt., kg, m itd.</Text>
         </TouchableOpacity>
       </View>
 
       {isAdmin ? (
         <>
-          <Text style={styles.sectionTitle}>Administracja</Text>
-
-          <View style={styles.adminInfoBox}>
-            <Text style={styles.adminInfoTitle}>Tylko administrator</Text>
-            <Text style={styles.adminInfoText}>
-              Z tego miejsca można zarządzać kontami pracowników. Zwykły
-              pracownik nie powinien mieć możliwości dodawania ani edycji
-              pracowników.
-            </Text>
-          </View>
+          <Text style={styles.sectionTitle}>Zespół</Text>
 
           <View style={styles.grid}>
             <TouchableOpacity
-              style={[styles.menuCard, styles.adminCard]}
+              style={[styles.menuCard, styles.teamCard]}
               onPress={() => navigation.navigate('Workers')}
               activeOpacity={0.85}>
               <Text style={styles.icon}>🛠️</Text>
               <Text style={styles.menuTitle}>Pracownicy</Text>
-              <Text style={styles.menuDescription}>Role i dostępy</Text>
             </TouchableOpacity>
           </View>
         </>
       ) : null}
 
-      <Text style={styles.sectionTitle}>Szybkie przejścia</Text>
+      <Text style={styles.sectionTitle}>Skróty</Text>
 
-      <View style={styles.bottomActions}>
+      <View style={styles.shortcutList}>
         <TouchableOpacity
-          style={styles.shopButton}
+          style={styles.shortcutRow}
           onPress={() => navigation.navigate('Home')}
           activeOpacity={0.85}>
-          <Text style={styles.shopButtonText}>Strona główna</Text>
+          <Text style={styles.shortcutIcon}>🏠</Text>
+
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Strona główna</Text>
+            <Text style={styles.shortcutText}>Powrót do ekranu startowego</Text>
+          </View>
+
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.clientShopButton}
+          style={styles.shortcutRow}
           onPress={() => navigation.navigate('Items')}
           activeOpacity={0.85}>
-          <Text style={styles.clientShopButtonText}>Sklep klienta</Text>
+          <Text style={styles.shortcutIcon}>🛍️</Text>
+
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Widok sklepu</Text>
+            <Text style={styles.shortcutText}>Podgląd produktów dla klienta</Text>
+          </View>
+
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -324,7 +234,7 @@ const styles = StyleSheet.create({
 
   accessTitle: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
@@ -403,7 +313,7 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
   },
 
@@ -424,82 +334,6 @@ const styles = StyleSheet.create({
   logoutButtonText: {
     color: '#ffffff',
     fontSize: 12,
-    fontWeight: '900',
-  },
-
-  roleBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginTop: 14,
-  },
-
-  roleLabel: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: '900',
-    marginBottom: 4,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-
-  roleText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-
-  priorityBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  priorityTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  priorityText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-
-  priorityButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  priorityButton: {
-    flex: 1,
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  priorityButtonSecondary: {
-    flex: 1,
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  priorityButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
     fontWeight: '900',
   },
 
@@ -553,101 +387,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  wideGrid: {
-    gap: 12,
-    marginBottom: 18,
-  },
-
-  wideCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-
-  wideIcon: {
-    fontSize: 33,
-  },
-
-  wideTextBox: {
-    flex: 1,
-  },
-
-  wideTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  wideDescription: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
-  workflowBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 18,
-  },
-
-  workflowTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 10,
-  },
-
-  workflowStep: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 9,
-  },
-
-  workflowNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 28,
-    overflow: 'hidden',
-  },
-
-  workflowTextBox: {
-    flex: 1,
-  },
-
-  workflowStepTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  workflowStepText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
-  },
-
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -657,10 +396,10 @@ const styles = StyleSheet.create({
 
   menuCard: {
     width: '30.8%',
-    minHeight: 128,
+    minHeight: 120,
     backgroundColor: '#111827',
     borderRadius: 18,
-    padding: 10,
+    padding: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -674,12 +413,12 @@ const styles = StyleSheet.create({
     borderColor: '#16a34a',
   },
 
-  adminCard: {
+  teamCard: {
     borderColor: '#a855f7',
   },
 
   icon: {
-    fontSize: 31,
+    fontSize: 33,
     marginBottom: 8,
   },
 
@@ -688,70 +427,47 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 5,
   },
 
-  menuDescription: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 15,
-  },
-
-  adminInfoBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#a855f7',
-    marginBottom: 12,
-  },
-
-  adminInfoTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  adminInfoText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-
-  bottomActions: {
-    flexDirection: 'row',
+  shortcutList: {
     gap: 10,
   },
 
-  shopButton: {
-    flex: 1,
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
+  shortcutRow: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 12,
   },
 
-  shopButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
+  shortcutIcon: {
+    fontSize: 26,
+  },
+
+  shortcutTextBox: {
+    flex: 1,
+  },
+
+  shortcutTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
     fontWeight: '900',
+    marginBottom: 3,
   },
 
-  clientShopButton: {
-    flex: 1,
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
+  shortcutText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
   },
 
-  clientShopButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
+  shortcutArrow: {
+    color: '#f97316',
+    fontSize: 20,
     fontWeight: '900',
   },
 });

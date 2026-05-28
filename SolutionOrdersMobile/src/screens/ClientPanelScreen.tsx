@@ -26,11 +26,9 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
   const {user, isCustomer, isAdmin, isWorker, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
 
-  const hasDeliveryAddress =
-    !!user?.adress && user.adress.trim().length > 0;
-
-  const hasPhoneNumber =
-    !!user?.phoneNumber && user.phoneNumber.trim().length > 0;
+  const hasAddress = !!user?.adress && user.adress.trim().length > 0;
+  const hasPhone = !!user?.phoneNumber && user.phoneNumber.trim().length > 0;
+  const deliveryReady = hasAddress && hasPhone;
 
   const handleLogout = (): void => {
     logout();
@@ -41,7 +39,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
     });
   };
 
-  const handlePanelPress = (): void => {
+  const handleBackPress = (): void => {
     if (isAdmin || isWorker) {
       navigation.reset({
         index: 0,
@@ -61,27 +59,31 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>👤</Text>
 
-        <Text style={styles.accessTitle}>Panel klienta</Text>
+        <Text style={styles.accessTitle}>Moje konto</Text>
 
         <Text style={styles.accessText}>
-          Ten ekran jest dostępny po zalogowaniu albo rejestracji konta klienta.
+          Zaloguj się albo utwórz konto, aby zobaczyć swoje zamówienia i dane
+          dostawy.
         </Text>
 
         <TouchableOpacity
           style={styles.primaryAccessButton}
           onPress={() =>
-            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'AuthLogin'}],
+            })
           }
           activeOpacity={0.85}>
-          <Text style={styles.primaryAccessButtonText}>Zaloguj</Text>
+          <Text style={styles.primaryAccessButtonText}>Zaloguj się</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryAccessButton}
-          onPress={handlePanelPress}
+          onPress={handleBackPress}
           activeOpacity={0.85}>
           <Text style={styles.secondaryAccessButtonText}>
-            {isAdmin || isWorker ? 'Panel pracownika' : 'Wróć do sklepu'}
+            {isAdmin || isWorker ? 'Panel obsługi' : 'Wróć do sklepu'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -95,6 +97,8 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.heroTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
             <Text style={styles.title}>Moje konto</Text>
+            <Text style={styles.userText}>{user?.name}</Text>
+            <Text style={styles.emailText}>{user?.login}</Text>
           </View>
 
           <TouchableOpacity
@@ -104,186 +108,162 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.logoutButtonText}>Wyloguj</Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.userText}>{user?.name}</Text>
-        <Text style={styles.emailText}>{user?.login}</Text>
       </View>
 
-      <View style={styles.statusInfoBox}>
-        <Text style={styles.statusInfoTitle}>Statusy zamówień</Text>
+      <View style={deliveryReady ? styles.readyBox : styles.warningBox}>
+        <Text style={deliveryReady ? styles.readyTitle : styles.warningTitle}>
+          {deliveryReady ? 'Konto gotowe do zakupów' : 'Uzupełnij dane dostawy'}
+        </Text>
 
-        <Text style={styles.statusInfoText}>
-          W zakładce „Moje zamówienia” możesz sprawdzić, czy zamówienie jest
-          nowe, w realizacji, gotowe, wysłane, zakończone albo anulowane.
+        <Text style={deliveryReady ? styles.readyText : styles.warningText}>
+          {deliveryReady
+            ? 'Adres i telefon są zapisane. Przy zamówieniu będzie szybciej.'
+            : 'Dodaj adres i telefon, żeby łatwiej składać zamówienia.'}
         </Text>
 
         <TouchableOpacity
-          style={styles.statusInfoButton}
-          onPress={() => navigation.navigate('CustomerOrders')}
+          style={deliveryReady ? styles.readyButton : styles.warningButton}
+          onPress={() => navigation.navigate('CustomerProfile')}
           activeOpacity={0.85}>
-          <Text style={styles.statusInfoButtonText}>Pokaż moje zamówienia</Text>
+          <Text style={styles.statusButtonText}>
+            {deliveryReady ? 'Zobacz dane' : 'Uzupełnij teraz'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.cartBox}>
-        <Text style={styles.cartIcon}>🛒</Text>
+        <View style={styles.cartIconBox}>
+          <Text style={styles.cartIcon}>🛒</Text>
+        </View>
 
         <View style={styles.cartTextBox}>
-          <Text style={styles.cartTitle}>Koszyk</Text>
-          <Text style={styles.cartText}>
+          <Text style={styles.cartTitle}>Twój koszyk</Text>
+
+          <Text style={styles.cartValue}>
             {totalQuantity} szt. | {formatMoney(totalValue)}
           </Text>
 
           <Text style={styles.cartHint}>
             {totalQuantity > 0
               ? 'Możesz przejść do koszyka i złożyć zamówienie.'
-              : 'Dodaj produkty ze sklepu, aby rozpocząć zamówienie.'}
+              : 'Koszyk jest pusty. Przejdź do sklepu i dodaj produkty.'}
           </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.smallButton}
+          style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
           activeOpacity={0.85}>
-          <Text style={styles.smallButtonText}>Otwórz</Text>
+          <Text style={styles.cartButtonText}>Otwórz</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.detailsBox}>
-        <View style={styles.detailsHeaderRow}>
-          <Text style={styles.detailsTitle}>Dane dostawy</Text>
+      <Text style={styles.sectionTitle}>Najczęściej używane</Text>
+
+      <View style={styles.mainGrid}>
+        <TouchableOpacity
+          style={[styles.mainCard, styles.shopCard]}
+          onPress={() => navigation.navigate('Items')}
+          activeOpacity={0.85}>
+          <Text style={styles.mainIcon}>🛍️</Text>
+          <Text style={styles.mainTitle}>Sklep</Text>
+          <Text style={styles.mainText}>Produkty i kategorie</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.mainCard, styles.ordersCard]}
+          onPress={() => navigation.navigate('CustomerOrders')}
+          activeOpacity={0.85}>
+          <Text style={styles.mainIcon}>📋</Text>
+          <Text style={styles.mainTitle}>Zamówienia</Text>
+          <Text style={styles.mainText}>Historia i statusy</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.mainCard, styles.statusCard]}
+          onPress={() => navigation.navigate('TrackOrder')}
+          activeOpacity={0.85}>
+          <Text style={styles.mainIcon}>📦</Text>
+          <Text style={styles.mainTitle}>Status</Text>
+          <Text style={styles.mainText}>Sprawdź numer</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.mainCard, styles.profileCard]}
+          onPress={() => navigation.navigate('CustomerProfile')}
+          activeOpacity={0.85}>
+          <Text style={styles.mainIcon}>👤</Text>
+          <Text style={styles.mainTitle}>Dane</Text>
+          <Text style={styles.mainText}>Adres i konto</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.deliveryBox}>
+        <View style={styles.deliveryHeaderRow}>
+          <Text style={styles.deliveryTitle}>Dane dostawy</Text>
 
           <TouchableOpacity
-            style={styles.editProfileButton}
+            style={styles.editButton}
             onPress={() => navigation.navigate('CustomerProfile')}
             activeOpacity={0.85}>
-            <Text style={styles.editProfileButtonText}>Edytuj</Text>
+            <Text style={styles.editButtonText}>Edytuj</Text>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.detailsRow}>
-          <Text style={styles.detailsLabel}>Adres</Text>
-          <Text style={styles.detailsValue}>
-            {hasDeliveryAddress ? user?.adress : 'Brak adresu w koncie'}
+        <View style={styles.deliveryRow}>
+          <Text style={styles.deliveryLabel}>Adres</Text>
+          <Text style={styles.deliveryValue}>
+            {hasAddress ? user?.adress : 'Brak adresu'}
           </Text>
         </View>
 
-        <View style={styles.detailsRow}>
-          <Text style={styles.detailsLabel}>Telefon</Text>
-          <Text style={styles.detailsValue}>
-            {hasPhoneNumber ? user?.phoneNumber : 'Brak telefonu w koncie'}
+        <View style={styles.deliveryRow}>
+          <Text style={styles.deliveryLabel}>Telefon</Text>
+          <Text style={styles.deliveryValue}>
+            {hasPhone ? user?.phoneNumber : 'Brak telefonu'}
           </Text>
         </View>
-
-        {!hasDeliveryAddress || !hasPhoneNumber ? (
-          <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>Uzupełnij dane</Text>
-
-            <Text style={styles.warningText}>
-              Adres i telefon przyspieszają składanie zamówienia oraz ułatwiają
-              obsługę dostawy.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.readyBox}>
-            <Text style={styles.readyTitle}>Dane gotowe</Text>
-
-            <Text style={styles.readyText}>
-              Dane dostawy są uzupełnione i mogą zostać użyte podczas zakupu.
-            </Text>
-          </View>
-        )}
       </View>
 
-      <Text style={styles.sectionTitle}>Szybkie akcje</Text>
+      <Text style={styles.sectionTitle}>Skróty</Text>
 
-      <View style={styles.grid}>
+      <View style={styles.shortcutList}>
         <TouchableOpacity
-          style={[styles.actionCard, styles.shopCard]}
+          style={styles.shortcutRow}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.85}>
+          <Text style={styles.shortcutIcon}>🏠</Text>
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Strona główna</Text>
+            <Text style={styles.shortcutText}>Wróć do ekranu startowego</Text>
+          </View>
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.shortcutRow}
           onPress={() => navigation.navigate('Items')}
           activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>🖨️</Text>
-          <Text style={styles.actionTitle}>Sklep</Text>
-          <Text style={styles.actionDescription}>Produkty i kategorie</Text>
+          <Text style={styles.shortcutIcon}>🖨️</Text>
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Produkty</Text>
+            <Text style={styles.shortcutText}>Przeglądaj ofertę sklepu</Text>
+          </View>
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionCard, styles.cartCard]}
+          style={styles.shortcutRow}
           onPress={() => navigation.navigate('Cart')}
           activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>🛒</Text>
-          <Text style={styles.actionTitle}>Koszyk</Text>
-          <Text style={styles.actionDescription}>Podsumowanie zakupu</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionCard, styles.ordersCard]}
-          onPress={() => navigation.navigate('CustomerOrders')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>📋</Text>
-          <Text style={styles.actionTitle}>Moje zamówienia</Text>
-          <Text style={styles.actionDescription}>Statusy i historia</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionCard, styles.profileCard]}
-          onPress={() => navigation.navigate('CustomerProfile')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>👤</Text>
-          <Text style={styles.actionTitle}>Dane konta</Text>
-          <Text style={styles.actionDescription}>E-mail, adres, telefon</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionCard, styles.orderCard]}
-          onPress={() => navigation.navigate('TrackOrder')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>📦</Text>
-          <Text style={styles.actionTitle}>Sprawdź zamówienie</Text>
-          <Text style={styles.actionDescription}>Po numerze zamówienia</Text>
+          <Text style={styles.shortcutIcon}>🛒</Text>
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Koszyk</Text>
+            <Text style={styles.shortcutText}>Przejdź do zamówienia</Text>
+          </View>
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
         </TouchableOpacity>
       </View>
-
-      <View style={styles.workflowBox}>
-        <Text style={styles.workflowTitle}>Jak działa realizacja?</Text>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>1</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>Składasz zamówienie</Text>
-            <Text style={styles.workflowStepText}>
-              Po zakupie zamówienie otrzymuje status „Nowe”.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>2</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>Pracownik realizuje</Text>
-            <Text style={styles.workflowStepText}>
-              Status może zmienić się na „W realizacji” albo „Gotowe”.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.workflowStep}>
-          <Text style={styles.workflowNumber}>3</Text>
-          <View style={styles.workflowTextBox}>
-            <Text style={styles.workflowStepTitle}>Dostawa lub zakończenie</Text>
-            <Text style={styles.workflowStepText}>
-              Zamówienie może zostać wysłane, zakończone albo anulowane.
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <TouchableOpacity
-        style={styles.homeButton}
-        onPress={() => navigation.navigate('Home')}
-        activeOpacity={0.85}>
-        <Text style={styles.homeButtonText}>Strona główna</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -309,7 +289,7 @@ const styles = StyleSheet.create({
 
   accessTitle: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
@@ -388,13 +368,13 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
   },
 
   userText: {
     color: '#f8fafc',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     marginTop: 12,
   },
@@ -419,39 +399,70 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  statusInfoBox: {
-    backgroundColor: '#111827',
+  readyBox: {
+    backgroundColor: '#052e16',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#38bdf8',
+    borderColor: '#16a34a',
     marginBottom: 14,
   },
 
-  statusInfoTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 6,
+  warningBox: {
+    backgroundColor: '#431407',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 14,
   },
 
-  statusInfoText: {
-    color: '#cbd5e1',
+  readyTitle: {
+    color: '#bbf7d0',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  readyText: {
+    color: '#bbf7d0',
     fontSize: 13,
     fontWeight: '700',
     lineHeight: 19,
     marginBottom: 12,
   },
 
-  statusInfoButton: {
-    backgroundColor: '#38bdf8',
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+
+  readyButton: {
+    backgroundColor: '#16a34a',
     borderRadius: 12,
     paddingVertical: 11,
     alignItems: 'center',
   },
 
-  statusInfoButtonText: {
-    color: '#0f172a',
+  warningButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonText: {
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
   },
@@ -461,15 +472,24 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
+    borderColor: '#334155',
+    marginBottom: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
 
+  cartIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   cartIcon: {
-    fontSize: 34,
+    fontSize: 28,
   },
 
   cartTextBox: {
@@ -483,135 +503,31 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
 
-  cartText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+  cartValue: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 3,
   },
 
   cartHint: {
     color: '#94a3b8',
     fontSize: 12,
-    fontWeight: '700',
     lineHeight: 17,
-    marginTop: 4,
+    fontWeight: '700',
   },
 
-  smallButton: {
+  cartButton: {
     backgroundColor: '#f97316',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
 
-  smallButtonText: {
+  cartButtonText: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900',
-  },
-
-  detailsBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 18,
-  },
-
-  detailsHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
-  },
-
-  detailsTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  editProfileButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-  },
-
-  editProfileButtonText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  detailsRow: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 8,
-  },
-
-  detailsLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-
-  detailsValue: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  warningBox: {
-    backgroundColor: '#431407',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginTop: 4,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  warningText: {
-    color: '#fed7aa',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
-  readyBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginTop: 4,
-  },
-
-  readyTitle: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  readyText: {
-    color: '#bbf7d0',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
 
   sectionTitle: {
@@ -621,20 +537,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  grid: {
+  mainGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginBottom: 18,
   },
 
-  actionCard: {
-    width: '47.8%',
-    minHeight: 134,
+  mainCard: {
+    width: '48%',
+    minHeight: 130,
     backgroundColor: '#111827',
     borderRadius: 18,
-    padding: 12,
+    padding: 13,
     borderWidth: 1,
-    alignItems: 'center',
     justifyContent: 'center',
   },
 
@@ -642,112 +558,134 @@ const styles = StyleSheet.create({
     borderColor: '#16a34a',
   },
 
-  cartCard: {
-    borderColor: '#f97316',
-  },
-
   ordersCard: {
     borderColor: '#a855f7',
   },
 
+  statusCard: {
+    borderColor: '#38bdf8',
+  },
+
   profileCard: {
-    borderColor: '#38bdf8',
+    borderColor: '#f97316',
   },
 
-  orderCard: {
-    borderColor: '#38bdf8',
-  },
-
-  actionIcon: {
-    fontSize: 34,
+  mainIcon: {
+    fontSize: 32,
     marginBottom: 8,
   },
 
-  actionTitle: {
+  mainTitle: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 5,
+    marginBottom: 4,
   },
 
-  actionDescription: {
+  mainText: {
     color: '#94a3b8',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    textAlign: 'center',
-    lineHeight: 15,
+    lineHeight: 17,
   },
 
-  workflowBox: {
+  deliveryBox: {
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginTop: 18,
     marginBottom: 18,
   },
 
-  workflowTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
+  deliveryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center',
     marginBottom: 10,
   },
 
-  workflowStep: {
-    flexDirection: 'row',
-    gap: 10,
+  deliveryTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+
+  editButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+
+  editButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  deliveryRow: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
-    marginBottom: 9,
+    marginBottom: 8,
   },
 
-  workflowNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: '#f97316',
-    color: '#ffffff',
+  deliveryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  deliveryValue: {
+    color: '#f8fafc',
     fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 28,
-    overflow: 'hidden',
+    fontWeight: '800',
   },
 
-  workflowTextBox: {
+  shortcutList: {
+    gap: 10,
+  },
+
+  shortcutRow: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  shortcutIcon: {
+    fontSize: 26,
+  },
+
+  shortcutTextBox: {
     flex: 1,
   },
 
-  workflowStepTitle: {
+  shortcutTitle: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
     marginBottom: 3,
   },
 
-  workflowStepText: {
+  shortcutText: {
     color: '#94a3b8',
     fontSize: 12,
-    lineHeight: 17,
     fontWeight: '700',
   },
 
-  homeButton: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  homeButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
+  shortcutArrow: {
+    color: '#f97316',
+    fontSize: 20,
     fontWeight: '900',
   },
 });
