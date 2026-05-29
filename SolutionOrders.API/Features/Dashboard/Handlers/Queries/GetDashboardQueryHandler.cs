@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SolutionOrders.API.Features.Dashboard.Messages.DTOs;
 using SolutionOrders.API.Features.Dashboard.Messages.Queries;
+using SolutionOrders.API.Features.Orders.Helpers;
 using SolutionOrders.API.Models.Data;
 
 namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
@@ -36,6 +37,48 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
             var ordersCount = await context.Orders
                 .AsNoTracking()
                 .CountAsync(order => order.IsActive, cancellationToken);
+
+            var newOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    (order.Status == null || order.Status == OrderStatusHelper.New),
+                    cancellationToken);
+
+            var inProgressOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.InProgress,
+                    cancellationToken);
+
+            var readyOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Ready,
+                    cancellationToken);
+
+            var shippedOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Shipped,
+                    cancellationToken);
+
+            var completedOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Completed,
+                    cancellationToken);
+
+            var cancelledOrdersCount = await context.Orders
+                .AsNoTracking()
+                .CountAsync(order =>
+                    order.IsActive &&
+                    order.Status == OrderStatusHelper.Cancelled,
+                    cancellationToken);
 
             var orderItemsCount = await context.OrderItems
                 .AsNoTracking()
@@ -80,6 +123,8 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
                     WorkerName = order.Worker != null
                         ? $"{order.Worker.FirstName} {order.Worker.LastName}"
                         : null,
+
+                    Status = order.Status ?? OrderStatusHelper.New,
 
                     OrderItemsCount = order.OrderItems
                         .Count(orderItem => orderItem.IsActive),
@@ -194,6 +239,13 @@ namespace SolutionOrders.API.Features.Dashboard.Handlers.Queries
 
                 OrdersCount = ordersCount,
                 OrderItemsCount = orderItemsCount,
+
+                NewOrdersCount = newOrdersCount,
+                InProgressOrdersCount = inProgressOrdersCount,
+                ReadyOrdersCount = readyOrdersCount,
+                ShippedOrdersCount = shippedOrdersCount,
+                CompletedOrdersCount = completedOrdersCount,
+                CancelledOrdersCount = cancelledOrdersCount,
 
                 ProductsStockValue = productsStockValue,
                 OrdersTotalValue = ordersTotalValue,

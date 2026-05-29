@@ -8,6 +8,7 @@
         public int? IdWorker { get; set; }
         public string? Notes { get; set; }
         public DateTime? DeliveryDate { get; set; }
+        public string? Status { get; set; } = "Nowe";
         public bool IsActive { get; set; } = true;
 
         public virtual Client? Client { get; set; }

@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SolutionOrders.API.Features.Orders.Helpers;
 using SolutionOrders.API.Features.Orders.Messages.Commands;
 using SolutionOrders.API.Models;
 using SolutionOrders.API.Models.Data;
@@ -54,6 +55,7 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Commands
                 IdWorker = request.IdWorker,
                 Notes = request.Notes,
                 DeliveryDate = request.DeliveryDate,
+                Status = OrderStatusHelper.Normalize(request.Status),
                 IsActive = request.IsActive
             };
 

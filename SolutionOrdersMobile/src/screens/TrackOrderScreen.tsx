@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -19,6 +19,18 @@ import type {OrderDto, OrderItemDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'TrackOrder'>;
 
+type OrderWithStatus = OrderDto & {
+  status?: string | null;
+};
+
+const STATUS_STEPS = [
+  'Nowe',
+  'W realizacji',
+  'Gotowe',
+  'Wysłane',
+  'Zakończone',
+];
+
 function formatMoney(value?: number | null): string {
   const safeValue = value ?? 0;
 
@@ -31,6 +43,62 @@ function formatDate(value?: string | null): string {
   }
 
   return value.substring(0, 10);
+}
+
+function getOrderStatus(order?: OrderDto | null): string {
+  if (!order) {
+    return 'Nowe';
+  }
+
+  const status = (order as OrderWithStatus).status?.trim();
+
+  if (!status || status.length === 0) {
+    return 'Nowe';
+  }
+
+  return status;
+}
+
+function getStatusIndex(status: string): number {
+  const index = STATUS_STEPS.indexOf(status);
+
+  if (index >= 0) {
+    return index;
+  }
+
+  if (status === 'Anulowane') {
+    return -1;
+  }
+
+  return 0;
+}
+
+function getFriendlyStatusDescription(status: string): string {
+  if (status === 'Nowe') {
+    return 'Zamówienie zostało przyjęte i czeka na obsługę.';
+  }
+
+  if (status === 'W realizacji') {
+    return 'Zamówienie jest aktualnie przygotowywane.';
+  }
+
+  if (status === 'Gotowe') {
+    return 'Zamówienie jest gotowe do odbioru albo do wysyłki.';
+  }
+
+  if (status === 'Wysłane') {
+    return 'Zamówienie zostało przekazane do dostawy.';
+  }
+
+  if (status === 'Zakończone') {
+    return 'Zamówienie zostało zakończone.';
+  }
+
+  if (status === 'Anulowane') {
+    return 'Zamówienie zostało anulowane.';
+  }
+
+  return 'Zamówienie jest w trakcie obsługi.';
 }
 
 function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
@@ -46,6 +114,18 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
   const [orderItems, setOrderItems] = useState<OrderItemDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const currentStatus = getOrderStatus(order);
+
+  const currentStatusIndex = useMemo(() => {
+    return getStatusIndex(currentStatus);
+  }, [currentStatus]);
+
+  const orderTotalFromItems = useMemo(() => {
+    return orderItems.reduce((sum, item) => {
+      return sum + (item.lineValue ?? 0);
+    }, 0);
+  }, [orderItems]);
 
   const clearResult = (): void => {
     setOrder(null);
@@ -63,9 +143,7 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     }
 
     if (foundOrder.idClient !== user.id) {
-      throw new Error(
-        'To zamówienie nie jest przypisane do Twojego konta klienta.',
-      );
+      throw new Error('To zamówienie nie jest przypisane do Twojego konta.');
     }
   };
 
@@ -96,9 +174,7 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
         return;
       }
 
-      setError(
-        'Nie znaleziono aktywnego zamówienia albo wystąpił błąd pobierania danych.',
-      );
+      setError('Nie udało się pobrać zamówienia.');
     } finally {
       setLoading(false);
     }
@@ -123,6 +199,56 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     await loadOrder(parsedId);
   };
 
+  const goToAccount = (): void => {
+    if (isAdmin || isWorker) {
+      navigation.navigate('AdminPanel');
+      return;
+    }
+
+    if (isCustomer) {
+      navigation.navigate('ClientPanel');
+      return;
+    }
+
+    navigation.navigate('AuthLogin');
+  };
+
+  const renderStatusStep = (
+    step: string,
+    index: number,
+  ): React.JSX.Element => {
+    const isCancelled = currentStatus === 'Anulowane';
+    const isCurrent = currentStatus === step;
+    const isDone = !isCancelled && index <= currentStatusIndex;
+
+    return (
+      <View key={`status-step-${step}`} style={styles.statusStep}>
+        <View
+          style={[
+            styles.statusDot,
+            isDone && styles.statusDotDone,
+            isCurrent && styles.statusDotCurrent,
+          ]}>
+          <Text style={styles.statusDotText}>{isDone ? '✓' : index + 1}</Text>
+        </View>
+
+        <View style={styles.statusStepTextBox}>
+          <Text
+            style={[
+              styles.statusStepTitle,
+              isDone && styles.statusStepTitleDone,
+            ]}>
+            {step}
+          </Text>
+
+          <Text style={styles.statusStepText}>
+            {isCurrent ? 'Aktualny etap' : isDone ? 'Zrealizowano' : 'Przed nami'}
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderOrderItem = (item: OrderItemDto): React.JSX.Element => {
     return (
       <View key={item.idOrderItem} style={styles.itemCard}>
@@ -130,17 +256,25 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
           {item.itemName ?? `Produkt ID ${item.idItem}`}
         </Text>
 
-        <Text style={styles.itemText}>Kod: {item.itemCode ?? 'Brak kodu'}</Text>
+        <View style={styles.itemInfoRow}>
+          <Text style={styles.itemLabel}>Kod</Text>
+          <Text style={styles.itemValue}>{item.itemCode ?? 'Brak kodu'}</Text>
+        </View>
 
-        <Text style={styles.itemText}>Ilość: {item.quantity ?? 0}</Text>
+        <View style={styles.itemInfoRow}>
+          <Text style={styles.itemLabel}>Ilość</Text>
+          <Text style={styles.itemValue}>{item.quantity ?? 0}</Text>
+        </View>
 
-        <Text style={styles.itemText}>
-          Cena produktu: {formatMoney(item.itemPrice)}
-        </Text>
+        <View style={styles.itemInfoRow}>
+          <Text style={styles.itemLabel}>Cena</Text>
+          <Text style={styles.itemValue}>{formatMoney(item.itemPrice)}</Text>
+        </View>
 
-        <Text style={styles.itemValue}>
-          Wartość pozycji: {formatMoney(item.lineValue)}
-        </Text>
+        <View style={styles.itemSummaryBox}>
+          <Text style={styles.itemSummaryLabel}>Wartość pozycji</Text>
+          <Text style={styles.itemSummaryValue}>{formatMoney(item.lineValue)}</Text>
+        </View>
       </View>
     );
   };
@@ -150,150 +284,212 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
       <View style={styles.heroBox}>
         <Text style={styles.appName}>3D Print Shop</Text>
 
-        <Text style={styles.title}>Sprawdź zamówienie</Text>
+        <Text style={styles.title}>Status zamówienia</Text>
 
         <Text style={styles.subtitle}>
-          Wpisz numer zamówienia, aby zobaczyć jego podstawowe dane i pozycje.
+          Wpisz numer zamówienia i sprawdź, na jakim etapie jest realizacja.
         </Text>
       </View>
 
       <View style={styles.searchCard}>
         <Text style={styles.label}>Numer zamówienia</Text>
 
-        <TextInput
-          style={styles.input}
-          value={orderNumber}
-          onChangeText={value => {
-            setOrderNumber(value);
-            clearResult();
-          }}
-          placeholder="Np. 7"
-          placeholderTextColor="#64748b"
-          keyboardType="numeric"
-          editable={!loading}
-        />
+        <View style={styles.searchRow}>
+          <TextInput
+            style={styles.input}
+            value={orderNumber}
+            onChangeText={value => {
+              setOrderNumber(value);
+              clearResult();
+            }}
+            placeholder="Np. 7"
+            placeholderTextColor="#64748b"
+            keyboardType="numeric"
+            editable={!loading}
+            returnKeyType="search"
+            onSubmitEditing={searchOrder}
+          />
 
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={searchOrder}
-          activeOpacity={0.8}
-          disabled={loading}>
-          <Text style={styles.searchButtonText}>
-            {loading ? 'Sprawdzanie...' : 'Sprawdź zamówienie'}
-          </Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.searchButton}
+            onPress={searchOrder}
+            activeOpacity={0.85}
+            disabled={loading}>
+            <Text style={styles.searchButtonText}>
+              {loading ? '...' : 'Szukaj'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.searchHint}>
+          Numer znajdziesz na ekranie po złożeniu zamówienia albo w zakładce
+          „Moje zamówienia”.
+        </Text>
       </View>
 
-      {loading && (
+      {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color="#f97316" />
           <Text style={styles.loadingText}>Pobieranie zamówienia...</Text>
         </View>
-      )}
+      ) : null}
 
-      {error && (
+      {error ? (
         <View style={styles.errorBox}>
           <Text style={styles.errorTitle}>Nie udało się pobrać zamówienia</Text>
           <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
 
-      {order && (
+          <TouchableOpacity
+            style={styles.errorActionButton}
+            onPress={() => navigation.navigate('Items')}
+            activeOpacity={0.85}>
+            <Text style={styles.errorActionButtonText}>Przejdź do sklepu</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {order ? (
         <>
+          <View style={styles.statusCard}>
+            <Text style={styles.statusLabel}>Aktualny status</Text>
+
+            <Text
+              style={
+                currentStatus === 'Anulowane'
+                  ? styles.cancelledStatusValue
+                  : styles.statusValue
+              }>
+              {currentStatus}
+            </Text>
+
+            <Text style={styles.statusDescription}>
+              {getFriendlyStatusDescription(currentStatus)}
+            </Text>
+          </View>
+
+          {currentStatus === 'Anulowane' ? (
+            <View style={styles.cancelledBox}>
+              <Text style={styles.cancelledTitle}>Zamówienie anulowane</Text>
+              <Text style={styles.cancelledText}>
+                To zamówienie nie będzie dalej realizowane.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.timelineCard}>
+              <Text style={styles.sectionTitle}>Przebieg realizacji</Text>
+
+              {STATUS_STEPS.map(renderStatusStep)}
+            </View>
+          )}
+
           <View style={styles.orderCard}>
             <Text style={styles.sectionTitle}>Zamówienie #{order.idOrder}</Text>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Data zamówienia</Text>
-              <Text style={styles.infoValue}>{formatDate(order.dataOrder)}</Text>
+            <View style={styles.infoGrid}>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Data zamówienia</Text>
+                <Text style={styles.infoValue}>{formatDate(order.dataOrder)}</Text>
+              </View>
+
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Data dostawy</Text>
+                <Text style={styles.infoValue}>
+                  {formatDate(order.deliveryDate)}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Data dostawy</Text>
-              <Text style={styles.infoValue}>
-                {formatDate(order.deliveryDate)}
-              </Text>
+            <View style={styles.infoGrid}>
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Pozycje</Text>
+                <Text style={styles.infoValue}>{order.orderItemsCount}</Text>
+              </View>
+
+              <View style={styles.infoBox}>
+                <Text style={styles.infoLabel}>Wartość</Text>
+                <Text style={styles.orderValue}>
+                  {formatMoney(order.totalValue)}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.infoRow}>
+            <View style={styles.infoBoxFull}>
               <Text style={styles.infoLabel}>Klient</Text>
               <Text style={styles.infoValue}>
-                {order.clientName ?? 'Brak klienta'}
-              </Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Obsługuje</Text>
-              <Text style={styles.infoValue}>
-                {order.workerName ?? 'Brak pracownika'}
-              </Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Liczba pozycji</Text>
-              <Text style={styles.infoValue}>{order.orderItemsCount}</Text>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Wartość produktów</Text>
-              <Text style={styles.orderValue}>
-                {formatMoney(order.totalValue)}
+                {order.clientName ?? 'Brak danych klienta'}
               </Text>
             </View>
           </View>
 
-          {order.notes && (
+          {order.notes ? (
             <View style={styles.notesCard}>
               <Text style={styles.sectionTitle}>Dostawa i płatność</Text>
 
               <Text style={styles.notesText}>{order.notes}</Text>
             </View>
-          )}
+          ) : null}
 
-          <Text style={styles.sectionTitleOutside}>Produkty w zamówieniu</Text>
+          <Text style={styles.sectionTitleOutside}>Produkty</Text>
 
           {orderItems.length === 0 ? (
             <View style={styles.emptyBox}>
               <Text style={styles.emptyText}>
-                Brak pozycji dla tego zamówienia
+                Brak pozycji dla tego zamówienia.
               </Text>
             </View>
           ) : (
             orderItems.map(renderOrderItem)
           )}
+
+          <View style={styles.totalCard}>
+            <Text style={styles.totalLabel}>Suma pozycji</Text>
+
+            <Text style={styles.totalValue}>
+              {formatMoney(orderTotalFromItems)}
+            </Text>
+          </View>
         </>
-      )}
+      ) : null}
 
       {isCustomer ? (
         <TouchableOpacity
           style={styles.customerPanelButton}
           onPress={() => navigation.navigate('ClientPanel')}
-          activeOpacity={0.8}>
+          activeOpacity={0.85}>
           <Text style={styles.customerPanelButtonText}>Moje konto</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {isCustomer ? (
+        <TouchableOpacity
+          style={styles.customerOrdersButton}
+          onPress={() => navigation.navigate('CustomerOrders')}
+          activeOpacity={0.85}>
+          <Text style={styles.customerOrdersButtonText}>Moje zamówienia</Text>
         </TouchableOpacity>
       ) : null}
 
       {isAdmin || isWorker ? (
         <TouchableOpacity
-          style={styles.adminPanelButton}
-          onPress={() => navigation.navigate('AdminPanel')}
-          activeOpacity={0.8}>
-          <Text style={styles.adminPanelButtonText}>Panel pracownika</Text>
+          style={styles.panelButton}
+          onPress={goToAccount}
+          activeOpacity={0.85}>
+          <Text style={styles.panelButtonText}>Panel obsługi</Text>
         </TouchableOpacity>
       ) : null}
 
       <TouchableOpacity
         style={styles.shopButton}
         onPress={() => navigation.navigate('Items')}
-        activeOpacity={0.8}>
-        <Text style={styles.shopButtonText}>Przejdź do sklepu</Text>
+        activeOpacity={0.85}>
+        <Text style={styles.shopButtonText}>Produkty</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.homeButton}
         onPress={() => navigation.navigate('Home')}
-        activeOpacity={0.8}>
-        <Text style={styles.homeButtonText}>Wróć na stronę główną</Text>
+        activeOpacity={0.85}>
+        <Text style={styles.homeButtonText}>Strona główna</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -330,7 +526,7 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '900',
   },
 
@@ -339,6 +535,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
+    fontWeight: '700',
   },
 
   searchCard: {
@@ -357,29 +554,43 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
+  searchRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
   input: {
+    flex: 1,
     backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 15,
-    marginBottom: 12,
   },
 
   searchButton: {
     backgroundColor: '#f97316',
-    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   searchButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
+  },
+
+  searchHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    marginTop: 10,
   },
 
   loadingBox: {
@@ -418,23 +629,90 @@ const styles = StyleSheet.create({
     color: '#fecaca',
     fontSize: 13,
     lineHeight: 18,
+    marginBottom: 12,
   },
 
-  orderCard: {
+  errorActionButton: {
+    backgroundColor: '#ef4444',
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  errorActionButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  statusCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
-    borderColor: '#16a34a',
+    borderColor: '#f97316',
     marginBottom: 14,
   },
 
-  notesCard: {
+  statusLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 5,
+  },
+
+  statusValue: {
+    color: '#f97316',
+    fontSize: 30,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  cancelledStatusValue: {
+    color: '#fca5a5',
+    fontSize: 30,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  statusDescription: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+
+  cancelledBox: {
+    backgroundColor: '#7f1d1d',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#ef4444',
+    marginBottom: 14,
+  },
+
+  cancelledTitle: {
+    color: '#fecaca',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  cancelledText: {
+    color: '#fecaca',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+  },
+
+  timelineCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#f97316',
+    borderColor: '#334155',
     marginBottom: 14,
   },
 
@@ -442,7 +720,125 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
+    marginBottom: 12,
+  },
+
+  statusStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+
+  statusDot: {
+    width: 34,
+    height: 34,
+    borderRadius: 999,
+    backgroundColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  statusDotDone: {
+    backgroundColor: '#16a34a',
+  },
+
+  statusDotCurrent: {
+    backgroundColor: '#f97316',
+  },
+
+  statusDotText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  statusStepTextBox: {
+    flex: 1,
+  },
+
+  statusStepTitle: {
+    color: '#cbd5e1',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  statusStepTitleDone: {
+    color: '#f8fafc',
+  },
+
+  statusStepText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+
+  orderCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 10,
     marginBottom: 10,
+  },
+
+  infoBox: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+
+  infoBoxFull: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+
+  infoLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  infoValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  orderValue: {
+    color: '#16a34a',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  notesCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  notesText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '700',
   },
 
   sectionTitleOutside: {
@@ -450,37 +846,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginBottom: 12,
-  },
-
-  infoRow: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#1e293b',
-    paddingVertical: 9,
-  },
-
-  infoLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-
-  infoValue: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  orderValue: {
-    color: '#16a34a',
-    fontSize: 20,
-    fontWeight: '900',
-  },
-
-  notesText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 20,
   },
 
   itemCard: {
@@ -496,26 +861,57 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    marginBottom: 6,
+    marginBottom: 10,
   },
 
-  itemText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    marginBottom: 4,
+  itemInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e293b',
+    paddingVertical: 7,
+  },
+
+  itemLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
   },
 
   itemValue: {
-    color: '#f97316',
-    fontSize: 15,
+    color: '#f8fafc',
+    fontSize: 13,
     fontWeight: '900',
-    marginTop: 4,
+    textAlign: 'right',
+  },
+
+  itemSummaryBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginTop: 10,
+  },
+
+  itemSummaryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  itemSummaryValue: {
+    color: '#f97316',
+    fontSize: 16,
+    fontWeight: '900',
   },
 
   emptyBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
@@ -523,65 +919,99 @@ const styles = StyleSheet.create({
 
   emptyText: {
     color: '#94a3b8',
-    fontSize: 14,
     textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  totalCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 14,
+  },
+
+  totalLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  totalValue: {
+    color: '#16a34a',
+    fontSize: 24,
+    fontWeight: '900',
   },
 
   customerPanelButton: {
     backgroundColor: '#2563eb',
-    paddingVertical: 13,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   customerPanelButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 
-  adminPanelButton: {
-    backgroundColor: '#a855f7',
-    paddingVertical: 13,
+  customerOrdersButton: {
+    backgroundColor: '#38bdf8',
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
-  adminPanelButtonText: {
+  customerOrdersButtonText: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  panelButton: {
+    backgroundColor: '#a855f7',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  panelButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 
   shopButton: {
     backgroundColor: '#16a34a',
-    paddingVertical: 13,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 4,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   shopButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 
   homeButton: {
-    backgroundColor: '#f97316',
-    paddingVertical: 13,
+    backgroundColor: '#334155',
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
   homeButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
   },
 });

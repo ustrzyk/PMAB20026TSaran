@@ -22,7 +22,7 @@ import type {OrderDto} from '../types/models.ts';
 type Props = NativeStackScreenProps<RootStackParamList, 'Orders'>;
 
 type SortMode = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc' | 'itemsDesc';
-type StatusFilter = 'all' | 'active' | 'inactive';
+type ViewFilter = 'current' | 'all' | 'archived';
 
 interface DialogState {
   visible: boolean;
@@ -63,7 +63,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('current');
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -73,16 +73,38 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const currentOrders = useMemo(() => {
+    return orders.filter(order => order.isActive !== false);
+  }, [orders]);
+
+  const archivedOrders = useMemo(() => {
+    return orders.filter(order => order.isActive === false);
+  }, [orders]);
+
+  const totalOrdersValue = useMemo(() => {
+    return currentOrders.reduce((sum, order) => {
+      return sum + (order.totalValue ?? 0);
+    }, 0);
+  }, [currentOrders]);
+
+  const todayOrdersCount = useMemo(() => {
+    const today = new Date().toISOString().substring(0, 10);
+
+    return currentOrders.filter(order => {
+      return formatDate(order.dataOrder) === today;
+    }).length;
+  }, [currentOrders]);
+
   const filteredOrders = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
     let result = orders;
 
-    if (statusFilter === 'active') {
+    if (viewFilter === 'current') {
       result = result.filter(order => order.isActive !== false);
     }
 
-    if (statusFilter === 'inactive') {
+    if (viewFilter === 'archived') {
       result = result.filter(order => order.isActive === false);
     }
 
@@ -92,12 +114,16 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         const clientName = order.clientName?.toLowerCase() ?? '';
         const workerName = order.workerName?.toLowerCase() ?? '';
         const notes = order.notes?.toLowerCase() ?? '';
+        const date = order.dataOrder?.toLowerCase() ?? '';
+        const deliveryDate = order.deliveryDate?.toLowerCase() ?? '';
 
         return (
           idOrder.includes(search) ||
           clientName.includes(search) ||
           workerName.includes(search) ||
-          notes.includes(search)
+          notes.includes(search) ||
+          date.includes(search) ||
+          deliveryDate.includes(search)
         );
       });
     }
@@ -121,19 +147,19 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     }
 
     if (sortMode === 'itemsDesc') {
-      sorted.sort((a, b) => (b.orderItemsCount ?? 0) - (a.orderItemsCount ?? 0));
+      sorted.sort((a, b) => {
+        return (b.orderItemsCount ?? 0) - (a.orderItemsCount ?? 0);
+      });
     }
 
     return sorted;
-  }, [orders, searchText, sortMode, statusFilter]);
+  }, [orders, searchText, sortMode, viewFilter]);
 
-  const activeCount = useMemo(() => {
-    return orders.filter(order => order.isActive !== false).length;
-  }, [orders]);
-
-  const inactiveCount = useMemo(() => {
-    return orders.filter(order => order.isActive === false).length;
-  }, [orders]);
+  const visibleOrdersValue = useMemo(() => {
+    return filteredOrders.reduce((sum, order) => {
+      return sum + (order.totalValue ?? 0);
+    }, 0);
+  }, [filteredOrders]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -152,7 +178,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       setOrders(data);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Nieznany błąd pobierania danych';
+        err instanceof Error ? err.message : 'Nie udało się pobrać zamówień';
 
       setError(message);
     } finally {
@@ -173,19 +199,19 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     await loadOrders();
   };
 
-  const handleDelete = (order: OrderDto): void => {
+  const handleArchive = (order: OrderDto): void => {
     setSelectedOrder(order);
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Usuwanie zamówienia',
-      message: `Czy na pewno chcesz oznaczyć zamówienie nr ${order.idOrder} jako nieaktywne?`,
+      title: 'Przenieść do archiwum?',
+      message: `Zamówienie #${order.idOrder} zostanie ukryte z bieżącej listy.`,
       loading: false,
     });
   };
 
-  const confirmDelete = async (): Promise<void> => {
+  const confirmArchive = async (): Promise<void> => {
     if (!selectedOrder) {
       return;
     }
@@ -216,15 +242,15 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Zamówienie oznaczone jako nieaktywne',
-        message: 'Zamówienie zostało przeniesione do nieaktywnych.',
+        title: 'Zamówienie przeniesione',
+        message: 'Zamówienie trafiło do archiwum.',
         loading: false,
       });
     } catch (err) {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Błąd usuwania',
+        title: 'Nie udało się wykonać operacji',
         message: (err as Error).message,
         loading: false,
       });
@@ -233,7 +259,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
   const handleDialogConfirm = (): void => {
     if (dialog.type === 'confirm') {
-      confirmDelete();
+      confirmArchive();
       return;
     }
 
@@ -243,31 +269,32 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
   const openOrderItems = (order: OrderDto): void => {
     navigation.navigate('OrderItems', {
       idOrder: order.idOrder,
-      orderTitle: `Zamówienie nr ${order.idOrder}`,
+      orderTitle: `Zamówienie #${order.idOrder}`,
     });
   };
 
   const clearFilters = (): void => {
     setSearchText('');
-    setStatusFilter('active');
+    setViewFilter('current');
     setSortMode('newest');
   };
 
-  const renderStatusButton = (
+  const renderViewButton = (
     label: string,
-    value: StatusFilter,
+    value: ViewFilter,
   ): React.JSX.Element => {
-    const selected = statusFilter === value;
+    const selected = viewFilter === value;
 
     return (
       <TouchableOpacity
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
-        onPress={() => setStatusFilter(value)}
-        activeOpacity={0.8}>
+        key={`view-${value}`}
+        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        onPress={() => setViewFilter(value)}
+        activeOpacity={0.85}>
         <Text
           style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -283,9 +310,10 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
+        key={`sort-${value}`}
         style={[styles.sortButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
-        activeOpacity={0.8}>
+        activeOpacity={0.85}>
         <Text
           style={[
             styles.sortButtonText,
@@ -301,69 +329,75 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     return (
       <>
         <View style={styles.heroBox}>
-          <Text style={styles.shopName}>3D Print Shop</Text>
+          <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Zamówienia</Text>
           <Text style={styles.heroSubtitle}>
-            Obsługa zamówień klientów, pozycji zamówienia i wartości sprzedaży.
+            Szybki podgląd zamówień, klientów i wartości sprzedaży.
           </Text>
-        </View>
-
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Zamówienia</Text>
-            <Text style={styles.subtitle}>
-              Wyświetlane: {filteredOrders.length} / {orders.length}
-            </Text>
-          </View>
-
-          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-            <Text style={styles.refreshButtonText}>Odśwież</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.summaryBox}>
           <View style={styles.summaryColumn}>
-            <Text style={styles.summaryLabel}>Aktywne</Text>
-            <Text style={styles.summaryActive}>{activeCount}</Text>
+            <Text style={styles.summaryLabel}>Bieżące</Text>
+            <Text style={styles.summaryCurrent}>{currentOrders.length}</Text>
           </View>
 
           <View style={styles.summaryColumn}>
-            <Text style={styles.summaryLabel}>Nieaktywne</Text>
-            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+            <Text style={styles.summaryLabel}>Dzisiaj</Text>
+            <Text style={styles.summaryToday}>{todayOrdersCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Archiwum</Text>
+            <Text style={styles.summaryArchived}>{archivedOrders.length}</Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('CreateOrder')}
-          activeOpacity={0.8}>
-          <Text style={styles.createButtonText}>+ Dodaj zamówienie</Text>
-        </TouchableOpacity>
+        <View style={styles.valueBox}>
+          <Text style={styles.valueLabel}>Wartość bieżących zamówień</Text>
+          <Text style={styles.valueText}>{formatMoney(totalOrdersValue)}</Text>
+        </View>
+
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => navigation.navigate('CreateOrder')}
+            activeOpacity={0.85}>
+            <Text style={styles.createButtonText}>+ Dodaj</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.dashboardButton}
+            onPress={() => navigation.navigate('Dashboard')}
+            activeOpacity={0.85}>
+            <Text style={styles.dashboardButtonText}>Dashboard</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchBox}>
           <TextInput
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj po numerze, kliencie, pracowniku lub notatce..."
+            placeholder="Szukaj numeru, klienta, daty..."
             placeholderTextColor="#64748b"
           />
         </View>
 
-        <View style={styles.sortBox}>
-          <Text style={styles.sortTitle}>Status</Text>
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Widok</Text>
 
-          <View style={styles.sortButtons}>
-            {renderStatusButton('Wszystkie', 'all')}
-            {renderStatusButton('Aktywne', 'active')}
-            {renderStatusButton('Nieaktywne', 'inactive')}
+          <View style={styles.filterButtons}>
+            {renderViewButton('Bieżące', 'current')}
+            {renderViewButton('Wszystkie', 'all')}
+            {renderViewButton('Archiwum', 'archived')}
           </View>
         </View>
 
-        <View style={styles.sortBox}>
-          <Text style={styles.sortTitle}>Sortowanie</Text>
+        <View style={styles.filterSection}>
+          <Text style={styles.filterTitle}>Sortowanie</Text>
 
-          <View style={styles.sortButtons}>
+          <View style={styles.filterButtons}>
             {renderSortButton('Najnowsze', 'newest')}
             {renderSortButton('Najstarsze', 'oldest')}
             {renderSortButton('Wartość ↓', 'valueDesc')}
@@ -374,116 +408,112 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.filterSummaryBox}>
           <Text style={styles.filterSummaryText}>
-            Filtr:{' '}
+            Wyświetlane: {filteredOrders.length} / {orders.length}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Wartość widocznych: {formatMoney(visibleOrdersValue)}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Szukaj:{' '}
             {searchText.trim().length > 0
               ? searchText.trim()
               : 'brak wyszukiwania'}
           </Text>
 
-          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
-            <Text style={styles.clearFiltersText}>Wyczyść</Text>
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
+            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          activeOpacity={0.85}>
+          <Text style={styles.refreshButtonText}>Odśwież listę</Text>
+        </TouchableOpacity>
       </>
     );
   };
 
   const renderItem = ({item}: {item: OrderDto}): React.JSX.Element => {
-    const isActive = item.isActive !== false;
+    const isCurrent = item.isActive !== false;
 
     return (
       <View style={styles.orderCard}>
         <View style={styles.orderTopRow}>
           <View style={styles.orderTitleBox}>
-            <Text style={styles.orderTitle}>Zamówienie nr {item.idOrder}</Text>
+            <Text style={styles.orderTitle}>Zamówienie #{item.idOrder}</Text>
             <Text style={styles.orderDate}>
-              Data: {formatDate(item.dataOrder)}
+              {formatDate(item.dataOrder)}
             </Text>
           </View>
 
-          <View style={styles.badgesBox}>
-            <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
-              {isActive ? 'Aktywne' : 'Nieaktywne'}
-            </Text>
+          <Text style={isCurrent ? styles.currentBadge : styles.archivedBadge}>
+            {isCurrent ? 'Bieżące' : 'Archiwum'}
+          </Text>
+        </View>
 
-            <View style={styles.statusBadge}>
-              <Text style={styles.statusBadgeText}>
-                {item.orderItemsCount > 0 ? 'Z pozycjami' : 'Puste'}
-              </Text>
-            </View>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Klient</Text>
+            <Text style={styles.infoValue} numberOfLines={1}>
+              {item.clientName ?? 'Brak danych'}
+            </Text>
+          </View>
+
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Wartość</Text>
+            <Text style={styles.orderValue}>{formatMoney(item.totalValue)}</Text>
           </View>
         </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Klient</Text>
-          <Text style={styles.infoValue}>
-            {item.clientName ?? `ID ${item.idClient ?? '-'}`}
-          </Text>
-        </View>
-
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Pracownik</Text>
-          <Text style={styles.infoValue}>
-            {item.workerName ?? `ID ${item.idWorker ?? '-'}`}
-          </Text>
-        </View>
-
-        <View style={styles.rowBox}>
-          <View style={styles.smallInfoBox}>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBox}>
             <Text style={styles.infoLabel}>Dostawa</Text>
             <Text style={styles.infoValue}>{formatDate(item.deliveryDate)}</Text>
           </View>
 
-          <View style={styles.smallInfoBox}>
+          <View style={styles.infoBox}>
             <Text style={styles.infoLabel}>Pozycje</Text>
-            <Text style={styles.infoValue}>{item.orderItemsCount}</Text>
+            <Text style={styles.infoValue}>{item.orderItemsCount ?? 0}</Text>
           </View>
         </View>
 
-        <View style={styles.totalBox}>
-          <Text style={styles.totalLabel}>Wartość produktów</Text>
-          <Text style={styles.totalValue}>{formatMoney(item.totalValue)}</Text>
-        </View>
-
         {item.notes ? (
-          <Text style={styles.orderNotes} numberOfLines={4}>
-            {item.notes}
-          </Text>
+          <View style={styles.notesBox}>
+            <Text style={styles.notesLabel}>Informacje</Text>
+            <Text style={styles.notesText} numberOfLines={4}>
+              {item.notes}
+            </Text>
+          </View>
         ) : null}
 
-        <View style={styles.actions}>
+        <View style={styles.cardActions}>
           <TouchableOpacity
-            style={styles.previewButton}
-            onPress={() =>
-              navigation.navigate('TrackOrder', {
-                idOrder: item.idOrder,
-              })
-            }
-            activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Podgląd</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.itemsButton}
+            style={styles.primaryCardButton}
             onPress={() => openOrderItems(item)}
-            activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Pozycje</Text>
+            activeOpacity={0.85}>
+            <Text style={styles.cardButtonText}>Pozycje</Text>
           </TouchableOpacity>
-        </View>
 
-        <View style={styles.actions}>
           <TouchableOpacity
-            style={styles.editButton}
+            style={styles.secondaryCardButton}
             onPress={() => navigation.navigate('EditOrder', {order: item})}
-            activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Edytuj</Text>
+            activeOpacity={0.85}>
+            <Text style={styles.cardButtonText}>Edytuj</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDelete(item)}
-            activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Usuń</Text>
+            style={[
+              styles.archiveButton,
+              !isCurrent && styles.disabledArchiveButton,
+            ]}
+            onPress={() => handleArchive(item)}
+            activeOpacity={0.85}
+            disabled={!isCurrent}>
+            <Text style={styles.cardButtonText}>Archiwum</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -503,11 +533,20 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorTitle}>Nie udało się pobrać zamówień</Text>
-
         <Text style={styles.errorText}>{error}</Text>
 
-        <TouchableOpacity style={styles.retryButton} onPress={loadOrders}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={loadOrders}
+          activeOpacity={0.85}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.85}>
+          <Text style={styles.backButtonText}>Panel obsługi</Text>
         </TouchableOpacity>
       </View>
     );
@@ -520,7 +559,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         type={dialog.type}
         title={dialog.title}
         message={dialog.message}
-        confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
+        confirmText={dialog.type === 'confirm' ? 'Przenieś' : 'OK'}
         cancelText="Anuluj"
         loading={dialog.loading}
         onConfirm={handleDialogConfirm}
@@ -538,11 +577,42 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 || statusFilter !== 'active'
-              ? 'Brak zamówień pasujących do filtrów'
-              : 'Brak aktywnych zamówień w API'}
-          </Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>📦</Text>
+            <Text style={styles.emptyTitle}>Brak zamówień</Text>
+
+            <Text style={styles.emptyText}>
+              {orders.length === 0
+                ? 'Nie ma jeszcze zamówień w systemie.'
+                : 'Brak zamówień pasujących do filtrów.'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={orders.length === 0 ? () => navigation.navigate('CreateOrder') : clearFilters}
+              activeOpacity={0.85}>
+              <Text style={styles.emptyButtonText}>
+                {orders.length === 0 ? 'Dodaj zamówienie' : 'Wyczyść filtry'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footerBox}>
+            <TouchableOpacity
+              style={styles.footerPrimaryButton}
+              onPress={() => navigation.navigate('CreateOrder')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerPrimaryButtonText}>Dodaj zamówienie</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerSecondaryButton}
+              onPress={() => navigation.navigate('AdminPanel')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerSecondaryButtonText}>Panel obsługi</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     </View>
@@ -581,100 +651,85 @@ const styles = StyleSheet.create({
     color: '#fca5a5',
     fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 16,
   },
 
   retryButton: {
     backgroundColor: '#f97316',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginBottom: 10,
   },
 
   retryButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+
+  backButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   listContent: {
-    paddingBottom: 30,
+    padding: 16,
+    paddingBottom: 32,
   },
 
   heroBox: {
     backgroundColor: '#111827',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
   },
 
-  shopName: {
+  appName: {
     color: '#f97316',
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 7,
   },
 
   heroTitle: {
     color: '#f8fafc',
-    fontSize: 22,
+    fontSize: 27,
     fontWeight: '900',
   },
 
   heroSubtitle: {
     color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
-  },
-
-  header: {
-    padding: 16,
-    backgroundColor: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 24,
-    fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#94a3b8',
-    fontSize: 13,
-    marginTop: 4,
-  },
-
-  refreshButton: {
-    backgroundColor: '#f97316',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-
-  refreshButtonText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    fontWeight: '700',
   },
 
   summaryBox: {
     backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 12,
+    marginBottom: 12,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
 
   summaryColumn: {
@@ -683,42 +738,87 @@ const styles = StyleSheet.create({
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
     marginBottom: 4,
   },
 
-  summaryActive: {
-    color: '#16a34a',
-    fontSize: 22,
+  summaryCurrent: {
+    color: '#f97316',
+    fontSize: 23,
     fontWeight: '900',
   },
 
-  summaryInactive: {
-    color: '#f97316',
-    fontSize: 22,
+  summaryToday: {
+    color: '#38bdf8',
+    fontSize: 23,
     fontWeight: '900',
+  },
+
+  summaryArchived: {
+    color: '#94a3b8',
+    fontSize: 23,
+    fontWeight: '900',
+  },
+
+  valueBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 12,
+  },
+
+  valueLabel: {
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  valueText: {
+    color: '#bbf7d0',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
   },
 
   createButton: {
+    flex: 1,
     backgroundColor: '#16a34a',
-    marginHorizontal: 16,
-    marginTop: 14,
-    paddingVertical: 13,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
   createButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  dashboardButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  dashboardButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
   },
 
   searchBox: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    backgroundColor: '#0f172a',
+    marginBottom: 12,
   },
 
   searchInput: {
@@ -732,22 +832,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 
-  sortBox: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+  filterSection: {
+    marginBottom: 12,
   },
 
-  sortTitle: {
+  filterTitle: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '900',
     marginBottom: 8,
   },
 
-  sortButtons: {
+  filterButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+  },
+
+  filterButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  filterButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  filterButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  filterButtonTextSelected: {
+    color: '#ffffff',
   },
 
   sortButton: {
@@ -760,8 +883,8 @@ const styles = StyleSheet.create({
   },
 
   sortButtonSelected: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
   },
 
   sortButtonText: {
@@ -776,20 +899,18 @@ const styles = StyleSheet.create({
 
   filterSummaryBox: {
     backgroundColor: '#111827',
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    padding: 12,
+    marginBottom: 12,
   },
 
   filterSummaryText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
   clearFiltersText: {
@@ -798,21 +919,35 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  refreshButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  refreshButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
   orderCard: {
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    marginTop: 12,
   },
 
   orderTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 10,
-    marginBottom: 10,
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
 
   orderTitleBox: {
@@ -821,170 +956,208 @@ const styles = StyleSheet.create({
 
   orderTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
-    marginBottom: 4,
   },
 
   orderDate: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
   },
 
-  badgesBox: {
-    alignItems: 'flex-end',
-    gap: 6,
-  },
-
-  activeBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  inactiveBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  statusBadge: {
-    backgroundColor: '#1e293b',
-    borderRadius: 999,
+  currentBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    alignSelf: 'flex-start',
-  },
-
-  statusBadgeText: {
-    color: '#cbd5e1',
+    paddingVertical: 5,
+    borderRadius: 999,
     fontSize: 11,
     fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  archivedBadge: {
+    backgroundColor: '#334155',
+    color: '#cbd5e1',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 9,
+    marginBottom: 9,
   },
 
   infoBox: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 8,
-  },
-
-  rowBox: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-
-  smallInfoBox: {
     flex: 1,
     backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#1e293b',
     borderRadius: 12,
     padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
   },
 
   infoLabel: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   infoValue: {
     color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  totalBox: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 10,
-    marginTop: 2,
-    marginBottom: 8,
-  },
-
-  totalLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-
-  totalValue: {
-    color: '#f97316',
-    fontSize: 20,
+    fontSize: 13,
     fontWeight: '900',
   },
 
-  orderNotes: {
-    color: '#94a3b8',
-    fontSize: 13,
-    lineHeight: 18,
-    marginTop: 4,
+  orderValue: {
+    color: '#16a34a',
+    fontSize: 16,
+    fontWeight: '900',
   },
 
-  actions: {
+  notesBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 10,
+  },
+
+  notesLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  notesText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '700',
+  },
+
+  cardActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 10,
+    marginTop: 2,
   },
 
-  previewButton: {
+  primaryCardButton: {
     flex: 1,
-    backgroundColor: '#38bdf8',
-    paddingVertical: 10,
+    backgroundColor: '#f97316',
     borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
   },
 
-  itemsButton: {
-    flex: 1,
-    backgroundColor: '#9333ea',
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-
-  editButton: {
+  secondaryCardButton: {
     flex: 1,
     backgroundColor: '#2563eb',
-    paddingVertical: 10,
     borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
   },
 
-  deleteButton: {
+  archiveButton: {
     flex: 1,
-    backgroundColor: '#7f1d1d',
-    paddingVertical: 10,
+    backgroundColor: '#334155',
     borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
   },
 
-  buttonText: {
+  disabledArchiveButton: {
+    opacity: 0.5,
+  },
+
+  cardButtonText: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900',
-    textAlign: 'center',
+  },
+
+  emptyBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginTop: 14,
+    alignItems: 'center',
+  },
+
+  emptyIcon: {
+    fontSize: 44,
+    marginBottom: 10,
+  },
+
+  emptyTitle: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 6,
   },
 
   emptyText: {
-    color: '#94a3b8',
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginTop: 40,
-    marginHorizontal: 16,
-    fontSize: 16,
+    marginBottom: 16,
+  },
+
+  emptyButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+
+  emptyButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  footerBox: {
+    paddingTop: 16,
+    gap: 10,
+  },
+
+  footerPrimaryButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerPrimaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  footerSecondaryButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerSecondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 

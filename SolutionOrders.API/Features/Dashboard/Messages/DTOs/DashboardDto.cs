@@ -13,6 +13,13 @@
         public int OrdersCount { get; set; }
         public int OrderItemsCount { get; set; }
 
+        public int NewOrdersCount { get; set; }
+        public int InProgressOrdersCount { get; set; }
+        public int ReadyOrdersCount { get; set; }
+        public int ShippedOrdersCount { get; set; }
+        public int CompletedOrdersCount { get; set; }
+        public int CancelledOrdersCount { get; set; }
+
         public decimal ProductsStockValue { get; set; }
         public decimal OrdersTotalValue { get; set; }
 

@@ -26,6 +26,10 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
   const {user, isCustomer, isAdmin, isWorker, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
 
+  const hasAddress = !!user?.adress && user.adress.trim().length > 0;
+  const hasPhone = !!user?.phoneNumber && user.phoneNumber.trim().length > 0;
+  const deliveryReady = hasAddress && hasPhone;
+
   const handleLogout = (): void => {
     logout();
 
@@ -35,7 +39,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
     });
   };
 
-  const handlePanelPress = (): void => {
+  const handleBackPress = (): void => {
     if (isAdmin || isWorker) {
       navigation.reset({
         index: 0,
@@ -54,26 +58,32 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>👤</Text>
-        <Text style={styles.accessTitle}>Panel klienta</Text>
+
+        <Text style={styles.accessTitle}>Moje konto</Text>
+
         <Text style={styles.accessText}>
-          Ten ekran jest dostępny po zalogowaniu albo rejestracji konta klienta.
+          Zaloguj się albo utwórz konto, aby zobaczyć swoje zamówienia i dane
+          dostawy.
         </Text>
 
         <TouchableOpacity
           style={styles.primaryAccessButton}
           onPress={() =>
-            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'AuthLogin'}],
+            })
           }
           activeOpacity={0.85}>
-          <Text style={styles.primaryAccessButtonText}>Zaloguj</Text>
+          <Text style={styles.primaryAccessButtonText}>Zaloguj się</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryAccessButton}
-          onPress={handlePanelPress}
+          onPress={handleBackPress}
           activeOpacity={0.85}>
           <Text style={styles.secondaryAccessButtonText}>
-            {isAdmin || isWorker ? 'Panel pracownika' : 'Wróć do sklepu'}
+            {isAdmin || isWorker ? 'Panel obsługi' : 'Wróć do sklepu'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -87,6 +97,8 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.heroTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
             <Text style={styles.title}>Moje konto</Text>
+            <Text style={styles.userText}>{user?.name}</Text>
+            <Text style={styles.emailText}>{user?.login}</Text>
           </View>
 
           <TouchableOpacity
@@ -96,101 +108,162 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.logoutButtonText}>Wyloguj</Text>
           </TouchableOpacity>
         </View>
+      </View>
 
-        <Text style={styles.userText}>{user?.name}</Text>
-        <Text style={styles.emailText}>{user?.login}</Text>
+      <View style={deliveryReady ? styles.readyBox : styles.warningBox}>
+        <Text style={deliveryReady ? styles.readyTitle : styles.warningTitle}>
+          {deliveryReady ? 'Konto gotowe do zakupów' : 'Uzupełnij dane dostawy'}
+        </Text>
+
+        <Text style={deliveryReady ? styles.readyText : styles.warningText}>
+          {deliveryReady
+            ? 'Adres i telefon są zapisane. Przy zamówieniu będzie szybciej.'
+            : 'Dodaj adres i telefon, żeby łatwiej składać zamówienia.'}
+        </Text>
+
+        <TouchableOpacity
+          style={deliveryReady ? styles.readyButton : styles.warningButton}
+          onPress={() => navigation.navigate('CustomerProfile')}
+          activeOpacity={0.85}>
+          <Text style={styles.statusButtonText}>
+            {deliveryReady ? 'Zobacz dane' : 'Uzupełnij teraz'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.cartBox}>
-        <Text style={styles.cartIcon}>🛒</Text>
+        <View style={styles.cartIconBox}>
+          <Text style={styles.cartIcon}>🛒</Text>
+        </View>
 
         <View style={styles.cartTextBox}>
-          <Text style={styles.cartTitle}>Koszyk</Text>
-          <Text style={styles.cartText}>
+          <Text style={styles.cartTitle}>Twój koszyk</Text>
+
+          <Text style={styles.cartValue}>
             {totalQuantity} szt. | {formatMoney(totalValue)}
           </Text>
+
+          <Text style={styles.cartHint}>
+            {totalQuantity > 0
+              ? 'Możesz przejść do koszyka i złożyć zamówienie.'
+              : 'Koszyk jest pusty. Przejdź do sklepu i dodaj produkty.'}
+          </Text>
         </View>
 
         <TouchableOpacity
-          style={styles.smallButton}
+          style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
           activeOpacity={0.85}>
-          <Text style={styles.smallButtonText}>Otwórz</Text>
+          <Text style={styles.cartButtonText}>Otwórz</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.detailsBox}>
-        <Text style={styles.detailsTitle}>Dane dostawy</Text>
+      <Text style={styles.sectionTitle}>Najczęściej używane</Text>
 
-        <View style={styles.detailsRow}>
-          <Text style={styles.detailsLabel}>Adres</Text>
-          <Text style={styles.detailsValue}>
-            {user?.adress && user.adress.length > 0
-              ? user.adress
-              : 'Brak adresu w koncie'}
-          </Text>
-        </View>
-
-        <View style={styles.detailsRow}>
-          <Text style={styles.detailsLabel}>Telefon</Text>
-          <Text style={styles.detailsValue}>
-            {user?.phoneNumber && user.phoneNumber.length > 0
-              ? user.phoneNumber
-              : 'Brak telefonu w koncie'}
-          </Text>
-        </View>
-      </View>
-
-      <Text style={styles.sectionTitle}>Szybkie akcje</Text>
-
-      <View style={styles.grid}>
+      <View style={styles.mainGrid}>
         <TouchableOpacity
-          style={[styles.actionCard, styles.shopCard]}
+          style={[styles.mainCard, styles.shopCard]}
           onPress={() => navigation.navigate('Items')}
           activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>🖨️</Text>
-          <Text style={styles.actionTitle}>Sklep</Text>
+          <Text style={styles.mainIcon}>🛍️</Text>
+          <Text style={styles.mainTitle}>Sklep</Text>
+          <Text style={styles.mainText}>Produkty i kategorie</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionCard, styles.cartCard]}
-          onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>🛒</Text>
-          <Text style={styles.actionTitle}>Koszyk</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionCard, styles.ordersCard]}
+          style={[styles.mainCard, styles.ordersCard]}
           onPress={() => navigation.navigate('CustomerOrders')}
           activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>📋</Text>
-          <Text style={styles.actionTitle}>Moje zamówienia</Text>
+          <Text style={styles.mainIcon}>📋</Text>
+          <Text style={styles.mainTitle}>Zamówienia</Text>
+          <Text style={styles.mainText}>Historia i statusy</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.actionCard, styles.profileCard]}
-          onPress={() => navigation.navigate('CustomerProfile')}
-          activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>👤</Text>
-          <Text style={styles.actionTitle}>Dane konta</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionCard, styles.orderCard]}
+          style={[styles.mainCard, styles.statusCard]}
           onPress={() => navigation.navigate('TrackOrder')}
           activeOpacity={0.85}>
-          <Text style={styles.actionIcon}>📦</Text>
-          <Text style={styles.actionTitle}>Sprawdź zamówienie</Text>
+          <Text style={styles.mainIcon}>📦</Text>
+          <Text style={styles.mainTitle}>Status</Text>
+          <Text style={styles.mainText}>Sprawdź numer</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.mainCard, styles.profileCard]}
+          onPress={() => navigation.navigate('CustomerProfile')}
+          activeOpacity={0.85}>
+          <Text style={styles.mainIcon}>👤</Text>
+          <Text style={styles.mainTitle}>Dane</Text>
+          <Text style={styles.mainText}>Adres i konto</Text>
         </TouchableOpacity>
       </View>
 
-      <TouchableOpacity
-        style={styles.homeButton}
-        onPress={() => navigation.navigate('Home')}
-        activeOpacity={0.85}>
-        <Text style={styles.homeButtonText}>Strona główna</Text>
-      </TouchableOpacity>
+      <View style={styles.deliveryBox}>
+        <View style={styles.deliveryHeaderRow}>
+          <Text style={styles.deliveryTitle}>Dane dostawy</Text>
+
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => navigation.navigate('CustomerProfile')}
+            activeOpacity={0.85}>
+            <Text style={styles.editButtonText}>Edytuj</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.deliveryRow}>
+          <Text style={styles.deliveryLabel}>Adres</Text>
+          <Text style={styles.deliveryValue}>
+            {hasAddress ? user?.adress : 'Brak adresu'}
+          </Text>
+        </View>
+
+        <View style={styles.deliveryRow}>
+          <Text style={styles.deliveryLabel}>Telefon</Text>
+          <Text style={styles.deliveryValue}>
+            {hasPhone ? user?.phoneNumber : 'Brak telefonu'}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Skróty</Text>
+
+      <View style={styles.shortcutList}>
+        <TouchableOpacity
+          style={styles.shortcutRow}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.85}>
+          <Text style={styles.shortcutIcon}>🏠</Text>
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Strona główna</Text>
+            <Text style={styles.shortcutText}>Wróć do ekranu startowego</Text>
+          </View>
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.shortcutRow}
+          onPress={() => navigation.navigate('Items')}
+          activeOpacity={0.85}>
+          <Text style={styles.shortcutIcon}>🖨️</Text>
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Produkty</Text>
+            <Text style={styles.shortcutText}>Przeglądaj ofertę sklepu</Text>
+          </View>
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.shortcutRow}
+          onPress={() => navigation.navigate('Cart')}
+          activeOpacity={0.85}>
+          <Text style={styles.shortcutIcon}>🛒</Text>
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Koszyk</Text>
+            <Text style={styles.shortcutText}>Przejdź do zamówienia</Text>
+          </View>
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -216,7 +289,7 @@ const styles = StyleSheet.create({
 
   accessTitle: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
@@ -295,13 +368,13 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
   },
 
   userText: {
     color: '#f8fafc',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     marginTop: 12,
   },
@@ -326,20 +399,97 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  cartBox: {
-    backgroundColor: '#111827',
+  readyBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 14,
+  },
+
+  warningBox: {
+    backgroundColor: '#431407',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#f97316',
     marginBottom: 14,
+  },
+
+  readyTitle: {
+    color: '#bbf7d0',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 17,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  readyText: {
+    color: '#bbf7d0',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+
+  readyButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  warningButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  statusButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  cartBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 18,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
 
+  cartIconBox: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: '#0f172a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
   cartIcon: {
-    fontSize: 34,
+    fontSize: 28,
   },
 
   cartTextBox: {
@@ -353,61 +503,31 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
 
-  cartText: {
-    color: '#cbd5e1',
-    fontSize: 13,
+  cartValue: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  cartHint: {
+    color: '#94a3b8',
+    fontSize: 12,
+    lineHeight: 17,
     fontWeight: '700',
   },
 
-  smallButton: {
+  cartButton: {
     backgroundColor: '#f97316',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
 
-  smallButtonText: {
+  cartButtonText: {
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900',
-  },
-
-  detailsBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 18,
-  },
-
-  detailsTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 10,
-  },
-
-  detailsRow: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 8,
-  },
-
-  detailsLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 3,
-  },
-
-  detailsValue: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '800',
   },
 
   sectionTitle: {
@@ -417,20 +537,20 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  grid: {
+  mainGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 10,
+    marginBottom: 18,
   },
 
-  actionCard: {
-    width: '47.8%',
-    minHeight: 118,
+  mainCard: {
+    width: '48%',
+    minHeight: 130,
     backgroundColor: '#111827',
     borderRadius: 18,
-    padding: 12,
+    padding: 13,
     borderWidth: 1,
-    alignItems: 'center',
     justifyContent: 'center',
   },
 
@@ -438,45 +558,134 @@ const styles = StyleSheet.create({
     borderColor: '#16a34a',
   },
 
-  cartCard: {
-    borderColor: '#f97316',
-  },
-
   ordersCard: {
     borderColor: '#a855f7',
   },
 
+  statusCard: {
+    borderColor: '#38bdf8',
+  },
+
   profileCard: {
-    borderColor: '#38bdf8',
+    borderColor: '#f97316',
   },
 
-  orderCard: {
-    borderColor: '#38bdf8',
-  },
-
-  actionIcon: {
-    fontSize: 34,
+  mainIcon: {
+    fontSize: 32,
     marginBottom: 8,
   },
 
-  actionTitle: {
+  mainTitle: {
+    color: '#f8fafc',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  mainText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  deliveryBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 18,
+  },
+
+  deliveryHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  deliveryTitle: {
+    color: '#f8fafc',
+    fontSize: 17,
+    fontWeight: '900',
+  },
+
+  editButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+
+  editButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  deliveryRow: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
+  },
+
+  deliveryLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  deliveryValue: {
     color: '#f8fafc',
     fontSize: 14,
-    fontWeight: '900',
-    textAlign: 'center',
+    fontWeight: '800',
   },
 
-  homeButton: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
+  shortcutList: {
+    gap: 10,
+  },
+
+  shortcutRow: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 18,
+    gap: 12,
   },
 
-  homeButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
+  shortcutIcon: {
+    fontSize: 26,
+  },
+
+  shortcutTextBox: {
+    flex: 1,
+  },
+
+  shortcutTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  shortcutText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  shortcutArrow: {
+    color: '#f97316',
+    fontSize: 20,
     fontWeight: '900',
   },
 });

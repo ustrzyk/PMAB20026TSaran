@@ -197,6 +197,23 @@ export interface CustomerLoginResponseDto {
   phoneNumber?: string | null;
 }
 
+export type OrderStatus =
+  | 'Nowe'
+  | 'W realizacji'
+  | 'Gotowe'
+  | 'Wysłane'
+  | 'Zakończone'
+  | 'Anulowane';
+
+export const ORDER_STATUSES: OrderStatus[] = [
+  'Nowe',
+  'W realizacji',
+  'Gotowe',
+  'Wysłane',
+  'Zakończone',
+  'Anulowane',
+];
+
 export interface OrderDto {
   idOrder: number;
   dataOrder?: string | null;
@@ -209,6 +226,7 @@ export interface OrderDto {
 
   notes?: string | null;
   deliveryDate?: string | null;
+  status?: OrderStatus | string | null;
 
   orderItemsCount: number;
   totalValue: number;
@@ -222,6 +240,7 @@ export interface CreateOrderCommand {
   idWorker?: number | null;
   notes?: string | null;
   deliveryDate?: string | null;
+  status?: OrderStatus | string | null;
   isActive?: boolean;
 }
 
@@ -232,6 +251,7 @@ export interface UpdateOrderCommand {
   idWorker?: number | null;
   notes?: string | null;
   deliveryDate?: string | null;
+  status?: OrderStatus | string | null;
   isActive?: boolean;
 }
 
@@ -309,6 +329,8 @@ export interface DashboardLatestOrderDto {
   clientName?: string | null;
   workerName?: string | null;
 
+  status?: OrderStatus | string | null;
+
   orderItemsCount: number;
   totalValue: number;
 }
@@ -359,6 +381,13 @@ export interface DashboardDto {
 
   ordersCount: number;
   orderItemsCount: number;
+
+  newOrdersCount: number;
+  inProgressOrdersCount: number;
+  readyOrdersCount: number;
+  shippedOrdersCount: number;
+  completedOrdersCount: number;
+  cancelledOrdersCount: number;
 
   productsStockValue: number;
   ordersTotalValue: number;

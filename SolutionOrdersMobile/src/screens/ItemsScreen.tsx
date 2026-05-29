@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -22,7 +22,17 @@ import type {Item} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Items'>;
 
-type SortMode = 'default' | 'name' | 'priceAsc' | 'priceDesc' | 'quantity';
+type SortMode =
+  | 'default'
+  | 'name'
+  | 'priceAsc'
+  | 'priceDesc'
+  | 'quantityDesc'
+  | 'lowStock'
+  | 'stockValueDesc';
+
+type StockFilter = 'all' | 'available' | 'low' | 'empty';
+type PriceFilter = 'all' | 'to50' | 'from50to200' | 'from200';
 
 interface DialogState {
   visible: boolean;
@@ -38,15 +48,80 @@ function formatMoney(value?: number | null): string {
   return `${safeValue.toFixed(2)} zł`;
 }
 
-function ItemsScreen({navigation}: Props): React.JSX.Element {
+function getStockValue(item: Item): number {
+  return (item.price ?? 0) * (item.quantity ?? 0);
+}
+
+function getCategoryIcon(categoryName?: string | null): string {
+  const safeName = categoryName?.toLowerCase() ?? '';
+
+  if (safeName.includes('druk')) {
+    return '🖨️';
+  }
+
+  if (
+    safeName.includes('filament') ||
+    safeName.includes('pla') ||
+    safeName.includes('petg')
+  ) {
+    return '🧵';
+  }
+
+  if (
+    safeName.includes('akces') ||
+    safeName.includes('czę') ||
+    safeName.includes('czes')
+  ) {
+    return '⚙️';
+  }
+
+  if (safeName.includes('serwis') || safeName.includes('narz')) {
+    return '🧰';
+  }
+
+  return '🏷️';
+}
+
+function getStockLabel(item: Item): string {
+  const quantity = item.quantity ?? 0;
+
+  if (item.isActive === false) {
+    return 'Nieaktywny';
+  }
+
+  if (quantity <= 0) {
+    return 'Brak na stanie';
+  }
+
+  if (quantity <= 5) {
+    return 'Niski stan';
+  }
+
+  return 'Dostępny';
+}
+
+function isLowStock(item: Item): boolean {
+  const quantity = item.quantity ?? 0;
+
+  return item.isActive !== false && quantity > 0 && quantity <= 5;
+}
+
+function ItemsScreen({navigation, route}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems} = useItems();
-  const {addToCart, totalQuantity, totalValue} = useCart();
+  const {
+    cartItems,
+    addToCart,
+    totalQuantity,
+    totalValue,
+  } = useCart();
+
   const {user, isAdmin, isWorker, isCustomer} = useAuth();
 
   const [searchText, setSearchText] = useState('');
   const [sortMode, setSortMode] = useState<SortMode>('default');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [stockFilter, setStockFilter] = useState<StockFilter>('all');
+  const [priceFilter, setPriceFilter] = useState<PriceFilter>('all');
 
   const [dialog, setDialog] = useState<DialogState>({
     visible: false,
@@ -55,6 +130,19 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  useEffect(() => {
+    const initialSearch = route.params?.initialSearch;
+    const initialCategory = route.params?.initialCategory;
+
+    if (initialSearch && initialSearch.trim().length > 0) {
+      setSearchText(initialSearch.trim());
+    }
+
+    if (initialCategory && initialCategory.trim().length > 0) {
+      setSelectedCategory(initialCategory.trim());
+    }
+  }, [route.params?.initialCategory, route.params?.initialSearch]);
 
   const activeItems = useMemo(() => {
     return items.filter(item => item.isActive !== false);
@@ -71,6 +159,28 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     return categoryNames;
   }, [activeItems]);
 
+  const availableItemsCount = useMemo(() => {
+    return activeItems.filter(item => (item.quantity ?? 0) > 0).length;
+  }, [activeItems]);
+
+  const lowStockItemsCount = useMemo(() => {
+    return activeItems.filter(item => isLowStock(item)).length;
+  }, [activeItems]);
+
+  const emptyStockItemsCount = useMemo(() => {
+    return activeItems.filter(item => (item.quantity ?? 0) <= 0).length;
+  }, [activeItems]);
+
+  const allStockValue = useMemo(() => {
+    return activeItems.reduce((sum, item) => {
+      return sum + getStockValue(item);
+    }, 0);
+  }, [activeItems]);
+
+  const cartItemIds = useMemo(() => {
+    return new Set(cartItems.map(cartItem => cartItem.item.idItem));
+  }, [cartItems]);
+
   const filteredItems = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
@@ -84,8 +194,32 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       });
     }
 
-    if (onlyAvailable) {
+    if (stockFilter === 'available') {
       result = result.filter(item => (item.quantity ?? 0) > 0);
+    }
+
+    if (stockFilter === 'low') {
+      result = result.filter(item => isLowStock(item));
+    }
+
+    if (stockFilter === 'empty') {
+      result = result.filter(item => (item.quantity ?? 0) <= 0);
+    }
+
+    if (priceFilter === 'to50') {
+      result = result.filter(item => (item.price ?? 0) <= 50);
+    }
+
+    if (priceFilter === 'from50to200') {
+      result = result.filter(item => {
+        const price = item.price ?? 0;
+
+        return price > 50 && price <= 200;
+      });
+    }
+
+    if (priceFilter === 'from200') {
+      result = result.filter(item => (item.price ?? 0) > 200);
     }
 
     if (search.length > 0) {
@@ -118,12 +252,44 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       sorted.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
     }
 
-    if (sortMode === 'quantity') {
+    if (sortMode === 'quantityDesc') {
       sorted.sort((a, b) => (b.quantity ?? 0) - (a.quantity ?? 0));
     }
 
+    if (sortMode === 'lowStock') {
+      sorted.sort((a, b) => {
+        const aQuantity = a.quantity ?? 0;
+        const bQuantity = b.quantity ?? 0;
+
+        return aQuantity - bQuantity;
+      });
+    }
+
+    if (sortMode === 'stockValueDesc') {
+      sorted.sort((a, b) => getStockValue(b) - getStockValue(a));
+    }
+
     return sorted;
-  }, [activeItems, searchText, sortMode, selectedCategory, onlyAvailable]);
+  }, [
+    activeItems,
+    priceFilter,
+    searchText,
+    selectedCategory,
+    sortMode,
+    stockFilter,
+  ]);
+
+  const visibleStockValue = useMemo(() => {
+    return filteredItems.reduce((sum, item) => {
+      return sum + getStockValue(item);
+    }, 0);
+  }, [filteredItems]);
+
+  const getQuantityInCart = (idItem: number): number => {
+    const cartItem = cartItems.find(item => item.item.idItem === idItem);
+
+    return cartItem?.quantity ?? 0;
+  };
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -161,6 +327,8 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
   const handleAddToCart = (item: Item): void => {
     const quantity = item.quantity ?? 0;
+    const quantityInCart = getQuantityInCart(item.idItem);
+    const canAddQuantity = quantity - quantityInCart;
 
     if (item.isActive === false) {
       setDialog({
@@ -186,13 +354,28 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
       return;
     }
 
+    if (canAddQuantity <= 0) {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Produkt już w koszyku',
+        message:
+          'Masz już w koszyku maksymalną dostępną ilość tego produktu.',
+        loading: false,
+      });
+
+      return;
+    }
+
     addToCart(item, 1);
 
     setDialog({
       visible: true,
       type: 'success',
       title: 'Dodano do koszyka',
-      message: `Produkt "${item.name}" został dodany do koszyka.`,
+      message:
+        `Produkt "${item.name}" został dodany do koszyka.\n\n` +
+        `W koszyku: ${quantityInCart + 1} z ${quantity} szt.`,
       loading: false,
     });
   };
@@ -200,7 +383,8 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   const clearFilters = (): void => {
     setSearchText('');
     setSelectedCategory('all');
-    setOnlyAvailable(false);
+    setStockFilter('all');
+    setPriceFilter('all');
     setSortMode('default');
   };
 
@@ -212,6 +396,7 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
+        key={`sort-${value}`}
         style={[styles.filterButton, isSelected && styles.filterButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.8}>
@@ -226,23 +411,77 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
     );
   };
 
+  const renderStockButton = (
+    label: string,
+    value: StockFilter,
+  ): React.JSX.Element => {
+    const isSelected = stockFilter === value;
+
+    return (
+      <TouchableOpacity
+        key={`stock-${value}`}
+        style={[
+          styles.stockFilterButton,
+          isSelected && styles.stockFilterButtonSelected,
+        ]}
+        onPress={() => setStockFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.stockFilterButtonText,
+            isSelected && styles.stockFilterButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderPriceButton = (
+    label: string,
+    value: PriceFilter,
+  ): React.JSX.Element => {
+    const isSelected = priceFilter === value;
+
+    return (
+      <TouchableOpacity
+        key={`price-${value}`}
+        style={[styles.priceButton, isSelected && styles.priceButtonSelected]}
+        onPress={() => setPriceFilter(value)}
+        activeOpacity={0.8}>
+        <Text
+          style={[
+            styles.priceButtonText,
+            isSelected && styles.priceButtonTextSelected,
+          ]}>
+          {label}
+        </Text>
+      </TouchableOpacity>
+    );
+  };
+
   const renderCategoryButton = (categoryName: string): React.JSX.Element => {
     const isSelected = selectedCategory === categoryName;
 
     return (
       <TouchableOpacity
-        key={categoryName}
+        key={`category-${categoryName}`}
         style={[
           styles.categoryButton,
           isSelected && styles.categoryButtonSelected,
         ]}
         onPress={() => setSelectedCategory(categoryName)}
         activeOpacity={0.8}>
+        <Text style={styles.categoryButtonIcon}>
+          {categoryName === 'all' ? '🏷️' : getCategoryIcon(categoryName)}
+        </Text>
+
         <Text
           style={[
             styles.categoryButtonText,
             isSelected && styles.categoryButtonTextSelected,
-          ]}>
+          ]}
+          numberOfLines={1}>
           {categoryName === 'all' ? 'Wszystkie' : categoryName}
         </Text>
       </TouchableOpacity>
@@ -268,6 +507,16 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.heroBox}>
+          <Text style={styles.heroBadge}>Oferta sklepu</Text>
+          <Text style={styles.heroTitle}>Produkty dla druku 3D</Text>
+
+          <Text style={styles.heroSubtitle}>
+            Wybierz produkt, sprawdź stan magazynowy i dodaj go do koszyka.
+            Zamówienie po zakupie otrzyma status „Nowe”.
+          </Text>
+        </View>
+
         <View style={styles.cartBar}>
           <View>
             <Text style={styles.cartBarTitle}>Koszyk</Text>
@@ -284,6 +533,25 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
+        {(isAdmin || isWorker) ? (
+          <View style={styles.adminShortcutBox}>
+            <View style={styles.adminShortcutTextBox}>
+              <Text style={styles.adminShortcutTitle}>Tryb pracownika</Text>
+              <Text style={styles.adminShortcutText}>
+                Możesz przejść do administracji produktów i edytować ceny, stany
+                oraz aktywność.
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={styles.adminShortcutButton}
+              onPress={() => navigation.navigate('AdminItems')}
+              activeOpacity={0.85}>
+              <Text style={styles.adminShortcutButtonText}>Admin</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
         <View style={styles.header}>
           <View>
             <Text style={styles.title}>Produkty</Text>
@@ -297,30 +565,50 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Aktywne</Text>
+            <Text style={styles.summaryValue}>{activeItems.length}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Dostępne</Text>
+            <Text style={styles.summaryAvailable}>{availableItemsCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Niski stan</Text>
+            <Text style={styles.summaryWarning}>{lowStockItemsCount}</Text>
+          </View>
+        </View>
+
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Brak stanu</Text>
+            <Text style={styles.summaryDanger}>{emptyStockItemsCount}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Wartość widoczna</Text>
+            <Text style={styles.summaryMoney}>
+              {formatMoney(visibleStockValue)}
+            </Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Wartość całości</Text>
+            <Text style={styles.summaryMoney}>{formatMoney(allStockValue)}</Text>
+          </View>
+        </View>
+
         <View style={styles.searchBox}>
           <TextInput
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj produktu, kodu lub kategorii..."
+            placeholder="Szukaj produktu, kodu, opisu lub kategorii..."
             placeholderTextColor="#64748b"
           />
-
-          <TouchableOpacity
-            style={[
-              styles.onlyAvailableButton,
-              onlyAvailable && styles.onlyAvailableButtonSelected,
-            ]}
-            onPress={() => setOnlyAvailable(previous => !previous)}
-            activeOpacity={0.8}>
-            <Text
-              style={[
-                styles.onlyAvailableText,
-                onlyAvailable && styles.onlyAvailableTextSelected,
-              ]}>
-              {onlyAvailable ? '✓ Tylko dostępne' : 'Tylko dostępne'}
-            </Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.categoryBox}>
@@ -333,6 +621,28 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.sortBox}>
+          <Text style={styles.filterTitle}>Stan magazynu</Text>
+
+          <View style={styles.filterButtons}>
+            {renderStockButton('Wszystkie', 'all')}
+            {renderStockButton('Dostępne', 'available')}
+            {renderStockButton('Niski stan', 'low')}
+            {renderStockButton('Brak stanu', 'empty')}
+          </View>
+        </View>
+
+        <View style={styles.sortBox}>
+          <Text style={styles.filterTitle}>Cena</Text>
+
+          <View style={styles.filterButtons}>
+            {renderPriceButton('Wszystkie', 'all')}
+            {renderPriceButton('do 50 zł', 'to50')}
+            {renderPriceButton('50-200 zł', 'from50to200')}
+            {renderPriceButton('powyżej 200 zł', 'from200')}
+          </View>
+        </View>
+
+        <View style={styles.sortBox}>
           <Text style={styles.filterTitle}>Sortowanie</Text>
 
           <View style={styles.filterButtons}>
@@ -340,17 +650,27 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             {renderSortButton('Nazwa', 'name')}
             {renderSortButton('Cena ↑', 'priceAsc')}
             {renderSortButton('Cena ↓', 'priceDesc')}
-            {renderSortButton('Stan', 'quantity')}
+            {renderSortButton('Stan ↓', 'quantityDesc')}
+            {renderSortButton('Niski stan', 'lowStock')}
+            {renderSortButton('Wartość magazynu', 'stockValueDesc')}
           </View>
         </View>
 
         <View style={styles.filterSummaryBox}>
           <Text style={styles.filterSummaryText}>
-            {selectedCategory === 'all'
-              ? 'Wszystkie kategorie'
-              : selectedCategory}
-            {onlyAvailable ? ' | tylko dostępne' : ''}
-            {searchText.trim().length > 0 ? ` | ${searchText.trim()}` : ''}
+            Kategoria:{' '}
+            {selectedCategory === 'all' ? 'wszystkie' : selectedCategory}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Stan: {stockFilter} | Cena: {priceFilter} | Sort: {sortMode}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Szukaj:{' '}
+            {searchText.trim().length > 0
+              ? searchText.trim()
+              : 'brak wyszukiwania'}
           </Text>
 
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
@@ -364,19 +684,27 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   const renderItem = ({item}: {item: Item}): React.JSX.Element => {
     const price = item.price ?? 0;
     const quantity = item.quantity ?? 0;
+    const quantityInCart = getQuantityInCart(item.idItem);
+    const canAddQuantity = quantity - quantityInCart;
     const isAvailable = quantity > 0 && item.isActive !== false;
+    const canAddToCart = isAvailable && canAddQuantity > 0;
+    const stockLabel = getStockLabel(item);
+    const stockValue = getStockValue(item);
+    const isInCart = cartItemIds.has(item.idItem);
 
     return (
       <View style={styles.itemCard}>
         <View style={styles.itemTopRow}>
           <View style={styles.itemIconBox}>
-            <Text style={styles.itemIcon}>🖨️</Text>
+            <Text style={styles.itemIcon}>
+              {getCategoryIcon(item.categoryName)}
+            </Text>
           </View>
 
           <View style={styles.itemContent}>
             <Text style={styles.itemName}>{item.name ?? 'Brak nazwy'}</Text>
 
-            <Text style={styles.itemDescription} numberOfLines={2}>
+            <Text style={styles.itemDescription} numberOfLines={3}>
               {item.description ?? 'Brak opisu produktu'}
             </Text>
           </View>
@@ -393,12 +721,16 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
             style={
               isAvailable ? styles.availableBadge : styles.notAvailableBadge
             }>
-            {isAvailable ? 'Dostępny' : 'Brak na stanie'}
+            {stockLabel}
           </Text>
+
+          {isInCart ? (
+            <Text style={styles.inCartBadge}>W koszyku</Text>
+          ) : null}
         </View>
 
         <View style={styles.priceRow}>
-          <View>
+          <View style={styles.priceBox}>
             <Text style={styles.priceLabel}>Cena</Text>
             <Text style={styles.itemPrice}>{formatMoney(price)}</Text>
           </View>
@@ -411,17 +743,48 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
           </View>
         </View>
 
+        <View style={styles.infoGrid}>
+          <View style={styles.infoCell}>
+            <Text style={styles.infoLabel}>W koszyku</Text>
+            <Text style={styles.infoValue}>
+              {quantityInCart} {item.unitName ?? 'szt'}
+            </Text>
+          </View>
+
+          <View style={styles.infoCell}>
+            <Text style={styles.infoLabel}>Można dodać</Text>
+            <Text style={styles.infoValue}>
+              {Math.max(canAddQuantity, 0)} {item.unitName ?? 'szt'}
+            </Text>
+          </View>
+
+          <View style={styles.infoCell}>
+            <Text style={styles.infoLabel}>Wartość stanu</Text>
+            <Text style={styles.infoValue}>{formatMoney(stockValue)}</Text>
+          </View>
+        </View>
+
+        {isLowStock(item) ? (
+          <View style={styles.lowStockBox}>
+            <Text style={styles.lowStockTitle}>Niski stan magazynowy</Text>
+            <Text style={styles.lowStockText}>
+              Produkt może szybko się skończyć. Dostępna ilość: {quantity}{' '}
+              {item.unitName ?? 'szt'}.
+            </Text>
+          </View>
+        ) : null}
+
         <View style={styles.shopActions}>
           <TouchableOpacity
             style={[
               styles.addToCartButton,
-              !isAvailable && styles.disabledButton,
+              !canAddToCart && styles.disabledButton,
             ]}
             onPress={() => handleAddToCart(item)}
             activeOpacity={0.8}
-            disabled={!isAvailable}>
+            disabled={!canAddToCart}>
             <Text style={styles.buttonText}>
-              {isAvailable ? 'Dodaj' : 'Brak'}
+              {canAddToCart ? 'Dodaj' : 'Brak'}
             </Text>
           </TouchableOpacity>
 
@@ -448,10 +811,18 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorText}>Błąd: {error}</Text>
+        <Text style={styles.errorTitle}>Nie udało się pobrać produktów</Text>
+        <Text style={styles.errorText}>{error}</Text>
 
         <TouchableOpacity style={styles.retryButton} onPress={refreshItems}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.homeReturnButton}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.8}>
+          <Text style={styles.homeReturnButtonText}>Wróć na start</Text>
         </TouchableOpacity>
       </View>
     );
@@ -483,12 +854,17 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>🔎</Text>
+
+            <Text style={styles.emptyTitle}>Brak produktów</Text>
+
             <Text style={styles.emptyText}>
               {searchText.trim().length > 0 ||
               selectedCategory !== 'all' ||
-              onlyAvailable
-                ? 'Brak produktów pasujących do filtrów'
-                : 'Brak produktów w API'}
+              stockFilter !== 'all' ||
+              priceFilter !== 'all'
+                ? 'Brak produktów pasujących do aktualnych filtrów.'
+                : 'Brak aktywnych produktów w API.'}
             </Text>
 
             <TouchableOpacity
@@ -496,6 +872,25 @@ function ItemsScreen({navigation}: Props): React.JSX.Element {
               onPress={clearFilters}
               activeOpacity={0.8}>
               <Text style={styles.clearEmptyButtonText}>Wyczyść filtry</Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footerBox}>
+            <TouchableOpacity
+              style={styles.footerCartButton}
+              onPress={() => navigation.navigate('Cart')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerCartButtonText}>
+                Koszyk: {totalQuantity} szt. | {formatMoney(totalValue)}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerHomeButton}
+              onPress={() => navigation.navigate('Home')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerHomeButtonText}>Strona główna</Text>
             </TouchableOpacity>
           </View>
         }
@@ -524,9 +919,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
+  errorTitle: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '900',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
   errorText: {
     color: '#fca5a5',
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -536,12 +939,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginBottom: 10,
   },
 
   retryButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+
+  homeReturnButton: {
+    backgroundColor: '#334155',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+
+  homeReturnButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   listContent: {
@@ -581,6 +1002,36 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  heroBox: {
+    backgroundColor: '#111827',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#334155',
+  },
+
+  heroBadge: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+  },
+
+  heroTitle: {
+    color: '#f8fafc',
+    fontSize: 24,
+    fontWeight: '900',
+  },
+
+  heroSubtitle: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 6,
+    fontWeight: '700',
+  },
+
   cartBar: {
     backgroundColor: '#111827',
     borderBottomWidth: 1,
@@ -601,6 +1052,7 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
     marginTop: 3,
+    fontWeight: '700',
   },
 
   cartButton: {
@@ -613,6 +1065,50 @@ const styles = StyleSheet.create({
   cartButtonText: {
     color: '#ffffff',
     fontSize: 13,
+    fontWeight: '900',
+  },
+
+  adminShortcutBox: {
+    backgroundColor: '#1e1b4b',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    marginHorizontal: 16,
+    marginTop: 14,
+    borderRadius: 14,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+
+  adminShortcutTextBox: {
+    flex: 1,
+  },
+
+  adminShortcutTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  adminShortcutText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  adminShortcutButton: {
+    backgroundColor: '#6366f1',
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+
+  adminShortcutButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '900',
   },
 
@@ -651,6 +1147,59 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  summaryBox: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 14,
+    marginHorizontal: 16,
+    marginTop: 14,
+    padding: 12,
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  summaryColumn: {
+    flex: 1,
+  },
+
+  summaryLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  summaryValue: {
+    color: '#38bdf8',
+    fontSize: 21,
+    fontWeight: '900',
+  },
+
+  summaryAvailable: {
+    color: '#16a34a',
+    fontSize: 21,
+    fontWeight: '900',
+  },
+
+  summaryWarning: {
+    color: '#f97316',
+    fontSize: 21,
+    fontWeight: '900',
+  },
+
+  summaryDanger: {
+    color: '#ef4444',
+    fontSize: 21,
+    fontWeight: '900',
+  },
+
+  summaryMoney: {
+    color: '#16a34a',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
   searchBox: {
     paddingHorizontal: 16,
     paddingTop: 14,
@@ -666,31 +1215,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 14,
-  },
-
-  onlyAvailableButton: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-
-  onlyAvailableButtonSelected: {
-    borderColor: '#16a34a',
-  },
-
-  onlyAvailableText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  onlyAvailableTextSelected: {
-    color: '#16a34a',
   },
 
   categoryBox: {
@@ -723,6 +1247,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    maxWidth: '100%',
   },
 
   categoryButtonSelected: {
@@ -730,10 +1258,15 @@ const styles = StyleSheet.create({
     borderColor: '#16a34a',
   },
 
+  categoryButtonIcon: {
+    fontSize: 13,
+  },
+
   categoryButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '800',
+    maxWidth: 160,
   },
 
   categoryButtonTextSelected: {
@@ -767,6 +1300,54 @@ const styles = StyleSheet.create({
   },
 
   filterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  stockFilterButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  stockFilterButtonSelected: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  stockFilterButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  stockFilterButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  priceButton: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  priceButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  priceButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  priceButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -846,7 +1427,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 10,
   },
 
   categoryBadge: {
@@ -893,27 +1474,43 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+  inCartBadge: {
+    backgroundColor: '#1e1b4b',
+    color: '#c4b5fd',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '800',
+    overflow: 'hidden',
+  },
+
   priceRow: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
-    padding: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    gap: 12,
+    marginBottom: 10,
+  },
+
+  priceBox: {
+    flex: 1,
   },
 
   priceLabel: {
     color: '#94a3b8',
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '800',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   itemPrice: {
     color: '#f97316',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
   },
 
@@ -923,15 +1520,68 @@ const styles = StyleSheet.create({
 
   stockLabel: {
     color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  stockValue: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  infoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 10,
+  },
+
+  infoCell: {
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: '#0f172a',
+    borderRadius: 10,
+    padding: 9,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+
+  infoLabel: {
+    color: '#94a3b8',
     fontSize: 11,
     fontWeight: '800',
     marginBottom: 3,
   },
 
-  stockValue: {
+  infoValue: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '900',
+  },
+
+  lowStockBox: {
+    backgroundColor: '#431407',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 10,
+  },
+
+  lowStockTitle: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  lowStockText: {
+    color: '#fed7aa',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
   },
 
   shopActions: {
@@ -942,44 +1592,58 @@ const styles = StyleSheet.create({
   addToCartButton: {
     flex: 1,
     backgroundColor: '#16a34a',
-    paddingVertical: 10,
+    paddingVertical: 11,
     borderRadius: 10,
-  },
-
-  detailsButton: {
-    flex: 1,
-    backgroundColor: '#2563eb',
-    paddingVertical: 10,
-    borderRadius: 10,
+    alignItems: 'center',
   },
 
   disabledButton: {
     opacity: 0.55,
   },
 
+  detailsButton: {
+    flex: 1,
+    backgroundColor: '#f97316',
+    paddingVertical: 11,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+
   buttonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
-    textAlign: 'center',
   },
 
   emptyBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginTop: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#334155',
+    marginHorizontal: 16,
+    marginTop: 20,
     alignItems: 'center',
+  },
+
+  emptyIcon: {
+    fontSize: 42,
+    marginBottom: 8,
+  },
+
+  emptyTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 6,
   },
 
   emptyText: {
     color: '#94a3b8',
     textAlign: 'center',
-    fontSize: 15,
-    marginBottom: 12,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 14,
   },
 
   clearEmptyButton: {
@@ -992,6 +1656,38 @@ const styles = StyleSheet.create({
   clearEmptyButtonText: {
     color: '#ffffff',
     fontSize: 13,
+    fontWeight: '900',
+  },
+
+  footerBox: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 10,
+  },
+
+  footerCartButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerCartButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  footerHomeButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerHomeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
   },
 });

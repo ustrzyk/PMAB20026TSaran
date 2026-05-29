@@ -18,7 +18,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'AdminPanel'>;
 function AdminPanelScreen({navigation}: Props): React.JSX.Element {
   const {user, isAdmin, isWorker, logout} = useAuth();
 
-  const roleName = isAdmin ? 'Administrator' : 'Pracownik';
   const hasAccess = isAdmin || isWorker;
 
   const handleLogout = (): void => {
@@ -34,26 +33,35 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>🔒</Text>
-        <Text style={styles.accessTitle}>Brak dostępu</Text>
+
+        <Text style={styles.accessTitle}>Zaloguj się</Text>
+
         <Text style={styles.accessText}>
-          Panel pracownika jest dostępny tylko po zalogowaniu jako pracownik albo
-          administrator.
+          Zaloguj się, aby przejść dalej.
         </Text>
 
         <TouchableOpacity
           style={styles.primaryAccessButton}
-          onPress={() => navigation.reset({index: 0, routes: [{name: 'Home'}]})}
+          onPress={() =>
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'AuthLogin'}],
+            })
+          }
           activeOpacity={0.85}>
-          <Text style={styles.primaryAccessButtonText}>Wróć do sklepu</Text>
+          <Text style={styles.primaryAccessButtonText}>Zaloguj</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryAccessButton}
           onPress={() =>
-            navigation.reset({index: 0, routes: [{name: 'AuthLogin'}]})
+            navigation.reset({
+              index: 0,
+              routes: [{name: 'Home'}],
+            })
           }
           activeOpacity={0.85}>
-          <Text style={styles.secondaryAccessButtonText}>Zaloguj</Text>
+          <Text style={styles.secondaryAccessButtonText}>Wróć do sklepu</Text>
         </TouchableOpacity>
       </View>
     );
@@ -65,9 +73,11 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroTopRow}>
           <View style={styles.heroTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
-            <Text style={styles.title}>Panel pracownika</Text>
+
+            <Text style={styles.title}>Panel obsługi</Text>
+
             <Text style={styles.userText}>
-              {user?.name ?? roleName} | {roleName}
+              {user?.name ?? 'Zalogowany użytkownik'}
             </Text>
           </View>
 
@@ -88,7 +98,9 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.bigTextBox}>
           <Text style={styles.bigTitle}>Dashboard</Text>
-          <Text style={styles.bigDescription}>Sprzedaż, magazyn i raporty</Text>
+          <Text style={styles.bigDescription}>
+            Podsumowanie sprzedaży, zamówień i magazynu
+          </Text>
         </View>
 
         <Text style={styles.arrow}>{'>'}</Text>
@@ -152,11 +164,11 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
 
       {isAdmin ? (
         <>
-          <Text style={styles.sectionTitle}>Administracja</Text>
+          <Text style={styles.sectionTitle}>Zespół</Text>
 
           <View style={styles.grid}>
             <TouchableOpacity
-              style={[styles.menuCard, styles.adminCard]}
+              style={[styles.menuCard, styles.teamCard]}
               onPress={() => navigation.navigate('Workers')}
               activeOpacity={0.85}>
               <Text style={styles.icon}>🛠️</Text>
@@ -166,12 +178,37 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         </>
       ) : null}
 
-      <TouchableOpacity
-        style={styles.shopButton}
-        onPress={() => navigation.navigate('Home')}
-        activeOpacity={0.85}>
-        <Text style={styles.shopButtonText}>Przejdź do sklepu</Text>
-      </TouchableOpacity>
+      <Text style={styles.sectionTitle}>Skróty</Text>
+
+      <View style={styles.shortcutList}>
+        <TouchableOpacity
+          style={styles.shortcutRow}
+          onPress={() => navigation.navigate('Home')}
+          activeOpacity={0.85}>
+          <Text style={styles.shortcutIcon}>🏠</Text>
+
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Strona główna</Text>
+            <Text style={styles.shortcutText}>Powrót do ekranu startowego</Text>
+          </View>
+
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.shortcutRow}
+          onPress={() => navigation.navigate('Items')}
+          activeOpacity={0.85}>
+          <Text style={styles.shortcutIcon}>🛍️</Text>
+
+          <View style={styles.shortcutTextBox}>
+            <Text style={styles.shortcutTitle}>Widok sklepu</Text>
+            <Text style={styles.shortcutText}>Podgląd produktów dla klienta</Text>
+          </View>
+
+          <Text style={styles.shortcutArrow}>{'>'}</Text>
+        </TouchableOpacity>
+      </View>
     </ScrollView>
   );
 }
@@ -197,7 +234,7 @@ const styles = StyleSheet.create({
 
   accessTitle: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
@@ -276,7 +313,7 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '900',
   },
 
@@ -334,6 +371,7 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 13,
     fontWeight: '700',
+    lineHeight: 18,
   },
 
   arrow: {
@@ -375,7 +413,7 @@ const styles = StyleSheet.create({
     borderColor: '#16a34a',
   },
 
-  adminCard: {
+  teamCard: {
     borderColor: '#a855f7',
   },
 
@@ -391,17 +429,45 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  shopButton: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 4,
+  shortcutList: {
+    gap: 10,
   },
 
-  shopButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
+  shortcutRow: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#334155',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+
+  shortcutIcon: {
+    fontSize: 26,
+  },
+
+  shortcutTextBox: {
+    flex: 1,
+  },
+
+  shortcutTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 3,
+  },
+
+  shortcutText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+
+  shortcutArrow: {
+    color: '#f97316',
+    fontSize: 20,
     fontWeight: '900',
   },
 });

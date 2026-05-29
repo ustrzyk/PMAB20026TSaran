@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SolutionOrders.API.Features.Checkout.Messages.Commands;
 using SolutionOrders.API.Features.Checkout.Messages.DTOs;
+using SolutionOrders.API.Features.Orders.Helpers;
 using SolutionOrders.API.Models;
 using SolutionOrders.API.Models.Data;
 
@@ -135,6 +136,7 @@ namespace SolutionOrders.API.Features.Checkout.Handlers.Commands
                     IdWorker = worker.IdWorker,
                     Notes = request.Notes,
                     DeliveryDate = request.DeliveryDate ?? DateTime.Now.AddDays(3),
+                    Status = OrderStatusHelper.New,
                     IsActive = true
                 };
 

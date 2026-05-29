@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SolutionOrders.API.Features.Orders.Helpers;
 using SolutionOrders.API.Features.Orders.Messages.DTOs;
 using SolutionOrders.API.Features.Orders.Messages.Queries;
 using SolutionOrders.API.Models.Data;
@@ -43,6 +44,7 @@ namespace SolutionOrders.API.Features.Orders.Handlers.Queries
 
                     Notes = order.Notes,
                     DeliveryDate = order.DeliveryDate,
+                    Status = order.Status ?? OrderStatusHelper.New,
 
                     OrderItemsCount = order.OrderItems.Count(orderItem => orderItem.IsActive),
 

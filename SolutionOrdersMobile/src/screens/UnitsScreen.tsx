@@ -21,7 +21,7 @@ import type {UnitOfMeasurementDto} from '../types/models.ts';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Units'>;
 
-type StatusFilter = 'all' | 'active' | 'inactive';
+type ViewFilter = 'current' | 'all' | 'archived';
 type SortMode = 'default' | 'nameAsc' | 'nameDesc' | 'shortcutAsc';
 
 interface DialogState {
@@ -37,11 +37,12 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   const [selectedUnit, setSelectedUnit] =
     useState<UnitOfMeasurementDto | null>(null);
 
   const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [viewFilter, setViewFilter] = useState<ViewFilter>('current');
   const [sortMode, setSortMode] = useState<SortMode>('default');
 
   const [dialog, setDialog] = useState<DialogState>({
@@ -52,16 +53,24 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const currentUnits = useMemo(() => {
+    return units.filter(unit => unit.isActive !== false);
+  }, [units]);
+
+  const archivedUnits = useMemo(() => {
+    return units.filter(unit => unit.isActive === false);
+  }, [units]);
+
   const filteredUnits = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
     let result = units;
 
-    if (statusFilter === 'active') {
+    if (viewFilter === 'current') {
       result = result.filter(unit => unit.isActive !== false);
     }
 
-    if (statusFilter === 'inactive') {
+    if (viewFilter === 'archived') {
       result = result.filter(unit => unit.isActive === false);
     }
 
@@ -96,15 +105,7 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [units, searchText, statusFilter, sortMode]);
-
-  const activeCount = useMemo(() => {
-    return units.filter(unit => unit.isActive !== false).length;
-  }, [units]);
-
-  const inactiveCount = useMemo(() => {
-    return units.filter(unit => unit.isActive === false).length;
-  }, [units]);
+  }, [searchText, sortMode, units, viewFilter]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -123,7 +124,7 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
       setUnits(data);
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'Nieznany błąd pobierania danych';
+        err instanceof Error ? err.message : 'Nie udało się pobrać jednostek';
 
       setError(message);
     } finally {
@@ -144,21 +145,19 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
     await loadUnits();
   };
 
-  const handleDelete = (unit: UnitOfMeasurementDto): void => {
+  const handleArchive = (unit: UnitOfMeasurementDto): void => {
     setSelectedUnit(unit);
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Usuwanie jednostki',
-      message: `Czy na pewno chcesz usunąć jednostkę "${
-        unit.name ?? 'bez nazwy'
-      }"?`,
+      title: 'Przenieść do archiwum?',
+      message: `Jednostka "${unit.name ?? 'bez nazwy'}" zostanie ukryta z bieżącej listy.`,
       loading: false,
     });
   };
 
-  const confirmDelete = async (): Promise<void> => {
+  const confirmArchive = async (): Promise<void> => {
     if (!selectedUnit) {
       return;
     }
@@ -172,9 +171,16 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
       await apiService.deleteUnit(selectedUnit.idUnitOfMeasurement);
 
       setUnits(previousUnits =>
-        previousUnits.filter(
-          item => item.idUnitOfMeasurement !== selectedUnit.idUnitOfMeasurement,
-        ),
+        previousUnits.map(unit => {
+          if (unit.idUnitOfMeasurement === selectedUnit.idUnitOfMeasurement) {
+            return {
+              ...unit,
+              isActive: false,
+            };
+          }
+
+          return unit;
+        }),
       );
 
       setSelectedUnit(null);
@@ -182,15 +188,15 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Jednostka usunięta',
-        message: 'Jednostka miary została poprawnie usunięta z listy.',
+        title: 'Przeniesiono',
+        message: 'Jednostka trafiła do archiwum.',
         loading: false,
       });
     } catch (err) {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Błąd usuwania',
+        title: 'Nie udało się wykonać operacji',
         message: (err as Error).message,
         loading: false,
       });
@@ -199,7 +205,7 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
 
   const handleDialogConfirm = (): void => {
     if (dialog.type === 'confirm') {
-      confirmDelete();
+      confirmArchive();
       return;
     }
 
@@ -208,21 +214,22 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
 
   const clearFilters = (): void => {
     setSearchText('');
-    setStatusFilter('all');
+    setViewFilter('current');
     setSortMode('default');
   };
 
-  const renderStatusButton = (
+  const renderViewButton = (
     label: string,
-    value: StatusFilter,
+    value: ViewFilter,
   ): React.JSX.Element => {
-    const selected = statusFilter === value;
+    const selected = viewFilter === value;
 
     return (
       <TouchableOpacity
+        key={`unit-view-${value}`}
         style={[styles.filterButton, selected && styles.filterButtonSelected]}
-        onPress={() => setStatusFilter(value)}
-        activeOpacity={0.8}>
+        onPress={() => setViewFilter(value)}
+        activeOpacity={0.85}>
         <Text
           style={[
             styles.filterButtonText,
@@ -242,13 +249,14 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
 
     return (
       <TouchableOpacity
-        style={[styles.filterButton, selected && styles.filterButtonSelected]}
+        key={`unit-sort-${value}`}
+        style={[styles.sortButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
-        activeOpacity={0.8}>
+        activeOpacity={0.85}>
         <Text
           style={[
-            styles.filterButtonText,
-            selected && styles.filterButtonTextSelected,
+            styles.sortButtonText,
+            selected && styles.sortButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -260,63 +268,63 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
     return (
       <>
         <View style={styles.heroBox}>
-          <Text style={styles.shopName}>3D Print Shop</Text>
-          <Text style={styles.heroTitle}>Jednostki miary</Text>
+          <Text style={styles.appName}>3D Print Shop</Text>
+          <Text style={styles.heroTitle}>Jednostki</Text>
           <Text style={styles.heroSubtitle}>
-            Jednostki używane przy produktach, stanach magazynowych i
-            zamówieniach.
+            Zarządzaj jednostkami używanymi przy produktach.
           </Text>
-        </View>
-
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Jednostki</Text>
-            <Text style={styles.subtitle}>
-              Wyświetlane: {filteredUnits.length} / {units.length}
-            </Text>
-          </View>
-
-          <TouchableOpacity style={styles.refreshButton} onPress={handleRefresh}>
-            <Text style={styles.refreshButtonText}>Odśwież</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.summaryBox}>
           <View style={styles.summaryColumn}>
-            <Text style={styles.summaryLabel}>Aktywne</Text>
-            <Text style={styles.summaryActive}>{activeCount}</Text>
+            <Text style={styles.summaryLabel}>Bieżące</Text>
+            <Text style={styles.summaryCurrent}>{currentUnits.length}</Text>
           </View>
 
           <View style={styles.summaryColumn}>
-            <Text style={styles.summaryLabel}>Nieaktywne</Text>
-            <Text style={styles.summaryInactive}>{inactiveCount}</Text>
+            <Text style={styles.summaryLabel}>Archiwum</Text>
+            <Text style={styles.summaryArchived}>{archivedUnits.length}</Text>
+          </View>
+
+          <View style={styles.summaryColumn}>
+            <Text style={styles.summaryLabel}>Widoczne</Text>
+            <Text style={styles.summaryVisible}>{filteredUnits.length}</Text>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.createButton}
-          onPress={() => navigation.navigate('CreateUnit')}
-          activeOpacity={0.8}>
-          <Text style={styles.createButtonText}>+ Dodaj jednostkę</Text>
-        </TouchableOpacity>
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={styles.createButton}
+            onPress={() => navigation.navigate('CreateUnit')}
+            activeOpacity={0.85}>
+            <Text style={styles.createButtonText}>+ Dodaj</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.panelButton}
+            onPress={() => navigation.navigate('AdminPanel')}
+            activeOpacity={0.85}>
+            <Text style={styles.panelButtonText}>Panel</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.searchBox}>
           <TextInput
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj jednostki po nazwie, skrócie lub opisie..."
+            placeholder="Szukaj jednostki..."
             placeholderTextColor="#64748b"
           />
         </View>
 
         <View style={styles.filterSection}>
-          <Text style={styles.filterTitle}>Status</Text>
+          <Text style={styles.filterTitle}>Widok</Text>
 
           <View style={styles.filterButtons}>
-            {renderStatusButton('Wszystkie', 'all')}
-            {renderStatusButton('Aktywne', 'active')}
-            {renderStatusButton('Nieaktywne', 'inactive')}
+            {renderViewButton('Bieżące', 'current')}
+            {renderViewButton('Wszystkie', 'all')}
+            {renderViewButton('Archiwum', 'archived')}
           </View>
         </View>
 
@@ -325,24 +333,35 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
 
           <View style={styles.filterButtons}>
             {renderSortButton('Domyślnie', 'default')}
-            {renderSortButton('Nazwa A-Z', 'nameAsc')}
-            {renderSortButton('Nazwa Z-A', 'nameDesc')}
-            {renderSortButton('Skrót A-Z', 'shortcutAsc')}
+            {renderSortButton('A-Z', 'nameAsc')}
+            {renderSortButton('Z-A', 'nameDesc')}
+            {renderSortButton('Skrót', 'shortcutAsc')}
           </View>
         </View>
 
         <View style={styles.filterSummaryBox}>
           <Text style={styles.filterSummaryText}>
-            Filtr:{' '}
+            Wyświetlane: {filteredUnits.length} / {units.length}
+          </Text>
+
+          <Text style={styles.filterSummaryText}>
+            Szukaj:{' '}
             {searchText.trim().length > 0
               ? searchText.trim()
               : 'brak wyszukiwania'}
           </Text>
 
-          <TouchableOpacity onPress={clearFilters} activeOpacity={0.8}>
+          <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
             <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={handleRefresh}
+          activeOpacity={0.85}>
+          <Text style={styles.refreshButtonText}>Odśwież</Text>
+        </TouchableOpacity>
       </>
     );
   };
@@ -352,7 +371,7 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
   }: {
     item: UnitOfMeasurementDto;
   }): React.JSX.Element => {
-    const isActive = item.isActive !== false;
+    const isCurrent = item.isActive !== false;
 
     return (
       <View style={styles.unitCard}>
@@ -361,32 +380,38 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.unitName}>{item.name ?? 'Brak nazwy'}</Text>
 
             <Text style={styles.unitShortcut}>
-              Skrót: {item.shortcut ?? item.name ?? 'Brak skrótu'}
+              {item.shortcut ?? item.name ?? 'Brak skrótu'}
             </Text>
           </View>
 
-          <Text style={isActive ? styles.activeBadge : styles.inactiveBadge}>
-            {isActive ? 'Aktywna' : 'Nieaktywna'}
+          <Text style={isCurrent ? styles.currentBadge : styles.archivedBadge}>
+            {isCurrent ? 'Bieżąca' : 'Archiwum'}
           </Text>
         </View>
 
         {item.description ? (
           <Text style={styles.unitDescription}>{item.description}</Text>
-        ) : null}
+        ) : (
+          <Text style={styles.unitDescriptionMuted}>Brak opisu</Text>
+        )}
 
         <View style={styles.actions}>
           <TouchableOpacity
             style={styles.editButton}
             onPress={() => navigation.navigate('EditUnit', {unit: item})}
-            activeOpacity={0.8}>
+            activeOpacity={0.85}>
             <Text style={styles.buttonText}>Edytuj</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={() => handleDelete(item)}
-            activeOpacity={0.8}>
-            <Text style={styles.buttonText}>Usuń</Text>
+            style={[
+              styles.archiveButton,
+              !isCurrent && styles.disabledArchiveButton,
+            ]}
+            onPress={() => handleArchive(item)}
+            activeOpacity={0.85}
+            disabled={!isCurrent}>
+            <Text style={styles.buttonText}>Archiwum</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -397,7 +422,7 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Ładowanie jednostek miary...</Text>
+        <Text style={styles.loadingText}>Ładowanie jednostek...</Text>
       </View>
     );
   }
@@ -405,14 +430,21 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
   if (error) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>
-          Nie udało się pobrać jednostek miary
-        </Text>
-
+        <Text style={styles.errorTitle}>Nie udało się pobrać jednostek</Text>
         <Text style={styles.errorText}>{error}</Text>
 
-        <TouchableOpacity style={styles.retryButton} onPress={loadUnits}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={loadUnits}
+          activeOpacity={0.85}>
           <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.85}>
+          <Text style={styles.backButtonText}>Panel obsługi</Text>
         </TouchableOpacity>
       </View>
     );
@@ -425,7 +457,7 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
         type={dialog.type}
         title={dialog.title}
         message={dialog.message}
-        confirmText={dialog.type === 'confirm' ? 'Usuń' : 'OK'}
+        confirmText={dialog.type === 'confirm' ? 'Przenieś' : 'OK'}
         cancelText="Anuluj"
         loading={dialog.loading}
         onConfirm={handleDialogConfirm}
@@ -443,11 +475,46 @@ function UnitsScreen({navigation}: Props): React.JSX.Element {
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            {searchText.trim().length > 0 || statusFilter !== 'all'
-              ? 'Brak jednostek pasujących do filtrów'
-              : 'Brak jednostek miary w API'}
-          </Text>
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyIcon}>📏</Text>
+            <Text style={styles.emptyTitle}>Brak jednostek</Text>
+
+            <Text style={styles.emptyText}>
+              {units.length === 0
+                ? 'Dodaj pierwszą jednostkę.'
+                : 'Brak wyników dla aktualnych filtrów.'}
+            </Text>
+
+            <TouchableOpacity
+              style={styles.emptyButton}
+              onPress={
+                units.length === 0
+                  ? () => navigation.navigate('CreateUnit')
+                  : clearFilters
+              }
+              activeOpacity={0.85}>
+              <Text style={styles.emptyButtonText}>
+                {units.length === 0 ? 'Dodaj jednostkę' : 'Wyczyść filtry'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footerBox}>
+            <TouchableOpacity
+              style={styles.footerPrimaryButton}
+              onPress={() => navigation.navigate('CreateUnit')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerPrimaryButtonText}>Dodaj jednostkę</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.footerSecondaryButton}
+              onPress={() => navigation.navigate('AdminPanel')}
+              activeOpacity={0.85}>
+              <Text style={styles.footerSecondaryButtonText}>Panel obsługi</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     </View>
@@ -486,100 +553,85 @@ const styles = StyleSheet.create({
     color: '#fca5a5',
     fontSize: 14,
     textAlign: 'center',
+    lineHeight: 20,
     marginBottom: 16,
   },
 
   retryButton: {
     backgroundColor: '#f97316',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    marginBottom: 10,
   },
 
   retryButtonText: {
     color: '#ffffff',
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '900',
+  },
+
+  backButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignSelf: 'stretch',
+    alignItems: 'center',
+  },
+
+  backButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   listContent: {
-    paddingBottom: 30,
+    padding: 16,
+    paddingBottom: 32,
   },
 
   heroBox: {
     backgroundColor: '#111827',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderRadius: 22,
+    padding: 18,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
   },
 
-  shopName: {
+  appName: {
     color: '#f97316',
     fontSize: 13,
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: 7,
   },
 
   heroTitle: {
     color: '#f8fafc',
-    fontSize: 22,
+    fontSize: 27,
     fontWeight: '900',
   },
 
   heroSubtitle: {
     color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    marginTop: 6,
-  },
-
-  header: {
-    padding: 16,
-    backgroundColor: '#111827',
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 24,
-    fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#94a3b8',
-    fontSize: 13,
-    marginTop: 4,
-  },
-
-  refreshButton: {
-    backgroundColor: '#f97316',
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-  },
-
-  refreshButtonText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 8,
+    fontWeight: '700',
   },
 
   summaryBox: {
     backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginHorizontal: 16,
-    marginTop: 14,
-    padding: 14,
-    borderRadius: 12,
+    marginBottom: 12,
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
 
   summaryColumn: {
@@ -588,42 +640,65 @@ const styles = StyleSheet.create({
 
   summaryLabel: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
     marginBottom: 4,
   },
 
-  summaryActive: {
-    color: '#16a34a',
-    fontSize: 22,
+  summaryCurrent: {
+    color: '#f97316',
+    fontSize: 23,
     fontWeight: '900',
   },
 
-  summaryInactive: {
-    color: '#f97316',
-    fontSize: 22,
+  summaryArchived: {
+    color: '#94a3b8',
+    fontSize: 23,
     fontWeight: '900',
+  },
+
+  summaryVisible: {
+    color: '#38bdf8',
+    fontSize: 23,
+    fontWeight: '900',
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
   },
 
   createButton: {
+    flex: 1,
     backgroundColor: '#16a34a',
-    marginHorizontal: 16,
-    marginTop: 14,
-    paddingVertical: 13,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
   createButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  panelButton: {
+    flex: 1,
+    backgroundColor: '#2563eb',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  panelButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
   },
 
   searchBox: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    backgroundColor: '#0f172a',
+    marginBottom: 12,
   },
 
   searchInput: {
@@ -638,8 +713,7 @@ const styles = StyleSheet.create({
   },
 
   filterSection: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    marginBottom: 12,
   },
 
   filterTitle: {
@@ -679,22 +753,44 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  filterSummaryBox: {
+  sortButton: {
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 12,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  sortButtonText: {
+    color: '#cbd5e1',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  sortButtonTextSelected: {
+    color: '#ffffff',
+  },
+
+  filterSummaryBox: {
+    backgroundColor: '#111827',
+    borderRadius: 14,
     padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 12,
   },
 
   filterSummaryText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
   clearFiltersText: {
@@ -703,14 +799,27 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  refreshButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  refreshButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
   unitCard: {
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
-    marginHorizontal: 16,
-    marginTop: 12,
     borderWidth: 1,
     borderColor: '#334155',
+    marginTop: 12,
   },
 
   cardTopRow: {
@@ -718,6 +827,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     alignItems: 'flex-start',
+    marginBottom: 10,
   },
 
   cardTitleBox: {
@@ -726,77 +836,157 @@ const styles = StyleSheet.create({
 
   unitName: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
-    marginBottom: 6,
+    marginBottom: 4,
   },
 
   unitShortcut: {
-    color: '#cbd5e1',
+    color: '#f97316',
     fontSize: 13,
-    lineHeight: 18,
+    fontWeight: '900',
+  },
+
+  currentBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  archivedBadge: {
+    backgroundColor: '#334155',
+    color: '#cbd5e1',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
   },
 
   unitDescription: {
-    color: '#94a3b8',
+    color: '#cbd5e1',
     fontSize: 13,
-    lineHeight: 18,
-    marginTop: 8,
+    lineHeight: 19,
+    fontWeight: '700',
+    marginBottom: 12,
   },
 
-  activeBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-
-  inactiveBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+  unitDescriptionMuted: {
+    color: '#64748b',
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: 12,
   },
 
   actions: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 12,
+    gap: 8,
   },
 
   editButton: {
     flex: 1,
     backgroundColor: '#2563eb',
-    paddingVertical: 10,
     borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
   },
 
-  deleteButton: {
+  archiveButton: {
     flex: 1,
-    backgroundColor: '#7f1d1d',
-    paddingVertical: 10,
+    backgroundColor: '#334155',
     borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  disabledArchiveButton: {
+    opacity: 0.5,
   },
 
   buttonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
-    textAlign: 'center',
+  },
+
+  emptyBox: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginTop: 14,
+    alignItems: 'center',
+  },
+
+  emptyIcon: {
+    fontSize: 44,
+    marginBottom: 10,
+  },
+
+  emptyTitle: {
+    color: '#f8fafc',
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 6,
   },
 
   emptyText: {
-    color: '#94a3b8',
+    color: '#cbd5e1',
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginTop: 40,
-    marginHorizontal: 16,
-    fontSize: 16,
+    marginBottom: 16,
+  },
+
+  emptyButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 11,
+  },
+
+  emptyButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  footerBox: {
+    paddingTop: 16,
+    gap: 10,
+  },
+
+  footerPrimaryButton: {
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerPrimaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  footerSecondaryButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  footerSecondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
   },
 });
 

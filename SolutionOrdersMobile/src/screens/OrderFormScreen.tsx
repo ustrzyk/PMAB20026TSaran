@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -60,10 +60,31 @@ function isDateValid(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value.trim());
 }
 
+function formatDate(value: Date): string {
+  return value.toISOString().substring(0, 10);
+}
+
 function getWorkerName(worker: WorkerDto): string {
   const name = `${worker.firstName ?? ''} ${worker.lastName ?? ''}`.trim();
 
-  return name.length > 0 ? name : worker.login ?? 'Brak nazwy';
+  return name.length > 0 ? name : worker.login ?? 'Pracownik';
+}
+
+function getClientContact(client?: ClientDto): string {
+  if (!client) {
+    return 'Brak danych';
+  }
+
+  const parts = [
+    client.email,
+    client.phoneNumber,
+  ].filter(part => !!part && part.trim().length > 0);
+
+  if (parts.length === 0) {
+    return client.adress ?? 'Brak kontaktu';
+  }
+
+  return parts.join(' | ');
 }
 
 function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
@@ -73,16 +94,19 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
   const [idClient, setIdClient] = useState(
     editedOrder?.idClient?.toString() ?? '',
   );
+
   const [idWorker, setIdWorker] = useState(
     editedOrder?.idWorker?.toString() ?? '',
   );
 
   const [dataOrder, setDataOrder] = useState(
-    dateToInputValue(editedOrder?.dataOrder),
+    dateToInputValue(editedOrder?.dataOrder) || formatDate(new Date()),
   );
+
   const [deliveryDate, setDeliveryDate] = useState(
     dateToInputValue(editedOrder?.deliveryDate),
   );
+
   const [notes, setNotes] = useState(editedOrder?.notes ?? '');
   const [isActive, setIsActive] = useState(editedOrder?.isActive ?? true);
 
@@ -100,6 +124,27 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     message: '',
     loading: false,
   });
+
+  const selectedClient = useMemo(() => {
+    return clients.find(client => {
+      return client.idClient === Number(idClient);
+    });
+  }, [clients, idClient]);
+
+  const selectedWorker = useMemo(() => {
+    return workers.find(worker => {
+      return worker.idWorker === Number(idWorker);
+    });
+  }, [idWorker, workers]);
+
+  const formReady = useMemo(() => {
+    return (
+      Number(idClient) > 0 &&
+      Number(idWorker) > 0 &&
+      isDateValid(dataOrder) &&
+      isDateValid(deliveryDate)
+    );
+  }, [dataOrder, deliveryDate, idClient, idWorker]);
 
   const showDialog = (
     type: AppDialogType,
@@ -173,7 +218,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     } catch (err) {
       showDialog(
         'error',
-        'Błąd pobierania danych',
+        'Nie udało się pobrać danych',
         (err as Error).message,
       );
     } finally {
@@ -185,49 +230,52 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
     loadDictionaries();
   }, [loadDictionaries]);
 
-  const selectedClient = clients.find(
-    client => client.idClient === Number(idClient),
-  );
-
-  const selectedWorker = workers.find(
-    worker => worker.idWorker === Number(idWorker),
-  );
-
   const validateForm = (): string | null => {
     if (!idClient || Number.isNaN(Number(idClient)) || Number(idClient) <= 0) {
-      return 'Wybierz klienta';
+      return 'Wybierz klienta.';
     }
 
     if (!idWorker || Number.isNaN(Number(idWorker)) || Number(idWorker) <= 0) {
-      return 'Wybierz pracownika';
+      return 'Wybierz osobę obsługującą.';
     }
 
     if (!isDateValid(dataOrder)) {
-      return 'Data zamówienia musi mieć format RRRR-MM-DD';
+      return 'Data zamówienia musi mieć format RRRR-MM-DD.';
     }
 
     if (!isDateValid(deliveryDate)) {
-      return 'Data dostawy musi mieć format RRRR-MM-DD';
+      return 'Data dostawy musi mieć format RRRR-MM-DD.';
     }
 
     return null;
+  };
+
+  const setToday = (): void => {
+    setDataOrder(formatDate(new Date()));
+  };
+
+  const setDeliveryInDays = (days: number): void => {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+
+    setDeliveryDate(formatDate(date));
   };
 
   const handleSavePress = (): void => {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Błąd formularza', validationError);
+      showDialog('error', 'Sprawdź formularz', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      title: isEditMode ? 'Zapisać zmiany?' : 'Dodać zamówienie?',
       message: isEditMode
-        ? `Czy zapisać zmiany w zamówieniu nr ${editedOrder?.idOrder}?`
-        : 'Czy dodać nowe zamówienie?',
+        ? `Zapisać zmiany w zamówieniu #${editedOrder?.idOrder}?`
+        : 'Dodać nowe zamówienie do listy?',
       loading: false,
     });
   };
@@ -254,7 +302,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
 
         showDialog(
           'success',
-          'Zamówienie zaktualizowane',
+          'Zapisano',
           'Zmiany zamówienia zostały zapisane.',
           true,
         );
@@ -270,13 +318,13 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
 
         showDialog(
           'success',
-          'Zamówienie dodane',
-          'Nowe zamówienie zostało zapisane w systemie.',
+          'Dodano',
+          'Nowe zamówienie zostało dodane.',
           true,
         );
       }
     } catch (err) {
-      showDialog('error', 'Błąd zapisu', (err as Error).message);
+      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -292,70 +340,83 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const renderClientButton = (client: ClientDto): React.JSX.Element => {
-    const isSelected = Number(idClient) === client.idClient;
-    const isClientActive = client.isActive !== false;
+    const selected = Number(idClient) === client.idClient;
+    const available = client.isActive !== false;
 
     return (
       <TouchableOpacity
-        key={client.idClient}
+        key={`client-${client.idClient}`}
         style={[
           styles.optionButton,
-          isSelected && styles.optionButtonSelected,
-          !isClientActive && styles.inactiveOptionButton,
+          selected && styles.optionButtonSelected,
+          !available && styles.optionButtonMuted,
         ]}
         onPress={() => setIdClient(client.idClient.toString())}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         disabled={submitting}>
-        <Text
-          style={[
-            styles.optionButtonText,
-            isSelected && styles.optionButtonTextSelected,
-          ]}>
-          {client.name}
-        </Text>
+        <View style={styles.optionTopRow}>
+          <Text
+            style={[
+              styles.optionTitle,
+              selected && styles.optionTitleSelected,
+            ]}
+            numberOfLines={1}>
+            {client.name}
+          </Text>
+
+          {selected ? (
+            <Text style={styles.selectedBadge}>Wybrano</Text>
+          ) : null}
+        </View>
 
         <Text
           style={[
-            styles.optionButtonSubtext,
-            isSelected && styles.optionButtonSubtextSelected,
-          ]}>
-          {client.adress ?? 'Brak adresu'}
-          {!isClientActive ? ' | klient nieaktywny' : ''}
+            styles.optionText,
+            selected && styles.optionTextSelected,
+          ]}
+          numberOfLines={2}>
+          {getClientContact(client)}
         </Text>
       </TouchableOpacity>
     );
   };
 
   const renderWorkerButton = (worker: WorkerDto): React.JSX.Element => {
-    const isSelected = Number(idWorker) === worker.idWorker;
-    const isWorkerActive = worker.isActive !== false;
+    const selected = Number(idWorker) === worker.idWorker;
+    const available = worker.isActive !== false;
 
     return (
       <TouchableOpacity
-        key={worker.idWorker}
+        key={`worker-${worker.idWorker}`}
         style={[
           styles.optionButton,
-          isSelected && styles.optionButtonSelected,
-          !isWorkerActive && styles.inactiveOptionButton,
+          selected && styles.optionButtonSelected,
+          !available && styles.optionButtonMuted,
         ]}
         onPress={() => setIdWorker(worker.idWorker.toString())}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         disabled={submitting}>
-        <Text
-          style={[
-            styles.optionButtonText,
-            isSelected && styles.optionButtonTextSelected,
-          ]}>
-          {getWorkerName(worker)}
-        </Text>
+        <View style={styles.optionTopRow}>
+          <Text
+            style={[
+              styles.optionTitle,
+              selected && styles.optionTitleSelected,
+            ]}
+            numberOfLines={1}>
+            {getWorkerName(worker)}
+          </Text>
+
+          {selected ? (
+            <Text style={styles.selectedBadge}>Wybrano</Text>
+          ) : null}
+        </View>
 
         <Text
           style={[
-            styles.optionButtonSubtext,
-            isSelected && styles.optionButtonSubtextSelected,
+            styles.optionText,
+            selected && styles.optionTextSelected,
           ]}>
-          Login: {worker.login ?? 'brak loginu'}
-          {!isWorkerActive ? ' | pracownik nieaktywny' : ''}
+          Obsługa zamówienia
         </Text>
       </TouchableOpacity>
     );
@@ -392,46 +453,85 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Wybierz klienta, pracownika oraz uzupełnij daty i notatki.
+            Wybierz klienta, osobę obsługującą i daty zamówienia.
           </Text>
         </View>
 
+        <View style={formReady ? styles.readyBox : styles.warningBox}>
+          <Text style={formReady ? styles.readyTitle : styles.warningTitle}>
+            {formReady ? 'Formularz gotowy' : 'Uzupełnij dane'}
+          </Text>
+
+          <Text style={formReady ? styles.readyText : styles.warningText}>
+            {formReady
+              ? 'Możesz zapisać zamówienie.'
+              : 'Wybierz klienta, osobę obsługującą i sprawdź daty.'}
+          </Text>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>Podgląd</Text>
+
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>Klient</Text>
+            <Text style={styles.previewValue}>
+              {selectedClient?.name ?? 'Nie wybrano'}
+            </Text>
+          </View>
+
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>Obsługa</Text>
+            <Text style={styles.previewValue}>
+              {selectedWorker ? getWorkerName(selectedWorker) : 'Nie wybrano'}
+            </Text>
+          </View>
+
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>Data</Text>
+            <Text style={styles.previewValue}>
+              {dataOrder.trim().length > 0 ? dataOrder : 'Brak daty'}
+            </Text>
+          </View>
+
+          <View style={styles.previewRow}>
+            <Text style={styles.previewLabel}>Dostawa</Text>
+            <Text style={styles.previewValue}>
+              {deliveryDate.trim().length > 0 ? deliveryDate : 'Brak daty'}
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Powiązania</Text>
+          <Text style={styles.sectionTitle}>Klient</Text>
 
           {dictionaryLoading ? (
-            <View style={styles.dictionaryLoadingBox}>
+            <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color="#f97316" />
-              <Text style={styles.dictionaryLoadingText}>
-                Ładowanie klientów i pracowników...
-              </Text>
+              <Text style={styles.loadingText}>Ładowanie klientów...</Text>
+            </View>
+          ) : clients.length > 0 ? (
+            <View style={styles.optionList}>
+              {clients.map(renderClientButton)}
             </View>
           ) : (
-            <>
-              <Text style={styles.label}>Klient</Text>
-              <Text style={styles.selectedText}>
-                Wybrano:{' '}
-                {selectedClient
-                  ? selectedClient.name
-                  : `ID ${idClient || '-'}`}
-              </Text>
+            <Text style={styles.emptyText}>Brak klientów do wyboru.</Text>
+          )}
+        </View>
 
-              <View style={styles.optionsContainer}>
-                {clients.map(renderClientButton)}
-              </View>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Obsługa</Text>
 
-              <Text style={styles.label}>Pracownik</Text>
-              <Text style={styles.selectedText}>
-                Wybrano:{' '}
-                {selectedWorker
-                  ? getWorkerName(selectedWorker)
-                  : `ID ${idWorker || '-'}`}
-              </Text>
-
-              <View style={styles.optionsContainer}>
-                {workers.map(renderWorkerButton)}
-              </View>
-            </>
+          {dictionaryLoading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" color="#f97316" />
+              <Text style={styles.loadingText}>Ładowanie listy...</Text>
+            </View>
+          ) : workers.length > 0 ? (
+            <View style={styles.optionList}>
+              {workers.map(renderWorkerButton)}
+            </View>
+          ) : (
+            <Text style={styles.emptyText}>Brak osób do wyboru.</Text>
           )}
         </View>
 
@@ -439,85 +539,96 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
           <Text style={styles.sectionTitle}>Daty</Text>
 
           <Text style={styles.label}>Data zamówienia</Text>
+
           <TextInput
             style={styles.input}
             value={dataOrder}
             onChangeText={setDataOrder}
-            placeholder="RRRR-MM-DD, np. 2026-05-23"
+            placeholder="RRRR-MM-DD"
             placeholderTextColor="#64748b"
             editable={!submitting}
           />
 
+          <View style={styles.quickButtons}>
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={setToday}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>Dzisiaj</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={styles.label}>Data dostawy</Text>
+
           <TextInput
             style={styles.input}
             value={deliveryDate}
             onChangeText={setDeliveryDate}
-            placeholder="RRRR-MM-DD, np. 2026-06-05"
+            placeholder="RRRR-MM-DD"
             placeholderTextColor="#64748b"
             editable={!submitting}
           />
+
+          <View style={styles.quickButtons}>
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setDeliveryInDays(1)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>Jutro</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setDeliveryInDays(2)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>+2 dni</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setDeliveryInDays(3)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>+3 dni</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Notatki</Text>
+          <Text style={styles.sectionTitle}>Informacje</Text>
 
           <TextInput
             style={[styles.input, styles.textArea]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Np. zamówienie testowe"
+            placeholder="Opcjonalnie, np. sposób dostawy albo uwagi klienta"
             placeholderTextColor="#64748b"
             multiline
             editable={!submitting}
           />
-        </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Status zamówienia</Text>
-
-          <View style={styles.statusButtons}>
-            <TouchableOpacity
-              style={[
-                styles.statusButton,
-                isActive && styles.statusButtonActive,
-              ]}
-              onPress={() => setIsActive(true)}
-              activeOpacity={0.8}
-              disabled={submitting}>
-              <Text
-                style={[
-                  styles.statusButtonText,
-                  isActive && styles.statusButtonTextSelected,
-                ]}>
-                Aktywne
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.statusButton,
-                !isActive && styles.statusButtonInactive,
-              ]}
-              onPress={() => setIsActive(false)}
-              activeOpacity={0.8}
-              disabled={submitting}>
-              <Text
-                style={[
-                  styles.statusButtonText,
-                  !isActive && styles.statusButtonTextSelected,
-                ]}>
-                Nieaktywne
-              </Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={isActive ? styles.visibleSwitch : styles.archiveSwitch}
+            onPress={() => setIsActive(previous => !previous)}
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.switchText}>
+              {isActive ? 'Widoczne na liście' : 'W archiwum'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, submitting && styles.disabledButton]}
+          style={[
+            styles.saveButton,
+            (!formReady || submitting || dictionaryLoading) && styles.disabledButton,
+          ]}
           onPress={handleSavePress}
-          activeOpacity={0.8}
-          disabled={submitting || dictionaryLoading}>
+          activeOpacity={0.85}
+          disabled={!formReady || submitting || dictionaryLoading}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
@@ -530,7 +641,7 @@ function OrderFormScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           disabled={submitting}>
           <Text style={styles.cancelButtonText}>Anuluj</Text>
         </TouchableOpacity>
@@ -552,7 +663,7 @@ const styles = StyleSheet.create({
 
   heroBox: {
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
     borderColor: '#334155',
@@ -565,12 +676,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   title: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: '900',
   },
 
@@ -579,11 +690,89 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
+    fontWeight: '700',
+  },
+
+  readyBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 14,
+  },
+
+  warningBox: {
+    backgroundColor: '#431407',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 14,
+  },
+
+  readyTitle: {
+    color: '#bbf7d0',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  readyText: {
+    color: '#bbf7d0',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+
+  previewCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
+  },
+
+  previewRow: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
+  },
+
+  previewLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
+  },
+
+  previewValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   card: {
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
@@ -592,9 +781,93 @@ const styles = StyleSheet.create({
 
   sectionTitle: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     marginBottom: 12,
+  },
+
+  loadingBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 12,
+  },
+
+  loadingText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+
+  optionList: {
+    gap: 10,
+  },
+
+  optionButton: {
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+
+  optionButtonSelected: {
+    backgroundColor: '#1e293b',
+    borderColor: '#f97316',
+  },
+
+  optionButtonMuted: {
+    opacity: 0.6,
+  },
+
+  optionTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+
+  optionTitle: {
+    flex: 1,
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  optionTitleSelected: {
+    color: '#ffffff',
+  },
+
+  optionText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  optionTextSelected: {
+    color: '#cbd5e1',
+  },
+
+  selectedBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  emptyText: {
+    color: '#fca5a5',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
   },
 
   label: {
@@ -611,127 +884,68 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 15,
-    marginBottom: 14,
+    marginBottom: 12,
   },
 
   textArea: {
-    height: 100,
+    minHeight: 90,
     textAlignVertical: 'top',
   },
 
-  dictionaryLoadingBox: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-
-  dictionaryLoadingText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  selectedText: {
-    color: '#94a3b8',
-    fontSize: 13,
-    marginBottom: 8,
-  },
-
-  optionsContainer: {
+  quickButtons: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
 
-  optionButton: {
-    backgroundColor: '#0f172a',
+  quickButton: {
+    backgroundColor: '#1e293b',
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 12,
+    borderRadius: 999,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 7,
   },
 
-  optionButtonSelected: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
-  },
-
-  inactiveOptionButton: {
-    borderColor: '#7f1d1d',
-  },
-
-  optionButtonText: {
+  quickButtonText: {
     color: '#cbd5e1',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
   },
 
-  optionButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  optionButtonSubtext: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-
-  optionButtonSubtextSelected: {
-    color: '#ffffff',
-  },
-
-  statusButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
+  visibleSwitch: {
+    backgroundColor: '#052e16',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#16a34a',
     borderRadius: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     alignItems: 'center',
   },
 
-  statusButtonActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
+  archiveSwitch: {
+    backgroundColor: '#334155',
+    borderWidth: 1,
+    borderColor: '#475569',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
 
-  statusButtonInactive: {
-    backgroundColor: '#7f1d1d',
-    borderColor: '#7f1d1d',
-  },
-
-  statusButtonText: {
-    color: '#cbd5e1',
+  switchText: {
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
   },
 
-  statusButtonTextSelected: {
-    color: '#ffffff',
-  },
-
   saveButton: {
     backgroundColor: '#16a34a',
-    paddingVertical: 14,
     borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 4,
+    marginBottom: 12,
   },
 
   disabledButton: {
@@ -746,16 +960,15 @@ const styles = StyleSheet.create({
 
   cancelButton: {
     backgroundColor: '#334155',
-    paddingVertical: 14,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    marginTop: 12,
   },
 
   cancelButtonText: {
     color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
   },
 });
 
