@@ -39,7 +39,7 @@ function formatMoney(value?: number | null): string {
   return `${safeValue.toFixed(2)} zł`;
 }
 
-function normalizePrice(value: string): string {
+function normalizeNumber(value: string): string {
   return value.replace(',', '.');
 }
 
@@ -63,7 +63,7 @@ function generateCodeFromName(name: string): string {
     return `PROD-${Date.now().toString().slice(-4)}`;
   }
 
-  return parts.slice(0, 3).join('-').slice(0, 24);
+  return parts.slice(0, 3).join('-').slice(0, 32);
 }
 
 function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
@@ -74,23 +74,17 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
 
   const [name, setName] = useState(editedItem?.name ?? '');
   const [description, setDescription] = useState(editedItem?.description ?? '');
-
   const [idCategory, setIdCategory] = useState(
     editedItem?.idCategory?.toString() ?? '',
   );
-
   const [price, setPrice] = useState(editedItem?.price?.toString() ?? '');
-
   const [quantity, setQuantity] = useState(
     editedItem?.quantity?.toString() ?? '',
   );
-
   const [fotoUrl, setFotoUrl] = useState(editedItem?.fotoUrl ?? '');
-
   const [idUnitOfMeasurement, setIdUnitOfMeasurement] = useState(
     editedItem?.idUnitOfMeasurement?.toString() ?? '',
   );
-
   const [code, setCode] = useState(editedItem?.code ?? '');
   const [isActive, setIsActive] = useState(editedItem?.isActive ?? true);
 
@@ -109,68 +103,81 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     loading: false,
   });
 
-  const parsedPrice = Number(normalizePrice(price));
-  const parsedQuantity = Number(quantity);
+  const safeName = name.trim();
+  const safeDescription = description.trim();
+  const safeCode = code.trim();
+  const safeFotoUrl = fotoUrl.trim();
 
-  const selectedCategory = categories.find(category => {
-    return category.idCategory === Number(idCategory);
-  });
+  const parsedPrice = Number(normalizeNumber(price));
+  const parsedQuantity = Number(normalizeNumber(quantity));
 
-  const selectedUnit = units.find(unit => {
-    return unit.idUnitOfMeasurement === Number(idUnitOfMeasurement);
-  });
+  const selectedCategory = useMemo(() => {
+    return categories.find(category => {
+      return category.idCategory === Number(idCategory);
+    });
+  }, [categories, idCategory]);
+
+  const selectedUnit = useMemo(() => {
+    return units.find(unit => {
+      return unit.idUnitOfMeasurement === Number(idUnitOfMeasurement);
+    });
+  }, [idUnitOfMeasurement, units]);
+
+  const nameReady = useMemo(() => {
+    return safeName.length >= 3 && safeName.length <= 80;
+  }, [safeName]);
+
+  const descriptionReady = useMemo(() => {
+    return safeDescription.length >= 5 && safeDescription.length <= 500;
+  }, [safeDescription]);
+
+  const codeReady = useMemo(() => {
+    return safeCode.length >= 2 && safeCode.length <= 40;
+  }, [safeCode]);
+
+  const categoryReady = useMemo(() => {
+    return Number(idCategory) > 0;
+  }, [idCategory]);
+
+  const unitReady = useMemo(() => {
+    return Number(idUnitOfMeasurement) > 0;
+  }, [idUnitOfMeasurement]);
+
+  const priceReady = useMemo(() => {
+    return !Number.isNaN(parsedPrice) && parsedPrice > 0;
+  }, [parsedPrice]);
+
+  const quantityReady = useMemo(() => {
+    return !Number.isNaN(parsedQuantity) && parsedQuantity >= 0;
+  }, [parsedQuantity]);
+
+  const formReady = useMemo(() => {
+    return (
+      nameReady &&
+      descriptionReady &&
+      codeReady &&
+      categoryReady &&
+      unitReady &&
+      priceReady &&
+      quantityReady
+    );
+  }, [
+    categoryReady,
+    codeReady,
+    descriptionReady,
+    nameReady,
+    priceReady,
+    quantityReady,
+    unitReady,
+  ]);
 
   const stockValue = useMemo(() => {
-    if (Number.isNaN(parsedPrice) || Number.isNaN(parsedQuantity)) {
+    if (!priceReady || !quantityReady) {
       return 0;
     }
 
-    return Math.max(parsedPrice, 0) * Math.max(parsedQuantity, 0);
-  }, [parsedPrice, parsedQuantity]);
-
-  const formProgress = useMemo(() => {
-    let result = 0;
-
-    if (name.trim().length >= 3) {
-      result += 1;
-    }
-
-    if (description.trim().length >= 5) {
-      result += 1;
-    }
-
-    if (code.trim().length > 0) {
-      result += 1;
-    }
-
-    if (Number(idCategory) > 0) {
-      result += 1;
-    }
-
-    if (Number(idUnitOfMeasurement) > 0) {
-      result += 1;
-    }
-
-    if (!Number.isNaN(parsedPrice) && parsedPrice > 0) {
-      result += 1;
-    }
-
-    if (!Number.isNaN(parsedQuantity) && parsedQuantity >= 0) {
-      result += 1;
-    }
-
-    return result;
-  }, [
-    code,
-    description,
-    idCategory,
-    idUnitOfMeasurement,
-    name,
-    parsedPrice,
-    parsedQuantity,
-  ]);
-
-  const formProgressText = `${formProgress}/7`;
+    return parsedPrice * parsedQuantity;
+  }, [parsedPrice, parsedQuantity, priceReady, quantityReady]);
 
   const showDialog = (
     type: AppDialogType,
@@ -211,147 +218,166 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
         apiService.getUnits(),
       ]);
 
-      const activeCategories = categoriesFromApi.filter(category => {
+      const visibleCategories = categoriesFromApi.filter(category => {
+        if (isEditMode && category.idCategory === editedItem?.idCategory) {
+          return true;
+        }
+
         return category.isActive !== false;
       });
 
-      const activeUnits = unitsFromApi.filter(unit => {
+      const visibleUnits = unitsFromApi.filter(unit => {
+        if (
+          isEditMode &&
+          unit.idUnitOfMeasurement === editedItem?.idUnitOfMeasurement
+        ) {
+          return true;
+        }
+
         return unit.isActive !== false;
       });
 
-      setCategories(activeCategories);
-      setUnits(activeUnits);
+      setCategories(visibleCategories);
+      setUnits(visibleUnits);
 
       if (!isEditMode) {
-        if (activeCategories.length > 0) {
-          setIdCategory(activeCategories[0].idCategory.toString());
+        if (visibleCategories.length > 0) {
+          setIdCategory(visibleCategories[0].idCategory.toString());
         }
 
-        if (activeUnits.length > 0) {
-          setIdUnitOfMeasurement(activeUnits[0].idUnitOfMeasurement.toString());
+        if (visibleUnits.length > 0) {
+          setIdUnitOfMeasurement(
+            visibleUnits[0].idUnitOfMeasurement.toString(),
+          );
         }
       }
     } catch (err) {
       showDialog(
         'error',
-        'Błąd pobierania danych',
+        'Nie udało się pobrać danych',
         (err as Error).message,
       );
     } finally {
       setDictionaryLoading(false);
     }
-  }, [isEditMode]);
+  }, [editedItem?.idCategory, editedItem?.idUnitOfMeasurement, isEditMode]);
 
   useEffect(() => {
     loadDictionaries();
   }, [loadDictionaries]);
 
   const validateForm = (): string | null => {
-    const safePrice = Number(normalizePrice(price));
-    const safeQuantity = Number(quantity);
-    const parsedCategoryId = Number(idCategory);
-    const parsedUnitId = Number(idUnitOfMeasurement);
-
-    if (name.trim().length === 0) {
-      return 'Podaj nazwę produktu';
+    if (safeName.length === 0) {
+      return 'Podaj nazwę produktu.';
     }
 
-    if (name.trim().length < 3) {
-      return 'Nazwa produktu powinna mieć minimum 3 znaki';
+    if (safeName.length < 3) {
+      return 'Nazwa produktu powinna mieć minimum 3 znaki.';
     }
 
-    if (name.trim().length > 80) {
-      return 'Nazwa produktu może mieć maksymalnie 80 znaków';
+    if (safeName.length > 80) {
+      return 'Nazwa produktu może mieć maksymalnie 80 znaków.';
     }
 
-    if (description.trim().length === 0) {
-      return 'Podaj opis produktu';
+    if (safeDescription.length === 0) {
+      return 'Podaj opis produktu.';
     }
 
-    if (description.trim().length < 5) {
-      return 'Opis produktu powinien mieć minimum 5 znaków';
+    if (safeDescription.length < 5) {
+      return 'Opis produktu powinien mieć minimum 5 znaków.';
     }
 
-    if (
-      idCategory.trim().length === 0 ||
-      Number.isNaN(parsedCategoryId) ||
-      parsedCategoryId <= 0
-    ) {
-      return 'Wybierz kategorię produktu';
+    if (safeDescription.length > 500) {
+      return 'Opis produktu może mieć maksymalnie 500 znaków.';
     }
 
-    if (
-      idUnitOfMeasurement.trim().length === 0 ||
-      Number.isNaN(parsedUnitId) ||
-      parsedUnitId <= 0
-    ) {
-      return 'Wybierz jednostkę miary';
+    if (!categoryReady) {
+      return 'Wybierz kategorię.';
     }
 
-    if (price.trim().length === 0 || Number.isNaN(safePrice)) {
-      return 'Podaj poprawną cenę produktu';
+    if (!unitReady) {
+      return 'Wybierz jednostkę.';
     }
 
-    if (safePrice <= 0) {
-      return 'Cena produktu musi być większa od 0';
+    if (!priceReady) {
+      return 'Podaj poprawną cenę większą od 0.';
     }
 
-    if (quantity.trim().length === 0 || Number.isNaN(safeQuantity)) {
-      return 'Podaj poprawną ilość produktu';
+    if (!quantityReady) {
+      return 'Podaj poprawną ilość. Ilość nie może być mniejsza od 0.';
     }
 
-    if (safeQuantity < 0) {
-      return 'Ilość nie może być mniejsza od 0';
+    if (safeCode.length === 0) {
+      return 'Podaj kod produktu.';
     }
 
-    if (code.trim().length === 0) {
-      return 'Podaj kod produktu';
+    if (safeCode.length < 2) {
+      return 'Kod produktu powinien mieć minimum 2 znaki.';
     }
 
-    if (code.trim().length > 40) {
-      return 'Kod produktu może mieć maksymalnie 40 znaków';
+    if (safeCode.length > 40) {
+      return 'Kod produktu może mieć maksymalnie 40 znaków.';
     }
 
     return null;
   };
 
   const handleGenerateCode = (): void => {
-    if (name.trim().length === 0) {
-      showDialog(
-        'error',
-        'Brak nazwy',
-        'Najpierw wpisz nazwę produktu, a potem wygeneruj kod.',
-      );
-
+    if (safeName.length === 0) {
+      showDialog('error', 'Brak nazwy', 'Najpierw wpisz nazwę produktu.');
       return;
     }
 
-    setCode(generateCodeFromName(name));
+    setCode(generateCodeFromName(safeName));
   };
 
-  const handleQuickPrice = (value: number): void => {
+  const setQuickPrice = (value: number): void => {
     setPrice(value.toString());
   };
 
-  const handleQuickQuantity = (value: number): void => {
+  const setQuickQuantity = (value: number): void => {
     setQuantity(value.toString());
+  };
+
+  const increaseQuantity = (): void => {
+    setQuantity(previous => {
+      const current = Number(normalizeNumber(previous));
+
+      if (Number.isNaN(current)) {
+        return '1';
+      }
+
+      return (current + 1).toString();
+    });
+  };
+
+  const decreaseQuantity = (): void => {
+    setQuantity(previous => {
+      const current = Number(normalizeNumber(previous));
+
+      if (Number.isNaN(current) || current <= 0) {
+        return '0';
+      }
+
+      return Math.max(current - 1, 0).toString();
+    });
   };
 
   const handleSavePress = (): void => {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Błąd formularza', validationError);
+      showDialog('error', 'Sprawdź formularz', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      title: isEditMode ? 'Zapisać zmiany?' : 'Dodać produkt?',
       message: isEditMode
-        ? `Czy zapisać zmiany w produkcie "${name.trim()}"?`
-        : `Czy dodać nowy produkt "${name.trim()}"?`,
+        ? `Zapisać produkt "${safeName}"?`
+        : `Dodać produkt "${safeName}"?`,
       loading: false,
     });
   };
@@ -366,14 +392,14 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
       }));
 
       const command = {
-        name: name.trim(),
-        description: description.trim(),
+        name: safeName,
+        description: safeDescription,
         idCategory: Number(idCategory),
-        price: Number(normalizePrice(price)),
-        quantity: Number(quantity),
-        fotoUrl: fotoUrl.trim().length > 0 ? fotoUrl.trim() : null,
+        price: Number(normalizeNumber(price)),
+        quantity: Number(normalizeNumber(quantity)),
+        fotoUrl: safeFotoUrl.length > 0 ? safeFotoUrl : null,
         idUnitOfMeasurement: Number(idUnitOfMeasurement),
-        code: code.trim(),
+        code: safeCode,
         isActive,
       };
 
@@ -383,24 +409,14 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           ...command,
         });
 
-        showDialog(
-          'success',
-          'Produkt zaktualizowany',
-          'Zmiany produktu zostały zapisane.',
-          true,
-        );
+        showDialog('success', 'Zapisano', 'Produkt został zapisany.', true);
       } else {
         await createItem(command);
 
-        showDialog(
-          'success',
-          'Produkt dodany',
-          'Nowy produkt został zapisany w systemie.',
-          true,
-        );
+        showDialog('success', 'Dodano', 'Produkt został dodany.', true);
       }
     } catch (err) {
-      showDialog('error', 'Błąd zapisu', (err as Error).message);
+      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -418,24 +434,38 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const renderCategoryButton = (
     category: CategoryDto,
   ): React.JSX.Element => {
-    const isSelected = Number(idCategory) === category.idCategory;
+    const selected = Number(idCategory) === category.idCategory;
 
     return (
       <TouchableOpacity
         key={`category-${category.idCategory}`}
         style={[
           styles.optionButton,
-          isSelected && styles.optionButtonSelected,
+          selected && styles.optionButtonSelected,
         ]}
         onPress={() => setIdCategory(category.idCategory.toString())}
         activeOpacity={0.85}
         disabled={submitting}>
+        <View style={styles.optionTopRow}>
+          <Text
+            style={[
+              styles.optionTitle,
+              selected && styles.optionTitleSelected,
+            ]}
+            numberOfLines={1}>
+            {category.name}
+          </Text>
+
+          {selected ? <Text style={styles.selectedBadge}>Wybrano</Text> : null}
+        </View>
+
         <Text
           style={[
-            styles.optionButtonText,
-            isSelected && styles.optionButtonTextSelected,
-          ]}>
-          {category.name}
+            styles.optionText,
+            selected && styles.optionTextSelected,
+          ]}
+          numberOfLines={2}>
+          {category.description ?? 'Brak opisu'}
         </Text>
       </TouchableOpacity>
     );
@@ -444,27 +474,40 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const renderUnitButton = (
     unit: UnitOfMeasurementDto,
   ): React.JSX.Element => {
-    const isSelected =
-      Number(idUnitOfMeasurement) === unit.idUnitOfMeasurement;
+    const selected = Number(idUnitOfMeasurement) === unit.idUnitOfMeasurement;
 
     return (
       <TouchableOpacity
         key={`unit-${unit.idUnitOfMeasurement}`}
         style={[
           styles.optionButton,
-          isSelected && styles.optionButtonSelected,
+          selected && styles.optionButtonSelected,
         ]}
         onPress={() =>
           setIdUnitOfMeasurement(unit.idUnitOfMeasurement.toString())
         }
         activeOpacity={0.85}
         disabled={submitting}>
+        <View style={styles.optionTopRow}>
+          <Text
+            style={[
+              styles.optionTitle,
+              selected && styles.optionTitleSelected,
+            ]}
+            numberOfLines={1}>
+            {unit.name}
+          </Text>
+
+          {selected ? <Text style={styles.selectedBadge}>Wybrano</Text> : null}
+        </View>
+
         <Text
           style={[
-            styles.optionButtonText,
-            isSelected && styles.optionButtonTextSelected,
-          ]}>
-          {unit.shortcut ? `${unit.name} (${unit.shortcut})` : unit.name}
+            styles.optionText,
+            selected && styles.optionTextSelected,
+          ]}
+          numberOfLines={2}>
+          {unit.shortcut ?? unit.description ?? 'Jednostka produktu'}
         </Text>
       </TouchableOpacity>
     );
@@ -501,154 +544,288 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Uzupełnij dane produktu, kategorię, cenę, stan magazynowy oraz kod.
+            Uzupełnij dane produktu, cenę i stan magazynowy.
           </Text>
         </View>
 
-        <View style={styles.progressBox}>
-          <View style={styles.progressHeader}>
-            <View>
-              <Text style={styles.progressTitle}>Postęp formularza</Text>
-              <Text style={styles.progressText}>
-                Uzupełnione pola: {formProgressText}
-              </Text>
-            </View>
+        <View style={formReady ? styles.readyBox : styles.warningBox}>
+          <Text style={formReady ? styles.readyTitle : styles.warningTitle}>
+            {formReady ? 'Gotowe do zapisu' : 'Uzupełnij dane'}
+          </Text>
 
-            <Text style={styles.progressBadge}>{formProgressText}</Text>
-          </View>
-
-          <Text style={styles.progressHint}>
-            Produkt powinien mieć nazwę, opis, kod, kategorię, jednostkę, cenę i
-            ilość.
+          <Text style={formReady ? styles.readyText : styles.warningText}>
+            {formReady
+              ? 'Możesz zapisać produkt.'
+              : 'Wpisz nazwę, opis, kod, cenę, ilość oraz wybierz kategorię i jednostkę.'}
           </Text>
         </View>
 
         <View style={styles.previewCard}>
-          <Text style={styles.sectionTitle}>Podgląd produktu</Text>
+          <Text style={styles.sectionTitle}>Podgląd</Text>
 
-          <View style={styles.previewRow}>
+          <View style={styles.previewHeader}>
             <View style={styles.previewIconBox}>
               <Text style={styles.previewIcon}>🖨️</Text>
             </View>
 
             <View style={styles.previewTextBox}>
               <Text style={styles.previewName}>
-                {name.trim().length > 0 ? name.trim() : 'Nazwa produktu'}
+                {safeName.length > 0 ? safeName : 'Nazwa produktu'}
               </Text>
 
-              <Text style={styles.previewDescription} numberOfLines={3}>
-                {description.trim().length > 0
-                  ? description.trim()
-                  : 'Opis produktu pojawi się tutaj.'}
+              <Text style={isActive ? styles.currentBadge : styles.archiveBadge}>
+                {isActive ? 'Bieżący' : 'Archiwum'}
               </Text>
             </View>
           </View>
 
-          <View style={styles.previewBadges}>
-            <Text style={styles.previewBadge}>
-              {selectedCategory?.name ?? 'Brak kategorii'}
-            </Text>
-
-            <Text style={styles.previewBadge}>
-              {code.trim().length > 0 ? code.trim() : 'Brak kodu'}
-            </Text>
-
-            <Text style={isActive ? styles.previewActiveBadge : styles.previewInactiveBadge}>
-              {isActive ? 'Aktywny' : 'Nieaktywny'}
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Kod</Text>
+            <Text style={styles.previewValue}>
+              {safeCode.length > 0 ? safeCode : 'Brak kodu'}
             </Text>
           </View>
 
-          <View style={styles.previewStats}>
-            <View style={styles.previewStat}>
-              <Text style={styles.previewStatLabel}>Cena</Text>
-              <Text style={styles.previewStatValue}>
-                {Number.isNaN(parsedPrice)
-                  ? '0.00 zł'
-                  : formatMoney(parsedPrice)}
+          <View style={styles.previewGrid}>
+            <View style={styles.previewCell}>
+              <Text style={styles.previewLabel}>Cena</Text>
+              <Text style={styles.previewMoney}>
+                {priceReady ? formatMoney(parsedPrice) : '0.00 zł'}
               </Text>
             </View>
 
-            <View style={styles.previewStat}>
-              <Text style={styles.previewStatLabel}>Stan</Text>
-              <Text style={styles.previewStatValue}>
-                {Number.isNaN(parsedQuantity) ? 0 : parsedQuantity}{' '}
-                {selectedUnit?.shortcut ?? selectedUnit?.name ?? 'szt'}
+            <View style={styles.previewCell}>
+              <Text style={styles.previewLabel}>Ilość</Text>
+              <Text style={styles.previewValue}>
+                {quantityReady ? parsedQuantity : 0}{' '}
+                {selectedUnit?.name ?? 'szt'}
               </Text>
             </View>
 
-            <View style={styles.previewStat}>
-              <Text style={styles.previewStatLabel}>Wartość</Text>
-              <Text style={styles.previewStatValue}>{formatMoney(stockValue)}</Text>
+            <View style={styles.previewCell}>
+              <Text style={styles.previewLabel}>Wartość</Text>
+              <Text style={styles.previewMoney}>{formatMoney(stockValue)}</Text>
             </View>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Kategoria</Text>
+            <Text style={styles.previewValue}>
+              {selectedCategory?.name ?? 'Nie wybrano'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statusGrid}>
+          <View style={nameReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{nameReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>Nazwa</Text>
+            <Text style={styles.statusText}>
+              {nameReady ? 'Uzupełniona' : 'Wymagana'}
+            </Text>
+          </View>
+
+          <View style={priceReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{priceReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>Cena</Text>
+            <Text style={styles.statusText}>
+              {priceReady ? 'Poprawna' : 'Wymagana'}
+            </Text>
           </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Dane podstawowe</Text>
+          <Text style={styles.sectionTitle}>Dane produktu</Text>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Nazwa produktu</Text>
-
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Np. Filament PLA 1.75 mm"
-              placeholderTextColor="#64748b"
-              editable={!submitting}
-            />
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Nazwa</Text>
+            <Text style={nameReady ? styles.counterOk : styles.counterWarning}>
+              {safeName.length}/80
+            </Text>
           </View>
 
-          <View style={styles.formGroup}>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Np. Filament PLA biały"
+            placeholderTextColor="#64748b"
+            editable={!submitting}
+            returnKeyType="next"
+          />
+
+          <View style={styles.labelRow}>
             <Text style={styles.label}>Opis</Text>
-
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Krótki opis produktu"
-              placeholderTextColor="#64748b"
-              multiline
-              editable={!submitting}
-            />
+            <Text
+              style={
+                descriptionReady ? styles.counterOk : styles.counterWarning
+              }>
+              {safeDescription.length}/500
+            </Text>
           </View>
 
-          <View style={styles.formGroup}>
-            <View style={styles.labelRow}>
-              <Text style={styles.label}>Kod produktu</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Krótki opis produktu"
+            placeholderTextColor="#64748b"
+            multiline
+            editable={!submitting}
+          />
 
-              <TouchableOpacity
-                style={styles.smallActionButton}
-                onPress={handleGenerateCode}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.smallActionButtonText}>Generuj</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={styles.input}
-              value={code}
-              onChangeText={setCode}
-              placeholder="Np. FIL-PLA-001"
-              placeholderTextColor="#64748b"
-              autoCapitalize="characters"
-              editable={!submitting}
-            />
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Kod</Text>
+            <Text style={codeReady ? styles.counterOk : styles.counterWarning}>
+              {safeCode.length}/40
+            </Text>
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Adres zdjęcia / URL</Text>
+          <TextInput
+            style={styles.input}
+            value={code}
+            onChangeText={setCode}
+            placeholder="Np. PLA-WHITE-1KG"
+            placeholderTextColor="#64748b"
+            autoCapitalize="characters"
+            editable={!submitting}
+            returnKeyType="next"
+          />
+
+          <TouchableOpacity
+            style={styles.generateButton}
+            onPress={handleGenerateCode}
+            activeOpacity={0.85}
+            disabled={submitting}>
+            <Text style={styles.generateButtonText}>Wygeneruj kod z nazwy</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Cena i magazyn</Text>
+
+          <Text style={styles.label}>Cena</Text>
+
+          <TextInput
+            style={[
+              styles.input,
+              !priceReady && price.trim().length > 0 && styles.inputWarning,
+            ]}
+            value={price}
+            onChangeText={setPrice}
+            placeholder="Np. 79.99"
+            placeholderTextColor="#64748b"
+            keyboardType="decimal-pad"
+            editable={!submitting}
+            returnKeyType="next"
+          />
+
+          <View style={styles.quickButtons}>
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickPrice(25)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>25</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickPrice(50)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>50</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickPrice(100)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>100</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickPrice(250)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>250</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.label}>Ilość</Text>
+
+          <View style={styles.quantityRow}>
+            <TouchableOpacity
+              style={styles.quantityButton}
+              onPress={decreaseQuantity}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quantityButtonText}>-</Text>
+            </TouchableOpacity>
 
             <TextInput
-              style={styles.input}
-              value={fotoUrl}
-              onChangeText={setFotoUrl}
-              placeholder="Opcjonalnie"
+              style={[
+                styles.quantityInput,
+                !quantityReady &&
+                  quantity.trim().length > 0 &&
+                  styles.inputWarning,
+              ]}
+              value={quantity}
+              onChangeText={setQuantity}
+              placeholder="0"
               placeholderTextColor="#64748b"
-              autoCapitalize="none"
+              keyboardType="decimal-pad"
               editable={!submitting}
             />
+
+            <TouchableOpacity
+              style={styles.quantityButton}
+              onPress={increaseQuantity}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quantityButtonText}>+</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.quickButtons}>
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickQuantity(0)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>0</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickQuantity(1)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>1</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickQuantity(5)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>5</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.quickButton}
+              onPress={() => setQuickQuantity(10)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text style={styles.quickButtonText}>10</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.stockValueBox}>
+            <Text style={styles.stockValueLabel}>Wartość magazynowa</Text>
+            <Text style={styles.stockValueText}>{formatMoney(stockValue)}</Text>
           </View>
         </View>
 
@@ -658,168 +835,97 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           {dictionaryLoading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color="#f97316" />
-              <Text style={styles.loadingTextSmall}>Ładowanie kategorii...</Text>
+              <Text style={styles.loadingBoxText}>Ładowanie kategorii...</Text>
+            </View>
+          ) : categories.length > 0 ? (
+            <View style={styles.optionList}>
+              {categories.map(renderCategoryButton)}
             </View>
           ) : (
-            <View style={styles.optionList}>
-              {categories.length > 0 ? (
-                categories.map(renderCategoryButton)
-              ) : (
-                <Text style={styles.emptyDictionaryText}>
-                  Brak aktywnych kategorii.
-                </Text>
-              )}
-            </View>
+            <Text style={styles.emptyText}>Brak kategorii do wyboru.</Text>
           )}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Jednostka miary</Text>
+          <Text style={styles.sectionTitle}>Jednostka</Text>
 
           {dictionaryLoading ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator size="small" color="#f97316" />
-              <Text style={styles.loadingTextSmall}>Ładowanie jednostek...</Text>
+              <Text style={styles.loadingBoxText}>Ładowanie jednostek...</Text>
+            </View>
+          ) : units.length > 0 ? (
+            <View style={styles.optionList}>
+              {units.map(renderUnitButton)}
             </View>
           ) : (
-            <View style={styles.optionList}>
-              {units.length > 0 ? (
-                units.map(renderUnitButton)
-              ) : (
-                <Text style={styles.emptyDictionaryText}>
-                  Brak aktywnych jednostek miary.
-                </Text>
-              )}
-            </View>
+            <Text style={styles.emptyText}>Brak jednostek do wyboru.</Text>
           )}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Cena i stan magazynowy</Text>
+          <Text style={styles.sectionTitle}>Zdjęcie</Text>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Cena</Text>
-
-            <TextInput
-              style={styles.input}
-              value={price}
-              onChangeText={value => setPrice(normalizePrice(value))}
-              placeholder="Np. 99.99"
-              placeholderTextColor="#64748b"
-              keyboardType="decimal-pad"
-              editable={!submitting}
-            />
-
-            <View style={styles.quickButtons}>
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickPrice(19.99)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>19.99</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickPrice(49.99)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>49.99</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickPrice(99.99)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>99.99</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Ilość</Text>
-
-            <TextInput
-              style={styles.input}
-              value={quantity}
-              onChangeText={setQuantity}
-              placeholder="Np. 10"
-              placeholderTextColor="#64748b"
-              keyboardType="number-pad"
-              editable={!submitting}
-            />
-
-            <View style={styles.quickButtons}>
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickQuantity(0)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>0</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickQuantity(5)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>5</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickQuantity(10)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>10</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.quickButton}
-                onPress={() => handleQuickQuantity(20)}
-                activeOpacity={0.85}
-                disabled={submitting}>
-                <Text style={styles.quickButtonText}>20</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.stockInfoBox}>
-            <Text style={styles.stockInfoTitle}>Wartość magazynowa</Text>
-
-            <Text style={styles.stockInfoValue}>{formatMoney(stockValue)}</Text>
-
-            <Text style={styles.stockInfoText}>
-              Wartość = cena produktu × ilość na stanie.
-            </Text>
-          </View>
+          <TextInput
+            style={styles.input}
+            value={fotoUrl}
+            onChangeText={setFotoUrl}
+            placeholder="Opcjonalny adres URL zdjęcia"
+            placeholderTextColor="#64748b"
+            autoCapitalize="none"
+            editable={!submitting}
+          />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Aktywność produktu</Text>
+          <Text style={styles.sectionTitle}>Widoczność</Text>
 
-          <TouchableOpacity
-            style={isActive ? styles.activeSwitch : styles.inactiveSwitch}
-            onPress={() => setIsActive(previous => !previous)}
-            activeOpacity={0.85}
-            disabled={submitting}>
-            <Text style={styles.switchText}>
-              {isActive ? 'Produkt aktywny' : 'Produkt nieaktywny'}
-            </Text>
-          </TouchableOpacity>
+          <View style={styles.statusButtons}>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                isActive && styles.statusButtonActive,
+              ]}
+              onPress={() => setIsActive(true)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  isActive && styles.statusButtonTextSelected,
+                ]}>
+                Bieżący
+              </Text>
+            </TouchableOpacity>
 
-          <Text style={styles.switchHint}>
-            Produkt aktywny jest widoczny dla klienta. Produkt nieaktywny można
-            zostawić w bazie, ale nie powinien być sprzedawany.
-          </Text>
+            <TouchableOpacity
+              style={[
+                styles.statusButton,
+                !isActive && styles.statusButtonArchive,
+              ]}
+              onPress={() => setIsActive(false)}
+              activeOpacity={0.85}
+              disabled={submitting}>
+              <Text
+                style={[
+                  styles.statusButtonText,
+                  !isActive && styles.statusButtonTextSelected,
+                ]}>
+                Archiwum
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, submitting && styles.disabledButton]}
+          style={[
+            styles.saveButton,
+            (!formReady || submitting || dictionaryLoading) &&
+              styles.disabledButton,
+          ]}
           onPress={handleSavePress}
           activeOpacity={0.85}
-          disabled={submitting || dictionaryLoading}>
+          disabled={!formReady || submitting || dictionaryLoading}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
@@ -854,7 +960,7 @@ const styles = StyleSheet.create({
 
   heroBox: {
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
     borderColor: '#334155',
@@ -867,7 +973,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   title: {
@@ -881,10 +987,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
+    fontWeight: '700',
   },
 
-  progressBox: {
-    backgroundColor: '#111827',
+  readyBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    marginBottom: 14,
+  },
+
+  warningBox: {
+    backgroundColor: '#431407',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
@@ -892,63 +1008,53 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  progressHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    alignItems: 'center',
-  },
-
-  progressTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
+  readyTitle: {
+    color: '#bbf7d0',
+    fontSize: 16,
     fontWeight: '900',
+    marginBottom: 5,
   },
 
-  progressText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-    marginTop: 4,
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
   },
 
-  progressBadge: {
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
+  readyText: {
+    color: '#bbf7d0',
     fontSize: 13,
-    fontWeight: '900',
-    overflow: 'hidden',
+    fontWeight: '700',
+    lineHeight: 18,
   },
 
-  progressHint: {
-    color: '#94a3b8',
-    fontSize: 12,
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 13,
     fontWeight: '700',
-    lineHeight: 17,
-    marginTop: 9,
+    lineHeight: 18,
   },
 
   previewCard: {
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#38bdf8',
     marginBottom: 14,
   },
 
-  previewRow: {
+  previewHeader: {
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 10,
+    alignItems: 'center',
+    marginBottom: 12,
   },
 
   previewIconBox: {
-    width: 58,
-    height: 58,
+    width: 52,
+    height: 52,
     borderRadius: 14,
     backgroundColor: '#0f172a',
     borderWidth: 1,
@@ -958,7 +1064,7 @@ const styles = StyleSheet.create({
   },
 
   previewIcon: {
-    fontSize: 30,
+    fontSize: 28,
   },
 
   previewTextBox: {
@@ -967,87 +1073,127 @@ const styles = StyleSheet.create({
 
   previewName: {
     color: '#f8fafc',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
-    marginBottom: 5,
+    marginBottom: 6,
   },
 
-  previewDescription: {
+  currentBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  archiveBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#334155',
     color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
-  },
-
-  previewBadges: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 10,
-  },
-
-  previewBadge: {
-    backgroundColor: '#1e293b',
-    color: '#cbd5e1',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
-  previewActiveBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
-    overflow: 'hidden',
+  previewInfoBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginBottom: 8,
   },
 
-  previewInactiveBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
-    overflow: 'hidden',
-  },
-
-  previewStats: {
+  previewGrid: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 8,
   },
 
-  previewStat: {
+  previewCell: {
     flex: 1,
     backgroundColor: '#0f172a',
     borderRadius: 12,
-    padding: 9,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
   },
 
-  previewStatLabel: {
+  previewLabel: {
     color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '900',
+    fontSize: 12,
+    fontWeight: '800',
     marginBottom: 4,
   },
 
-  previewStatValue: {
-    color: '#f97316',
+  previewValue: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+
+  previewMoney: {
+    color: '#16a34a',
     fontSize: 13,
     fontWeight: '900',
   },
 
+  statusGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  readyStatusCard: {
+    flex: 1,
+    backgroundColor: '#052e16',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#16a34a',
+  },
+
+  warningStatusCard: {
+    flex: 1,
+    backgroundColor: '#431407',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#f97316',
+  },
+
+  statusIcon: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  statusTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  statusText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+
   card: {
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
@@ -1058,10 +1204,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
-    marginBottom: 12,
-  },
-
-  formGroup: {
     marginBottom: 12,
   },
 
@@ -1080,6 +1222,18 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
 
+  counterOk: {
+    color: '#16a34a',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  counterWarning: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
   input: {
     backgroundColor: '#0f172a',
     borderWidth: 1,
@@ -1087,25 +1241,109 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 15,
+    marginBottom: 14,
+  },
+
+  inputWarning: {
+    borderColor: '#f97316',
   },
 
   textArea: {
-    minHeight: 92,
+    minHeight: 96,
     textAlignVertical: 'top',
   },
 
-  smallActionButton: {
+  generateButton: {
     backgroundColor: '#2563eb',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
 
-  smallActionButtonText: {
+  generateButtonText: {
     color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  quickButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+
+  quickButton: {
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+
+  quickButtonText: {
+    color: '#cbd5e1',
     fontSize: 12,
+    fontWeight: '900',
+  },
+
+  quantityRow: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  quantityButton: {
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    backgroundColor: '#f97316',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  quantityButtonText: {
+    color: '#ffffff',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  quantityInput: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 18,
+    fontWeight: '900',
+    textAlign: 'center',
+  },
+
+  stockValueBox: {
+    backgroundColor: '#052e16',
+    borderWidth: 1,
+    borderColor: '#16a34a',
+    borderRadius: 12,
+    padding: 10,
+  },
+
+  stockValueLabel: {
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  stockValueText: {
+    color: '#bbf7d0',
+    fontSize: 18,
     fontWeight: '900',
   },
 
@@ -1118,131 +1356,110 @@ const styles = StyleSheet.create({
     padding: 12,
   },
 
-  loadingTextSmall: {
+  loadingBoxText: {
     color: '#cbd5e1',
     fontSize: 13,
     fontWeight: '700',
   },
 
   optionList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
+    gap: 10,
   },
 
   optionButton: {
     backgroundColor: '#0f172a',
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
   },
 
   optionButtonSelected: {
-    backgroundColor: '#f97316',
+    backgroundColor: '#1e293b',
     borderColor: '#f97316',
   },
 
-  optionButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
+  optionTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 4,
   },
 
-  optionButtonTextSelected: {
+  optionTitle: {
+    flex: 1,
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  optionTitleSelected: {
     color: '#ffffff',
   },
 
-  emptyDictionaryText: {
+  optionText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  optionTextSelected: {
+    color: '#cbd5e1',
+  },
+
+  selectedBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
+  },
+
+  emptyText: {
     color: '#fca5a5',
     fontSize: 13,
     fontWeight: '800',
     lineHeight: 18,
   },
 
-  quickButtons: {
+  statusButtons: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 9,
+    gap: 10,
   },
 
-  quickButton: {
-    backgroundColor: '#1e293b',
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+  statusButton: {
+    flex: 1,
+    backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
 
-  quickButtonText: {
+  statusButtonActive: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  statusButtonArchive: {
+    backgroundColor: '#334155',
+    borderColor: '#475569',
+  },
+
+  statusButtonText: {
     color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  stockInfoBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-  },
-
-  stockInfoTitle: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  stockInfoValue: {
-    color: '#bbf7d0',
-    fontSize: 22,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  stockInfoText: {
-    color: '#bbf7d0',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
-  activeSwitch: {
-    backgroundColor: '#052e16',
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 9,
-  },
-
-  inactiveSwitch: {
-    backgroundColor: '#7f1d1d',
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    marginBottom: 9,
-  },
-
-  switchText: {
-    color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
   },
 
-  switchHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
+  statusButtonTextSelected: {
+    color: '#ffffff',
   },
 
   saveButton: {
@@ -1250,7 +1467,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 4,
   },
 
   disabledButton: {
@@ -1265,15 +1482,16 @@ const styles = StyleSheet.create({
 
   cancelButton: {
     backgroundColor: '#334155',
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 12,
   },
 
   cancelButtonText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });
 
