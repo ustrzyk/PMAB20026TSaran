@@ -216,6 +216,21 @@ export const sharedStyles = StyleSheet.create({
     marginBottom: appSpacing.md,
   },
 
+  previewGrid: {
+    flexDirection: 'row',
+    gap: appSpacing.md,
+    marginBottom: appSpacing.md,
+  },
+
+  previewCell: {
+    flex: 1,
+    backgroundColor: appColors.surfaceDark,
+    borderRadius: appRadius.md,
+    padding: appSpacing.lg,
+    borderWidth: 1,
+    borderColor: appColors.borderDark,
+  },
+
   previewLabel: {
     color: appColors.textSoft,
     fontSize: appFontSize.small,
@@ -228,6 +243,12 @@ export const sharedStyles = StyleSheet.create({
     fontSize: appFontSize.normal,
     fontWeight: appFontWeight.extraBold,
     lineHeight: 18,
+  },
+
+  previewMoney: {
+    color: appColors.success,
+    fontSize: appFontSize.normal,
+    fontWeight: appFontWeight.black,
   },
 
   currentBadge: {
@@ -394,6 +415,156 @@ export const sharedStyles = StyleSheet.create({
 
   roleButtonTextSelected: {
     color: appColors.text,
+  },
+
+  generateButton: {
+    backgroundColor: appColors.blue,
+    borderRadius: appRadius.md,
+    paddingVertical: appSpacing.xl,
+    alignItems: 'center',
+  },
+
+  generateButtonText: {
+    color: appColors.text,
+    fontSize: appFontSize.body,
+    fontWeight: appFontWeight.black,
+  },
+
+  quickButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: appSpacing.md,
+    marginBottom: appSpacing.xl,
+  },
+
+  quickButton: {
+    backgroundColor: appColors.surfaceLight,
+    borderWidth: 1,
+    borderColor: appColors.border,
+    borderRadius: appRadius.round,
+    paddingHorizontal: appSpacing.xxl,
+    paddingVertical: appSpacing.md,
+  },
+
+  quickButtonText: {
+    color: appColors.textMuted,
+    fontSize: appFontSize.small,
+    fontWeight: appFontWeight.black,
+  },
+
+  quantityRow: {
+    flexDirection: 'row',
+    gap: appSpacing.lg,
+    alignItems: 'center',
+    marginBottom: appSpacing.xl,
+  },
+
+  quantityButton: {
+    width: 46,
+    height: 46,
+    borderRadius: appRadius.round,
+    backgroundColor: appColors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  quantityButtonText: {
+    color: appColors.text,
+    fontSize: 22,
+    fontWeight: appFontWeight.black,
+  },
+
+  quantityInput: {
+    flex: 1,
+    backgroundColor: appColors.surfaceDark,
+    borderWidth: 1,
+    borderColor: appColors.border,
+    color: appColors.text,
+    borderRadius: appRadius.md,
+    paddingHorizontal: appSpacing.xl,
+    paddingVertical: appSpacing.xl,
+    fontSize: 18,
+    fontWeight: appFontWeight.black,
+    textAlign: 'center',
+  },
+
+  stockValueBox: {
+    backgroundColor: appColors.successDark,
+    borderWidth: 1,
+    borderColor: appColors.success,
+    borderRadius: appRadius.md,
+    padding: appSpacing.lg,
+  },
+
+  stockValueLabel: {
+    color: appColors.successLight,
+    fontSize: appFontSize.small,
+    fontWeight: appFontWeight.black,
+    marginBottom: appSpacing.xs,
+  },
+
+  stockValueText: {
+    color: appColors.successLight,
+    fontSize: appFontSize.section,
+    fontWeight: appFontWeight.black,
+  },
+
+  optionList: {
+    gap: appSpacing.lg,
+  },
+
+  optionButton: {
+    backgroundColor: appColors.surfaceDark,
+    borderRadius: appRadius.lg,
+    padding: appSpacing.xl,
+    borderWidth: 1,
+    borderColor: appColors.border,
+  },
+
+  optionButtonSelected: {
+    backgroundColor: appColors.surfaceLight,
+    borderColor: appColors.primary,
+  },
+
+  optionTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: appSpacing.lg,
+    alignItems: 'center',
+    marginBottom: appSpacing.xs,
+  },
+
+  optionTitle: {
+    flex: 1,
+    color: appColors.text,
+    fontSize: appFontSize.input,
+    fontWeight: appFontWeight.black,
+  },
+
+  optionTitleSelected: {
+    color: appColors.text,
+  },
+
+  optionText: {
+    color: appColors.textSoft,
+    fontSize: appFontSize.small,
+    fontWeight: appFontWeight.bold,
+    lineHeight: 17,
+  },
+
+  optionTextSelected: {
+    color: appColors.textMuted,
+  },
+
+  selectedBadge: {
+    backgroundColor: appColors.primary,
+    color: appColors.text,
+    paddingHorizontal: 9,
+    paddingVertical: appSpacing.xs,
+    borderRadius: appRadius.round,
+    fontSize: appFontSize.tiny,
+    fontWeight: appFontWeight.black,
+    overflow: 'hidden',
   },
 
   saveButton: {

@@ -4,7 +4,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -15,6 +14,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {sharedStyles as styles} from '../components/styles/sharedStyles.ts';
 import {useItems} from '../context/ItemsContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
@@ -439,10 +439,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`category-${category.idCategory}`}
-        style={[
-          styles.optionButton,
-          selected && styles.optionButtonSelected,
-        ]}
+        style={[styles.optionButton, selected && styles.optionButtonSelected]}
         onPress={() => setIdCategory(category.idCategory.toString())}
         activeOpacity={0.85}
         disabled={submitting}>
@@ -460,10 +457,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <Text
-          style={[
-            styles.optionText,
-            selected && styles.optionTextSelected,
-          ]}
+          style={[styles.optionText, selected && styles.optionTextSelected]}
           numberOfLines={2}>
           {category.description ?? 'Brak opisu'}
         </Text>
@@ -479,10 +473,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`unit-${unit.idUnitOfMeasurement}`}
-        style={[
-          styles.optionButton,
-          selected && styles.optionButtonSelected,
-        ]}
+        style={[styles.optionButton, selected && styles.optionButtonSelected]}
         onPress={() =>
           setIdUnitOfMeasurement(unit.idUnitOfMeasurement.toString())
         }
@@ -502,10 +493,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <Text
-          style={[
-            styles.optionText,
-            selected && styles.optionTextSelected,
-          ]}
+          style={[styles.optionText, selected && styles.optionTextSelected]}
           numberOfLines={2}>
           {unit.shortcut ?? unit.description ?? 'Jednostka produktu'}
         </Text>
@@ -665,7 +653,11 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           </View>
 
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[
+              styles.input,
+              styles.textArea,
+              !descriptionReady && styles.inputWarning,
+            ]}
             value={description}
             onChangeText={setDescription}
             placeholder="Krótki opis produktu"
@@ -682,7 +674,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
           </View>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, !codeReady && styles.inputWarning]}
             value={code}
             onChangeText={setCode}
             placeholder="Np. PLA-WHITE-1KG"
@@ -855,9 +847,7 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
               <Text style={styles.loadingBoxText}>Ładowanie jednostek...</Text>
             </View>
           ) : units.length > 0 ? (
-            <View style={styles.optionList}>
-              {units.map(renderUnitButton)}
-            </View>
+            <View style={styles.optionList}>{units.map(renderUnitButton)}</View>
           ) : (
             <Text style={styles.emptyText}>Brak jednostek do wyboru.</Text>
           )}
@@ -946,553 +936,5 @@ function ItemFormScreen({navigation, route}: Props): React.JSX.Element {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
-  heroBox: {
-    backgroundColor: '#111827',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 7,
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 27,
-    fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
-  readyBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 14,
-  },
-
-  warningBox: {
-    backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  readyTitle: {
-    color: '#bbf7d0',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  readyText: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  warningText: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  previewCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginBottom: 14,
-  },
-
-  previewHeader: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  previewIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  previewIcon: {
-    fontSize: 28,
-  },
-
-  previewTextBox: {
-    flex: 1,
-  },
-
-  previewName: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  currentBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  archiveBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#334155',
-    color: '#cbd5e1',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  previewInfoBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 8,
-  },
-
-  previewGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
-  },
-
-  previewCell: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-  },
-
-  previewLabel: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-
-  previewValue: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-
-  previewMoney: {
-    color: '#16a34a',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-
-  statusGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-
-  readyStatusCard: {
-    flex: 1,
-    backgroundColor: '#052e16',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-  },
-
-  warningStatusCard: {
-    flex: 1,
-    backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#f97316',
-  },
-
-  statusIcon: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  statusTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  statusText: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 16,
-  },
-
-  card: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-
-  label: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-
-  counterOk: {
-    color: '#16a34a',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  counterWarning: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  input: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-
-  inputWarning: {
-    borderColor: '#f97316',
-  },
-
-  textArea: {
-    minHeight: 96,
-    textAlignVertical: 'top',
-  },
-
-  generateButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  generateButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  quickButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 12,
-  },
-
-  quickButton: {
-    backgroundColor: '#1e293b',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-
-  quickButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  quantityRow: {
-    flexDirection: 'row',
-    gap: 10,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  quantityButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 999,
-    backgroundColor: '#f97316',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  quantityButtonText: {
-    color: '#ffffff',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  quantityInput: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 18,
-    fontWeight: '900',
-    textAlign: 'center',
-  },
-
-  stockValueBox: {
-    backgroundColor: '#052e16',
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    borderRadius: 12,
-    padding: 10,
-  },
-
-  stockValueLabel: {
-    color: '#bbf7d0',
-    fontSize: 12,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  stockValueText: {
-    color: '#bbf7d0',
-    fontSize: 18,
-    fontWeight: '900',
-  },
-
-  loadingBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 12,
-  },
-
-  loadingBoxText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-
-  optionList: {
-    gap: 10,
-  },
-
-  optionButton: {
-    backgroundColor: '#0f172a',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-
-  optionButtonSelected: {
-    backgroundColor: '#1e293b',
-    borderColor: '#f97316',
-  },
-
-  optionTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-
-  optionTitle: {
-    flex: 1,
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  optionTitleSelected: {
-    color: '#ffffff',
-  },
-
-  optionText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
-  optionTextSelected: {
-    color: '#cbd5e1',
-  },
-
-  selectedBadge: {
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  emptyText: {
-    color: '#fca5a5',
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-
-  statusButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  statusButtonActive: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
-  },
-
-  statusButtonArchive: {
-    backgroundColor: '#334155',
-    borderColor: '#475569',
-  },
-
-  statusButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  statusButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  saveButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default ItemFormScreen;
