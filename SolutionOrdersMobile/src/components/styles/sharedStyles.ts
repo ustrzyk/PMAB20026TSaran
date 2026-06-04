@@ -97,6 +97,7 @@ export const sharedStyles = StyleSheet.create({
     color: appColors.textMuted,
     fontSize: appFontSize.body,
     fontWeight: appFontWeight.extraBold,
+    marginBottom: appSpacing.sm,
   },
 
   input: {
@@ -271,6 +272,60 @@ export const sharedStyles = StyleSheet.create({
     fontWeight: appFontWeight.black,
   },
 
+  statusGrid: {
+    flexDirection: 'row',
+    gap: appSpacing.lg,
+    marginBottom: appSpacing.xxl,
+  },
+
+  readyStatusCard: {
+    flex: 1,
+    backgroundColor: appColors.successDark,
+    borderRadius: appRadius.xl,
+    padding: appSpacing.xl,
+    borderWidth: 1,
+    borderColor: appColors.success,
+  },
+
+  warningStatusCard: {
+    flex: 1,
+    backgroundColor: appColors.primaryDark,
+    borderRadius: appRadius.xl,
+    padding: appSpacing.xl,
+    borderWidth: 1,
+    borderColor: appColors.primary,
+  },
+
+  infoStatusCard: {
+    flex: 1,
+    backgroundColor: appColors.surface,
+    borderRadius: appRadius.xl,
+    padding: appSpacing.xl,
+    borderWidth: 1,
+    borderColor: appColors.border,
+  },
+
+  statusIcon: {
+    color: appColors.text,
+    fontSize: 20,
+    fontWeight: appFontWeight.black,
+    marginBottom: appSpacing.sm,
+  },
+
+  statusTitle: {
+    color: appColors.text,
+    fontSize: appFontSize.body,
+    fontWeight: appFontWeight.black,
+    marginBottom: appSpacing.xs,
+  },
+
+  statusText: {
+    color: appColors.textMuted,
+    fontSize: appFontSize.tiny,
+    fontWeight: appFontWeight.bold,
+    lineHeight: 16,
+  },
+
   statusButtons: {
     flexDirection: 'row',
     gap: appSpacing.lg,
@@ -303,6 +358,41 @@ export const sharedStyles = StyleSheet.create({
   },
 
   statusButtonTextSelected: {
+    color: appColors.text,
+  },
+
+  roleButtons: {
+    flexDirection: 'row',
+    gap: appSpacing.lg,
+  },
+
+  roleButton: {
+    flex: 1,
+    backgroundColor: appColors.surfaceDark,
+    borderWidth: 1,
+    borderColor: appColors.border,
+    borderRadius: appRadius.md,
+    paddingVertical: appSpacing.xl,
+    alignItems: 'center',
+  },
+
+  roleButtonWorker: {
+    backgroundColor: appColors.success,
+    borderColor: appColors.success,
+  },
+
+  roleButtonAdmin: {
+    backgroundColor: appColors.purple,
+    borderColor: appColors.purple,
+  },
+
+  roleButtonText: {
+    color: appColors.textMuted,
+    fontSize: appFontSize.body,
+    fontWeight: appFontWeight.black,
+  },
+
+  roleButtonTextSelected: {
     color: appColors.text,
   },
 
