@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {sharedStyles as styles} from '../components/styles/sharedStyles.ts';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
@@ -51,16 +51,23 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
     loading: false,
   });
 
-  const nameLength = name.trim().length;
-  const descriptionLength = description.trim().length;
+  const safeName = name.trim();
+  const safeDescription = description.trim();
+
+  const nameLength = safeName.length;
+  const descriptionLength = safeDescription.length;
 
   const nameReady = useMemo(() => {
-    return name.trim().length >= 1 && name.trim().length <= 32;
-  }, [name]);
+    return safeName.length >= 1 && safeName.length <= 32;
+  }, [safeName]);
+
+  const descriptionReady = useMemo(() => {
+    return safeDescription.length <= 300;
+  }, [safeDescription]);
 
   const formReady = useMemo(() => {
-    return nameReady;
-  }, [nameReady]);
+    return nameReady && descriptionReady;
+  }, [descriptionReady, nameReady]);
 
   const showDialog = (
     type: AppDialogType,
@@ -93,15 +100,15 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const validateForm = (): string | null => {
-    if (name.trim().length === 0) {
+    if (safeName.length === 0) {
       return 'Podaj nazwę jednostki.';
     }
 
-    if (name.trim().length > 32) {
+    if (safeName.length > 32) {
       return 'Nazwa jednostki może mieć maksymalnie 32 znaki.';
     }
 
-    if (description.trim().length > 300) {
+    if (safeDescription.length > 300) {
       return 'Opis może mieć maksymalnie 300 znaków.';
     }
 
@@ -121,8 +128,8 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
       type: 'confirm',
       title: isEditMode ? 'Zapisać zmiany?' : 'Dodać jednostkę?',
       message: isEditMode
-        ? `Zapisać jednostkę "${name.trim()}"?`
-        : `Dodać jednostkę "${name.trim()}"?`,
+        ? `Zapisać jednostkę "${safeName}"?`
+        : `Dodać jednostkę "${safeName}"?`,
       loading: false,
     });
   };
@@ -137,9 +144,8 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
       }));
 
       const command = {
-        name: name.trim(),
-        description:
-          description.trim().length > 0 ? description.trim() : null,
+        name: safeName,
+        description: safeDescription.length > 0 ? safeDescription : null,
         isActive,
       };
 
@@ -228,7 +234,7 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
 
             <View style={styles.previewTextBox}>
               <Text style={styles.previewName}>
-                {name.trim().length > 0 ? name.trim() : 'Nazwa jednostki'}
+                {safeName.length > 0 ? safeName : 'Nazwa jednostki'}
               </Text>
 
               <Text style={isActive ? styles.currentBadge : styles.archiveBadge}>
@@ -238,8 +244,8 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
           </View>
 
           <Text style={styles.previewDescription}>
-            {description.trim().length > 0
-              ? description.trim()
+            {safeDescription.length > 0
+              ? safeDescription
               : 'Opis pojawi się tutaj.'}
           </Text>
         </View>
@@ -266,11 +272,20 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
 
           <View style={styles.labelRow}>
             <Text style={styles.label}>Opis</Text>
-            <Text style={styles.counterMuted}>{descriptionLength}/300</Text>
+            <Text
+              style={
+                descriptionReady ? styles.counterMuted : styles.counterWarning
+              }>
+              {descriptionLength}/300
+            </Text>
           </View>
 
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[
+              styles.input,
+              styles.textArea,
+              !descriptionReady && styles.inputWarning,
+            ]}
             value={description}
             onChangeText={setDescription}
             placeholder="Opcjonalnie"
@@ -348,300 +363,5 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
-  heroBox: {
-    backgroundColor: '#111827',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 7,
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 27,
-    fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
-  readyBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 14,
-  },
-
-  warningBox: {
-    backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  readyTitle: {
-    color: '#bbf7d0',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  readyText: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  warningText: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  previewCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginBottom: 14,
-  },
-
-  previewHeader: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  previewIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  previewIcon: {
-    fontSize: 28,
-  },
-
-  previewTextBox: {
-    flex: 1,
-  },
-
-  previewName: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  currentBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  archiveBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#334155',
-    color: '#cbd5e1',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  previewDescription: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '700',
-  },
-
-  card: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-
-  labelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-
-  label: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-
-  counterOk: {
-    color: '#16a34a',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  counterWarning: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  counterMuted: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  input: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-
-  textArea: {
-    minHeight: 96,
-    textAlignVertical: 'top',
-  },
-
-  statusButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-
-  statusButtonActive: {
-    backgroundColor: '#f97316',
-    borderColor: '#f97316',
-  },
-
-  statusButtonArchive: {
-    backgroundColor: '#334155',
-    borderColor: '#475569',
-  },
-
-  statusButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  statusButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  saveButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default UnitFormScreen;
