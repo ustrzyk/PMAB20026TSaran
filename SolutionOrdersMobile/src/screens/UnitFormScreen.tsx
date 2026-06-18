@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -54,21 +54,6 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
   const safeName = name.trim();
   const safeDescription = description.trim();
 
-  const nameLength = safeName.length;
-  const descriptionLength = safeDescription.length;
-
-  const nameReady = useMemo(() => {
-    return safeName.length >= 1 && safeName.length <= 32;
-  }, [safeName]);
-
-  const descriptionReady = useMemo(() => {
-    return safeDescription.length <= 300;
-  }, [safeDescription]);
-
-  const formReady = useMemo(() => {
-    return nameReady && descriptionReady;
-  }, [descriptionReady, nameReady]);
-
   const showDialog = (
     type: AppDialogType,
     title: string,
@@ -105,7 +90,7 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
     }
 
     if (safeName.length > 32) {
-      return 'Nazwa jednostki może mieć maksymalnie 32 znaki.';
+      return 'Nazwa może mieć maksymalnie 32 znaki.';
     }
 
     if (safeDescription.length > 300) {
@@ -119,17 +104,15 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Sprawdź formularz', validationError);
+      showDialog('error', 'Błąd', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: isEditMode ? 'Zapisać zmiany?' : 'Dodać jednostkę?',
-      message: isEditMode
-        ? `Zapisać jednostkę "${safeName}"?`
-        : `Dodać jednostkę "${safeName}"?`,
+      title: isEditMode ? 'Zapis zmian' : 'Nowa jednostka',
+      message: isEditMode ? 'Zapisać zmiany?' : 'Dodać jednostkę?',
       loading: false,
     });
   };
@@ -155,14 +138,14 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
           ...command,
         });
 
-        showDialog('success', 'Zapisano', 'Jednostka została zapisana.', true);
+        showDialog('success', 'Zapisano', 'Jednostka została zaktualizowana.', true);
       } else {
         await apiService.createUnit(command);
 
-        showDialog('success', 'Dodano', 'Jednostka została dodana.', true);
+        showDialog('success', 'Zapisano', 'Jednostka została dodana.', true);
       }
     } catch (err) {
-      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
+      showDialog('error', 'Błąd', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -206,59 +189,12 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
           <Text style={styles.title}>
             {isEditMode ? 'Edytuj jednostkę' : 'Dodaj jednostkę'}
           </Text>
-
-          <Text style={styles.subtitle}>
-            Jednostka pojawi się przy ilości produktu.
-          </Text>
-        </View>
-
-        <View style={formReady ? styles.readyBox : styles.warningBox}>
-          <Text style={formReady ? styles.readyTitle : styles.warningTitle}>
-            {formReady ? 'Gotowe do zapisu' : 'Uzupełnij nazwę'}
-          </Text>
-
-          <Text style={formReady ? styles.readyText : styles.warningText}>
-            {formReady
-              ? 'Możesz zapisać jednostkę.'
-              : 'Wpisz krótką nazwę jednostki, np. szt albo rolka.'}
-          </Text>
-        </View>
-
-        <View style={styles.previewCard}>
-          <Text style={styles.sectionTitle}>Podgląd</Text>
-
-          <View style={styles.previewHeader}>
-            <View style={styles.previewIconBox}>
-              <Text style={styles.previewIcon}>📏</Text>
-            </View>
-
-            <View style={styles.previewTextBox}>
-              <Text style={styles.previewName}>
-                {safeName.length > 0 ? safeName : 'Nazwa jednostki'}
-              </Text>
-
-              <Text style={isActive ? styles.currentBadge : styles.archiveBadge}>
-                {isActive ? 'Bieżąca' : 'Archiwum'}
-              </Text>
-            </View>
-          </View>
-
-          <Text style={styles.previewDescription}>
-            {safeDescription.length > 0
-              ? safeDescription
-              : 'Opis pojawi się tutaj.'}
-          </Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Dane jednostki</Text>
 
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>Nazwa</Text>
-            <Text style={nameReady ? styles.counterOk : styles.counterWarning}>
-              {nameLength}/32
-            </Text>
-          </View>
+          <Text style={styles.label}>Nazwa</Text>
 
           <TextInput
             style={styles.input}
@@ -270,22 +206,10 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
             returnKeyType="next"
           />
 
-          <View style={styles.labelRow}>
-            <Text style={styles.label}>Opis</Text>
-            <Text
-              style={
-                descriptionReady ? styles.counterMuted : styles.counterWarning
-              }>
-              {descriptionLength}/300
-            </Text>
-          </View>
+          <Text style={styles.label}>Opis</Text>
 
           <TextInput
-            style={[
-              styles.input,
-              styles.textArea,
-              !descriptionReady && styles.inputWarning,
-            ]}
+            style={[styles.input, styles.textArea]}
             value={description}
             onChangeText={setDescription}
             placeholder="Opcjonalnie"
@@ -295,60 +219,59 @@ function UnitFormScreen({navigation, route}: Props): React.JSX.Element {
           />
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Widoczność</Text>
+        {isEditMode ? (
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Widoczność</Text>
 
-          <View style={styles.statusButtons}>
-            <TouchableOpacity
-              style={[
-                styles.statusButton,
-                isActive && styles.statusButtonActive,
-              ]}
-              onPress={() => setIsActive(true)}
-              activeOpacity={0.85}
-              disabled={submitting}>
-              <Text
+            <View style={styles.statusButtons}>
+              <TouchableOpacity
                 style={[
-                  styles.statusButtonText,
-                  isActive && styles.statusButtonTextSelected,
-                ]}>
-                Bieżąca
-              </Text>
-            </TouchableOpacity>
+                  styles.statusButton,
+                  isActive && styles.statusButtonActive,
+                ]}
+                onPress={() => setIsActive(true)}
+                activeOpacity={0.85}
+                disabled={submitting}>
+                <Text
+                  style={[
+                    styles.statusButtonText,
+                    isActive && styles.statusButtonTextSelected,
+                  ]}>
+                  Bieżąca
+                </Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={[
-                styles.statusButton,
-                !isActive && styles.statusButtonArchive,
-              ]}
-              onPress={() => setIsActive(false)}
-              activeOpacity={0.85}
-              disabled={submitting}>
-              <Text
+              <TouchableOpacity
                 style={[
-                  styles.statusButtonText,
-                  !isActive && styles.statusButtonTextSelected,
-                ]}>
-                Archiwum
-              </Text>
-            </TouchableOpacity>
+                  styles.statusButton,
+                  !isActive && styles.statusButtonArchive,
+                ]}
+                onPress={() => setIsActive(false)}
+                activeOpacity={0.85}
+                disabled={submitting}>
+                <Text
+                  style={[
+                    styles.statusButtonText,
+                    !isActive && styles.statusButtonTextSelected,
+                  ]}>
+                  Archiwum
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
+        ) : null}
 
         <TouchableOpacity
-          style={[
-            styles.saveButton,
-            (!formReady || submitting) && styles.disabledButton,
-          ]}
+          style={[styles.saveButton, submitting && styles.disabledButton]}
           onPress={handleSavePress}
           activeOpacity={0.85}
-          disabled={!formReady || submitting}>
+          disabled={submitting}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
               : isEditMode
-                ? 'Zapisz zmiany'
-                : 'Dodaj jednostkę'}
+                ? 'Zapisz'
+                : 'Dodaj'}
           </Text>
         </TouchableOpacity>
 
