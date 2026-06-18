@@ -28,7 +28,6 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
 
   const hasAddress = !!user?.adress && user.adress.trim().length > 0;
   const hasPhone = !!user?.phoneNumber && user.phoneNumber.trim().length > 0;
-  const deliveryReady = hasAddress && hasPhone;
 
   const handleLogout = (): void => {
     logout();
@@ -45,6 +44,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         index: 0,
         routes: [{name: 'AdminPanel'}],
       });
+
       return;
     }
 
@@ -60,11 +60,6 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.lockIcon}>👤</Text>
 
         <Text style={styles.accessTitle}>Moje konto</Text>
-
-        <Text style={styles.accessText}>
-          Zaloguj się albo utwórz konto, aby zobaczyć swoje zamówienia i dane
-          dostawy.
-        </Text>
 
         <TouchableOpacity
           style={styles.primaryAccessButton}
@@ -83,7 +78,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           onPress={handleBackPress}
           activeOpacity={0.85}>
           <Text style={styles.secondaryAccessButtonText}>
-            {isAdmin || isWorker ? 'Panel obsługi' : 'Wróć do sklepu'}
+            {isAdmin || isWorker ? 'Panel obsługi' : 'Sklep'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -110,43 +105,12 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         </View>
       </View>
 
-      <View style={deliveryReady ? styles.readyBox : styles.warningBox}>
-        <Text style={deliveryReady ? styles.readyTitle : styles.warningTitle}>
-          {deliveryReady ? 'Konto gotowe do zakupów' : 'Uzupełnij dane dostawy'}
-        </Text>
-
-        <Text style={deliveryReady ? styles.readyText : styles.warningText}>
-          {deliveryReady
-            ? 'Adres i telefon są zapisane. Przy zamówieniu będzie szybciej.'
-            : 'Dodaj adres i telefon, żeby łatwiej składać zamówienia.'}
-        </Text>
-
-        <TouchableOpacity
-          style={deliveryReady ? styles.readyButton : styles.warningButton}
-          onPress={() => navigation.navigate('CustomerProfile')}
-          activeOpacity={0.85}>
-          <Text style={styles.statusButtonText}>
-            {deliveryReady ? 'Zobacz dane' : 'Uzupełnij teraz'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.cartBox}>
-        <View style={styles.cartIconBox}>
-          <Text style={styles.cartIcon}>🛒</Text>
-        </View>
-
         <View style={styles.cartTextBox}>
-          <Text style={styles.cartTitle}>Twój koszyk</Text>
+          <Text style={styles.cartTitle}>Koszyk</Text>
 
           <Text style={styles.cartValue}>
             {totalQuantity} szt. | {formatMoney(totalValue)}
-          </Text>
-
-          <Text style={styles.cartHint}>
-            {totalQuantity > 0
-              ? 'Możesz przejść do koszyka i złożyć zamówienie.'
-              : 'Koszyk jest pusty. Przejdź do sklepu i dodaj produkty.'}
           </Text>
         </View>
 
@@ -158,8 +122,6 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         </TouchableOpacity>
       </View>
 
-      <Text style={styles.sectionTitle}>Najczęściej używane</Text>
-
       <View style={styles.mainGrid}>
         <TouchableOpacity
           style={[styles.mainCard, styles.shopCard]}
@@ -167,7 +129,6 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.mainIcon}>🛍️</Text>
           <Text style={styles.mainTitle}>Sklep</Text>
-          <Text style={styles.mainText}>Produkty i kategorie</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -176,7 +137,6 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.mainIcon}>📋</Text>
           <Text style={styles.mainTitle}>Zamówienia</Text>
-          <Text style={styles.mainText}>Historia i statusy</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -185,7 +145,6 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.mainIcon}>📦</Text>
           <Text style={styles.mainTitle}>Status</Text>
-          <Text style={styles.mainText}>Sprawdź numer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -194,13 +153,12 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.mainIcon}>👤</Text>
           <Text style={styles.mainTitle}>Dane</Text>
-          <Text style={styles.mainText}>Adres i konto</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.deliveryBox}>
         <View style={styles.deliveryHeaderRow}>
-          <Text style={styles.deliveryTitle}>Dane dostawy</Text>
+          <Text style={styles.deliveryTitle}>Dostawa</Text>
 
           <TouchableOpacity
             style={styles.editButton}
@@ -217,7 +175,7 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
           </Text>
         </View>
 
-        <View style={styles.deliveryRow}>
+        <View style={styles.deliveryRowLast}>
           <Text style={styles.deliveryLabel}>Telefon</Text>
           <Text style={styles.deliveryValue}>
             {hasPhone ? user?.phoneNumber : 'Brak telefonu'}
@@ -225,45 +183,12 @@ function ClientPanelScreen({navigation}: Props): React.JSX.Element {
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Skróty</Text>
-
-      <View style={styles.shortcutList}>
-        <TouchableOpacity
-          style={styles.shortcutRow}
-          onPress={() => navigation.navigate('Home')}
-          activeOpacity={0.85}>
-          <Text style={styles.shortcutIcon}>🏠</Text>
-          <View style={styles.shortcutTextBox}>
-            <Text style={styles.shortcutTitle}>Strona główna</Text>
-            <Text style={styles.shortcutText}>Wróć do ekranu startowego</Text>
-          </View>
-          <Text style={styles.shortcutArrow}>{'>'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.shortcutRow}
-          onPress={() => navigation.navigate('Items')}
-          activeOpacity={0.85}>
-          <Text style={styles.shortcutIcon}>🖨️</Text>
-          <View style={styles.shortcutTextBox}>
-            <Text style={styles.shortcutTitle}>Produkty</Text>
-            <Text style={styles.shortcutText}>Przeglądaj ofertę sklepu</Text>
-          </View>
-          <Text style={styles.shortcutArrow}>{'>'}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.shortcutRow}
-          onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.85}>
-          <Text style={styles.shortcutIcon}>🛒</Text>
-          <View style={styles.shortcutTextBox}>
-            <Text style={styles.shortcutTitle}>Koszyk</Text>
-            <Text style={styles.shortcutText}>Przejdź do zamówienia</Text>
-          </View>
-          <Text style={styles.shortcutArrow}>{'>'}</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={styles.homeButton}
+        onPress={() => navigation.navigate('Home')}
+        activeOpacity={0.85}>
+        <Text style={styles.homeButtonText}>Strona główna</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -291,14 +216,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 26,
     fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-
-  accessText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
     textAlign: 'center',
     marginBottom: 18,
   },
@@ -399,97 +316,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  readyBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 14,
-  },
-
-  warningBox: {
-    backgroundColor: '#431407',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  readyTitle: {
-    color: '#bbf7d0',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  readyText: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-
-  warningText: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-
-  readyButton: {
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  warningButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  statusButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
   cartBox: {
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginBottom: 18,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-  },
-
-  cartIconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#0f172a',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  cartIcon: {
-    fontSize: 28,
   },
 
   cartTextBox: {
@@ -507,14 +343,6 @@ const styles = StyleSheet.create({
     color: '#f97316',
     fontSize: 15,
     fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  cartHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
   },
 
   cartButton: {
@@ -530,23 +358,16 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-
   mainGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 18,
+    marginBottom: 14,
   },
 
   mainCard: {
     width: '48%',
-    minHeight: 130,
+    minHeight: 105,
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 13,
@@ -579,14 +400,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  mainText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
 
   deliveryBox: {
@@ -595,7 +408,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginBottom: 18,
+    marginBottom: 14,
   },
 
   deliveryHeaderRow: {
@@ -634,6 +447,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
 
+  deliveryRowLast: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+
   deliveryLabel: {
     color: '#94a3b8',
     fontSize: 12,
@@ -647,45 +468,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  shortcutList: {
-    gap: 10,
-  },
-
-  shortcutRow: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 13,
-    borderWidth: 1,
-    borderColor: '#334155',
-    flexDirection: 'row',
+  homeButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
-    gap: 12,
   },
 
-  shortcutIcon: {
-    fontSize: 26,
-  },
-
-  shortcutTextBox: {
-    flex: 1,
-  },
-
-  shortcutTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  shortcutText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-
-  shortcutArrow: {
-    color: '#f97316',
-    fontSize: 20,
+  homeButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
     fontWeight: '900',
   },
 });
