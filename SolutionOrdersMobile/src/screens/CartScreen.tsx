@@ -218,7 +218,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
   const buildPaymentNote = (): string => {
     if (paymentMethod === 'blik') {
-      return 'Płatność BLIK: kod potwierdzony symulacyjnie';
+      return 'Płatność BLIK';
     }
 
     if (paymentMethod === 'transfer') {
@@ -425,7 +425,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
           />
 
           <Text style={styles.paymentDetailsText}>
-            Wpisz 6 cyfr. Płatność jest symulowana.
+            Wpisz 6-cyfrowy kod BLIK.
           </Text>
         </View>
       );
