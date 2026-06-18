@@ -213,6 +213,16 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     navigation.navigate('AuthLogin');
   };
 
+  const openPrintPreview = (): void => {
+    if (!order) {
+      return;
+    }
+
+    navigation.navigate('OrderPrint', {
+      idOrder: order.idOrder,
+    });
+  };
+
   const renderStatusStep = (
     step: string,
     index: number,
@@ -402,7 +412,9 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
             <View style={styles.infoGrid}>
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>Pozycje</Text>
-                <Text style={styles.infoValue}>{order.orderItemsCount}</Text>
+                <Text style={styles.infoValue}>
+                  {order.orderItemsCount ?? orderItems.length}
+                </Text>
               </View>
 
               <View style={styles.infoBox}>
@@ -428,6 +440,22 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
               <Text style={styles.notesText}>{order.notes}</Text>
             </View>
           ) : null}
+
+          <View style={styles.printCard}>
+            <Text style={styles.sectionTitle}>Wydruk / potwierdzenie</Text>
+
+            <Text style={styles.printText}>
+              Otwórz podgląd wydruku, aby zobaczyć zamówienie w formie
+              dokumentu i udostępnić podsumowanie.
+            </Text>
+
+            <TouchableOpacity
+              style={styles.printButton}
+              onPress={openPrintPreview}
+              activeOpacity={0.85}>
+              <Text style={styles.printButtonText}>Otwórz podgląd wydruku</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.sectionTitleOutside}>Produkty</Text>
 
@@ -839,6 +867,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '700',
+  },
+
+  printCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
+  },
+
+  printText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 19,
+    marginBottom: 12,
+  },
+
+  printButton: {
+    backgroundColor: '#38bdf8',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  printButtonText: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   sectionTitleOutside: {
