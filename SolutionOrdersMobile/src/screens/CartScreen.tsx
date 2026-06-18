@@ -58,14 +58,14 @@ function getPaymentMethodLabel(method: PaymentMethod): string {
   }
 
   if (method === 'card') {
-    return 'Karta płatnicza';
+    return 'Karta';
   }
 
   if (method === 'transfer') {
-    return 'Przelew bankowy';
+    return 'Przelew';
   }
 
-  return 'Płatność przy odbiorze';
+  return 'Przy odbiorze';
 }
 
 function getDeliveryPrice(method: DeliveryMethod): number {
@@ -149,11 +149,6 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
   const hasCartWarnings = unavailableItems.length > 0;
 
-  const isDeliveryDataReady =
-    clientName.trim().length >= 3 &&
-    clientAddress.trim().length >= 5 &&
-    clientPhone.trim().length >= 6;
-
   useEffect(() => {
     if (!isCustomer || !user) {
       return;
@@ -188,35 +183,23 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
   const validateCheckout = (): string | null => {
     if (cartItems.length === 0) {
-      return 'Koszyk jest pusty';
+      return 'Koszyk jest pusty.';
     }
 
     if (hasCartWarnings) {
-      return 'W koszyku są produkty niedostępne albo ilości większe niż stan magazynowy';
-    }
-
-    if (clientName.trim().length === 0) {
-      return 'Podaj imię i nazwisko';
+      return 'Popraw produkty w koszyku.';
     }
 
     if (clientName.trim().length < 3) {
-      return 'Imię i nazwisko powinno mieć minimum 3 znaki';
-    }
-
-    if (clientAddress.trim().length === 0) {
-      return 'Podaj adres dostawy';
+      return 'Podaj imię i nazwisko.';
     }
 
     if (clientAddress.trim().length < 5) {
-      return 'Adres dostawy powinien mieć minimum 5 znaków';
-    }
-
-    if (clientPhone.trim().length === 0) {
-      return 'Podaj numer telefonu';
+      return 'Podaj adres dostawy.';
     }
 
     if (clientPhone.trim().length < 6) {
-      return 'Numer telefonu jest za krótki';
+      return 'Podaj numer telefonu.';
     }
 
     return null;
@@ -228,12 +211,11 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     const noteParts = [
       user
         ? `Zamówienie z konta: ${user.name} (${user.login})`
-        : 'Zamówienie złożone jako gość',
+        : 'Zamówienie jako gość',
       `Metoda dostawy: ${getDeliveryMethodLabel(deliveryMethod)}`,
       `Koszt dostawy: ${formatMoney(deliveryPrice)}`,
       `Metoda płatności: ${getPaymentMethodLabel(paymentMethod)}`,
       `Przewidywana data dostawy: ${formatDate(estimatedDeliveryDate)}`,
-      'Status początkowy: Nowe',
       userNotes.length > 0 ? `Notatka klienta: ${userNotes}` : null,
     ];
 
@@ -247,7 +229,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Błąd formularza',
+        title: 'Błąd',
         message: validationError,
         loading: false,
       });
@@ -258,10 +240,8 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Potwierdzenie zamówienia',
-      message:
-        `Czy złożyć zamówienie na kwotę ${formatMoney(finalValue)}?\n\n` +
-        `Status początkowy zamówienia: Nowe.`,
+      title: 'Złożyć zamówienie?',
+      message: `Razem: ${formatMoney(finalValue)}`,
       loading: false,
     });
   };
@@ -322,7 +302,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Błąd składania zamówienia',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -357,7 +337,6 @@ function CartScreen({navigation}: Props): React.JSX.Element {
   const renderDeliveryOption = (
     method: DeliveryMethod,
     title: string,
-    description: string,
   ): React.JSX.Element => {
     const selected = deliveryMethod === method;
 
@@ -366,16 +345,12 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         key={method}
         style={[styles.optionButton, selected && styles.optionButtonSelected]}
         onPress={() => setDeliveryMethod(method)}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         disabled={submitting}>
-        <View style={styles.optionHeader}>
-          <Text style={styles.optionTitle}>{title}</Text>
-          <Text style={styles.optionPrice}>
-            {formatMoney(getDeliveryPrice(method))}
-          </Text>
-        </View>
-
-        <Text style={styles.optionDescription}>{description}</Text>
+        <Text style={styles.optionTitle}>{title}</Text>
+        <Text style={styles.optionPrice}>
+          {formatMoney(getDeliveryPrice(method))}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -383,7 +358,6 @@ function CartScreen({navigation}: Props): React.JSX.Element {
   const renderPaymentOption = (
     method: PaymentMethod,
     title: string,
-    description: string,
   ): React.JSX.Element => {
     const selected = paymentMethod === method;
 
@@ -392,10 +366,9 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         key={method}
         style={[styles.optionButton, selected && styles.optionButtonSelected]}
         onPress={() => setPaymentMethod(method)}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         disabled={submitting}>
         <Text style={styles.optionTitle}>{title}</Text>
-        <Text style={styles.optionDescription}>{description}</Text>
       </TouchableOpacity>
     );
   };
@@ -407,34 +380,19 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     const availableQuantity = item.quantity ?? 0;
     const isItemAvailable = item.isActive !== false && availableQuantity > 0;
     const isQuantityTooHigh = cartItem.quantity > availableQuantity;
+    const hasWarning = !isItemAvailable || isQuantityTooHigh;
 
     return (
       <View key={item.idItem} style={styles.cartCard}>
         <View style={styles.cartItemHeader}>
           <View style={styles.cartItemTitleBox}>
             <Text style={styles.cartItemName}>{item.name}</Text>
-
-            <Text style={styles.cartItemDescription} numberOfLines={2}>
-              {item.description}
-            </Text>
+            <Text style={styles.cartItemCode}>{item.code ?? 'Brak kodu'}</Text>
           </View>
 
-          <Text
-            style={
-              isItemAvailable && !isQuantityTooHigh
-                ? styles.cartItemOkBadge
-                : styles.cartItemWarningBadge
-            }>
-            {isItemAvailable && !isQuantityTooHigh ? 'OK' : 'Sprawdź'}
-          </Text>
-        </View>
-
-        <View style={styles.badgeRow}>
-          <Text style={styles.categoryBadge}>
-            {item.categoryName ?? 'Brak kategorii'}
-          </Text>
-
-          <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
+          {hasWarning ? (
+            <Text style={styles.warningBadge}>Sprawdź</Text>
+          ) : null}
         </View>
 
         <View style={styles.cartInfoRow}>
@@ -453,32 +411,28 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
         {isQuantityTooHigh ? (
           <View style={styles.itemWarningBox}>
-            <Text style={styles.itemWarningTitle}>Za duża ilość</Text>
             <Text style={styles.itemWarningText}>
-              W koszyku jest {cartItem.quantity}, a dostępne jest tylko{' '}
-              {availableQuantity}. Zmniejsz ilość przed złożeniem zamówienia.
+              Dostępne: {availableQuantity}
             </Text>
           </View>
         ) : null}
 
         {!isItemAvailable ? (
           <View style={styles.itemWarningBox}>
-            <Text style={styles.itemWarningTitle}>Produkt niedostępny</Text>
-            <Text style={styles.itemWarningText}>
-              Ten produkt nie może być teraz zamówiony.
-            </Text>
+            <Text style={styles.itemWarningText}>Produkt niedostępny</Text>
           </View>
         ) : null}
 
-        <Text style={styles.cartItemValue}>
-          Wartość pozycji: {formatMoney(lineValue)}
-        </Text>
+        <View style={styles.lineValueBox}>
+          <Text style={styles.lineValueLabel}>Wartość</Text>
+          <Text style={styles.lineValueText}>{formatMoney(lineValue)}</Text>
+        </View>
 
         <View style={styles.quantityRow}>
           <TouchableOpacity
             style={styles.quantityButton}
             onPress={() => updateQuantity(item.idItem, cartItem.quantity - 1)}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={submitting}>
             <Text style={styles.quantityButtonText}>-</Text>
           </TouchableOpacity>
@@ -492,7 +446,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
                 styles.quantityButtonDisabled,
             ]}
             onPress={() => updateQuantity(item.idItem, cartItem.quantity + 1)}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={submitting || cartItem.quantity >= availableQuantity}>
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>
@@ -501,9 +455,9 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.removeButton}
           onPress={() => removeFromCart(item.idItem)}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           disabled={submitting}>
-          <Text style={styles.removeButtonText}>Usuń z koszyka</Text>
+          <Text style={styles.removeButtonText}>Usuń</Text>
         </TouchableOpacity>
       </View>
     );
@@ -528,40 +482,15 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
-
-          <Text style={styles.title}>Koszyk i zamówienie</Text>
-
-          <Text style={styles.subtitle}>
-            Sprawdź produkty, wybierz dostawę, płatność i złóż zamówienie.
-            Nowe zamówienie otrzyma status „Nowe”.
-          </Text>
-        </View>
-
-        <View style={styles.checkoutStepsBox}>
-          <Text style={styles.checkoutStepsTitle}>Proces zakupu</Text>
-
-          <View style={styles.stepRow}>
-            <Text style={styles.stepNumber}>1</Text>
-            <Text style={styles.stepText}>Koszyk i ilości produktów</Text>
-          </View>
-
-          <View style={styles.stepRow}>
-            <Text style={styles.stepNumber}>2</Text>
-            <Text style={styles.stepText}>Dostawa, płatność i dane klienta</Text>
-          </View>
-
-          <View style={styles.stepRow}>
-            <Text style={styles.stepNumber}>3</Text>
-            <Text style={styles.stepText}>Zamówienie ze statusem „Nowe”</Text>
-          </View>
+          <Text style={styles.title}>Koszyk</Text>
         </View>
 
         <View style={styles.summaryBox}>
           <View style={styles.summaryTopRow}>
             <View style={styles.summaryTopTextBox}>
-              <Text style={styles.summaryLabel}>Tryb zamówienia</Text>
+              <Text style={styles.summaryLabel}>Klient</Text>
               <Text style={styles.customerModeText}>
-                {user ? `${user.name} (${user.login})` : 'Gość bez logowania'}
+                {user ? user.name : 'Gość'}
               </Text>
             </View>
 
@@ -602,11 +531,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
         {hasCartWarnings ? (
           <View style={styles.warningBox}>
-            <Text style={styles.warningTitle}>Koszyk wymaga sprawdzenia</Text>
-            <Text style={styles.warningText}>
-              Niektóre produkty są niedostępne albo mają za dużą ilość. Popraw
-              koszyk przed złożeniem zamówienia.
-            </Text>
+            <Text style={styles.warningText}>Sprawdź produkty w koszyku.</Text>
           </View>
         ) : null}
 
@@ -614,109 +539,55 @@ function CartScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.emptyBox}>
             <Text style={styles.emptyTitle}>Koszyk jest pusty</Text>
 
-            <Text style={styles.emptyText}>
-              Przejdź do produktów i dodaj drukarkę 3D, filament albo akcesoria
-              do koszyka.
-            </Text>
-
             <TouchableOpacity
               style={styles.shopButton}
               onPress={() => navigation.navigate('Items')}
-              activeOpacity={0.8}>
-              <Text style={styles.shopButtonText}>Przejdź do sklepu</Text>
+              activeOpacity={0.85}>
+              <Text style={styles.shopButtonText}>Produkty</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>Produkty w koszyku</Text>
+            <Text style={styles.sectionTitle}>Produkty</Text>
 
             {cartItems.map(renderCartItem)}
 
             <TouchableOpacity
               style={styles.clearCartButton}
               onPress={clearCart}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text style={styles.clearCartButtonText}>Wyczyść koszyk</Text>
             </TouchableOpacity>
 
-            <Text style={styles.sectionTitle}>Metoda dostawy</Text>
+            <Text style={styles.sectionTitle}>Dostawa</Text>
 
             <View style={styles.formCard}>
-              {renderDeliveryOption(
-                'courier',
-                'Kurier',
-                'Dostawa pod wskazany adres. Przewidywany czas: 2-3 dni.',
-              )}
-
-              {renderDeliveryOption(
-                'parcelLocker',
-                'Paczkomat',
-                'Dostawa do paczkomatu. Przewidywany czas: 1-2 dni.',
-              )}
-
-              {renderDeliveryOption(
-                'pickup',
-                'Odbiór osobisty',
-                'Odbiór w punkcie sklepu. Bez kosztu dostawy.',
-              )}
+              <View style={styles.optionsGrid}>
+                {renderDeliveryOption('courier', 'Kurier')}
+                {renderDeliveryOption('parcelLocker', 'Paczkomat')}
+                {renderDeliveryOption('pickup', 'Odbiór')}
+              </View>
 
               <Text style={styles.deliveryDateText}>
-                Przewidywana data dostawy: {formatDate(estimatedDeliveryDate)}
+                Data: {formatDate(estimatedDeliveryDate)}
               </Text>
             </View>
 
-            <Text style={styles.sectionTitle}>Metoda płatności</Text>
+            <Text style={styles.sectionTitle}>Płatność</Text>
 
             <View style={styles.formCard}>
-              {renderPaymentOption(
-                'blik',
-                'BLIK',
-                'Szybka płatność kodem BLIK.',
-              )}
-
-              {renderPaymentOption(
-                'card',
-                'Karta płatnicza',
-                'Płatność kartą online.',
-              )}
-
-              {renderPaymentOption(
-                'transfer',
-                'Przelew bankowy',
-                'Dane do przelewu zostaną przekazane po złożeniu zamówienia.',
-              )}
-
-              {renderPaymentOption(
-                'cashOnDelivery',
-                'Płatność przy odbiorze',
-                'Płatność kurierowi albo przy odbiorze osobistym.',
-              )}
+              <View style={styles.optionsGrid}>
+                {renderPaymentOption('blik', 'BLIK')}
+                {renderPaymentOption('card', 'Karta')}
+                {renderPaymentOption('transfer', 'Przelew')}
+                {renderPaymentOption('cashOnDelivery', 'Przy odbiorze')}
+              </View>
             </View>
 
             <Text style={styles.sectionTitle}>Dane dostawy</Text>
 
             <View style={styles.formCard}>
-              {isCustomer ? (
-                <View style={styles.customerHintBox}>
-                  <Text style={styles.customerHintTitle}>
-                    Dane z konta klienta
-                  </Text>
-                  <Text style={styles.customerHintText}>
-                    Jeżeli masz zapisany adres i telefon, formularz uzupełnił je
-                    automatycznie. Możesz je zmienić tylko dla tego zamówienia.
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.guestHintBox}>
-                  <Text style={styles.guestHintTitle}>Zamówienie jako gość</Text>
-                  <Text style={styles.guestHintText}>
-                    Możesz złożyć zamówienie bez konta, ale konto klienta ułatwia
-                    późniejsze śledzenie statusu.
-                  </Text>
-                </View>
-              )}
-
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Imię i nazwisko</Text>
 
@@ -724,20 +595,20 @@ function CartScreen({navigation}: Props): React.JSX.Element {
                   style={styles.input}
                   value={clientName}
                   onChangeText={setClientName}
-                  placeholder="Np. Jan Kowalski"
+                  placeholder="Imię i nazwisko"
                   placeholderTextColor="#64748b"
                   editable={!submitting}
                 />
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Adres dostawy</Text>
+                <Text style={styles.label}>Adres</Text>
 
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={clientAddress}
                   onChangeText={setClientAddress}
-                  placeholder="Np. ul. Testowa 1, Warszawa"
+                  placeholder="Adres"
                   placeholderTextColor="#64748b"
                   multiline
                   editable={!submitting}
@@ -745,41 +616,27 @@ function CartScreen({navigation}: Props): React.JSX.Element {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Numer telefonu</Text>
+                <Text style={styles.label}>Telefon</Text>
 
                 <TextInput
                   style={styles.input}
                   value={clientPhone}
                   onChangeText={setClientPhone}
-                  placeholder="Np. 500-111-222"
+                  placeholder="Telefon"
                   placeholderTextColor="#64748b"
                   keyboardType="phone-pad"
                   editable={!submitting}
                 />
               </View>
 
-              <View style={isDeliveryDataReady ? styles.readyBox : styles.infoBox}>
-                <Text style={isDeliveryDataReady ? styles.readyTitle : styles.infoTitle}>
-                  {isDeliveryDataReady
-                    ? 'Dane dostawy wyglądają poprawnie'
-                    : 'Uzupełnij dane dostawy'}
-                </Text>
-
-                <Text style={isDeliveryDataReady ? styles.readyText : styles.infoText}>
-                  {isDeliveryDataReady
-                    ? 'Możesz złożyć zamówienie.'
-                    : 'Wymagane są: imię i nazwisko, adres oraz telefon.'}
-                </Text>
-              </View>
-
               <View style={styles.formGroup}>
-                <Text style={styles.label}>Notatka do zamówienia</Text>
+                <Text style={styles.label}>Notatka</Text>
 
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={notes}
                   onChangeText={setNotes}
-                  placeholder="Opcjonalnie, np. preferowana godzina dostawy"
+                  placeholder="Opcjonalnie"
                   placeholderTextColor="#64748b"
                   multiline
                   editable={!submitting}
@@ -788,18 +645,12 @@ function CartScreen({navigation}: Props): React.JSX.Element {
             </View>
 
             <View style={styles.finalBox}>
-              <Text style={styles.finalTitle}>Podsumowanie końcowe</Text>
-
               <Text style={styles.finalText}>
                 Produkty: {formatMoney(totalValue)}
               </Text>
 
               <Text style={styles.finalText}>
                 Dostawa: {formatMoney(deliveryPrice)}
-              </Text>
-
-              <Text style={styles.finalText}>
-                Status po złożeniu: Nowe
               </Text>
 
               <Text style={styles.finalTotal}>
@@ -813,10 +664,10 @@ function CartScreen({navigation}: Props): React.JSX.Element {
                 (submitting || hasCartWarnings) && styles.disabledButton,
               ]}
               onPress={handleCheckoutPress}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting || hasCartWarnings}>
               <Text style={styles.checkoutButtonText}>
-                {submitting ? 'Składanie zamówienia...' : 'Złóż zamówienie'}
+                {submitting ? 'Składanie...' : 'Złóż zamówienie'}
               </Text>
             </TouchableOpacity>
           </>
@@ -825,9 +676,9 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.backToShopButton}
           onPress={() => navigation.navigate('Items')}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           disabled={submitting}>
-          <Text style={styles.backToShopButtonText}>Wróć do produktów</Text>
+          <Text style={styles.backToShopButtonText}>Produkty</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -867,55 +718,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 28,
     fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-
-  checkoutStepsBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  checkoutStepsTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 10,
-  },
-
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 9,
-    marginBottom: 8,
-  },
-
-  stepNumber: {
-    width: 26,
-    height: 26,
-    borderRadius: 999,
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 26,
-    overflow: 'hidden',
-  },
-
-  stepText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '800',
   },
 
   summaryBox: {
@@ -1006,25 +808,17 @@ const styles = StyleSheet.create({
 
   warningBox: {
     backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#f97316',
     marginBottom: 14,
   },
 
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
   warningText: {
     color: '#fed7aa',
     fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
+    fontWeight: '900',
   },
 
   sectionTitle: {
@@ -1048,16 +842,8 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
-  },
-
-  emptyText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: 'center',
-    marginBottom: 14,
   },
 
   shopButton: {
@@ -1098,71 +884,30 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
-    marginBottom: 6,
   },
 
-  cartItemDescription: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 8,
+  cartItemCode: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
   },
 
-  cartItemOkBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
+  warningBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  cartItemWarningBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
-  },
-
-  categoryBadge: {
-    backgroundColor: '#1e293b',
-    color: '#cbd5e1',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
-    overflow: 'hidden',
-  },
-
-  codeBadge: {
-    backgroundColor: '#422006',
-    color: '#fed7aa',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
     overflow: 'hidden',
   },
 
   cartInfoRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: 10,
+    marginBottom: 10,
   },
 
   cartInfoBox: {
@@ -1183,79 +928,86 @@ const styles = StyleSheet.create({
 
   cartInfoValue: {
     color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
   },
 
   itemWarningBox: {
     backgroundColor: '#431407',
-    borderRadius: 12,
-    padding: 10,
+    borderRadius: 10,
+    padding: 9,
     borderWidth: 1,
     borderColor: '#f97316',
-    marginBottom: 8,
-  },
-
-  itemWarningTitle: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
+    marginBottom: 10,
   },
 
   itemWarningText: {
     color: '#fed7aa',
     fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
+    fontWeight: '900',
   },
 
-  cartItemValue: {
-    color: '#f97316',
-    fontSize: 15,
-    fontWeight: '900',
-    marginTop: 4,
+  lineValueBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#16a34a',
     marginBottom: 10,
+  },
+
+  lineValueLabel: {
+    color: '#bbf7d0',
+    fontSize: 12,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  lineValueText: {
+    color: '#bbf7d0',
+    fontSize: 17,
+    fontWeight: '900',
   },
 
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 12,
+    justifyContent: 'center',
+    gap: 18,
+    marginBottom: 10,
   },
 
   quantityButton: {
-    backgroundColor: '#f97316',
-    width: 38,
-    height: 38,
+    width: 42,
+    height: 42,
     borderRadius: 999,
-    justifyContent: 'center',
+    backgroundColor: '#f97316',
     alignItems: 'center',
+    justifyContent: 'center',
   },
 
   quantityButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.45,
   },
 
   quantityButtonText: {
     color: '#ffffff',
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '900',
   },
 
   quantityValue: {
     color: '#f8fafc',
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
     minWidth: 36,
     textAlign: 'center',
   },
 
   removeButton: {
-    backgroundColor: '#7f1d1d',
-    paddingVertical: 10,
-    borderRadius: 10,
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 11,
     alignItems: 'center',
   },
 
@@ -1267,15 +1019,15 @@ const styles = StyleSheet.create({
 
   clearCartButton: {
     backgroundColor: '#334155',
-    paddingVertical: 12,
     borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
   },
 
   clearCartButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
   },
 
@@ -1288,97 +1040,46 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+
   optionButton: {
+    width: '47.8%',
     backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
+    padding: 10,
+    minHeight: 74,
+    justifyContent: 'center',
   },
 
   optionButtonSelected: {
     borderColor: '#f97316',
-    backgroundColor: '#1e293b',
-  },
-
-  optionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 5,
+    backgroundColor: '#1f2937',
   },
 
   optionTitle: {
     color: '#f8fafc',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
+    marginBottom: 5,
   },
 
   optionPrice: {
-    color: '#f97316',
-    fontSize: 14,
+    color: '#16a34a',
+    fontSize: 13,
     fontWeight: '900',
-  },
-
-  optionDescription: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
 
   deliveryDateText: {
-    color: '#38bdf8',
+    color: '#94a3b8',
     fontSize: 13,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-
-  customerHintBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 12,
-  },
-
-  customerHintTitle: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  customerHintText: {
-    color: '#bbf7d0',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
-  guestHintBox: {
-    backgroundColor: '#1e293b',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-  },
-
-  guestHintTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  guestHintText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
+    fontWeight: '800',
+    marginTop: 12,
   },
 
   formGroup: {
@@ -1387,8 +1088,8 @@ const styles = StyleSheet.create({
 
   label: {
     color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
     marginBottom: 6,
   },
 
@@ -1399,63 +1100,17 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
+    paddingVertical: 12,
     fontSize: 15,
   },
 
   textArea: {
-    minHeight: 80,
+    minHeight: 82,
     textAlignVertical: 'top',
   },
 
-  readyBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 12,
-  },
-
-  readyTitle: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  readyText: {
-    color: '#bbf7d0',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
-  infoBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-  },
-
-  infoTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  infoText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-  },
-
   finalBox: {
-    backgroundColor: '#111827',
+    backgroundColor: '#052e16',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
@@ -1463,37 +1118,26 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  finalTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-
   finalText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 4,
+    color: '#bbf7d0',
+    fontSize: 14,
+    fontWeight: '800',
+    marginBottom: 5,
   },
 
   finalTotal: {
-    color: '#16a34a',
-    fontSize: 23,
+    color: '#bbf7d0',
+    fontSize: 24,
     fontWeight: '900',
-    marginTop: 6,
+    marginTop: 4,
   },
 
   checkoutButton: {
     backgroundColor: '#16a34a',
-    paddingVertical: 14,
+    paddingVertical: 15,
     borderRadius: 12,
     alignItems: 'center',
     marginBottom: 12,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
   },
 
   checkoutButtonText: {
@@ -1502,9 +1146,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  disabledButton: {
+    opacity: 0.5,
+  },
+
   backToShopButton: {
     backgroundColor: '#334155',
-    paddingVertical: 12,
+    paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
   },
