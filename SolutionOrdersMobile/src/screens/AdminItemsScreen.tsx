@@ -25,10 +25,8 @@ type StockFilter = 'all' | 'available' | 'low' | 'empty';
 type SortMode =
   | 'default'
   | 'nameAsc'
-  | 'nameDesc'
   | 'priceAsc'
   | 'priceDesc'
-  | 'quantityAsc'
   | 'quantityDesc'
   | 'valueDesc';
 
@@ -74,24 +72,6 @@ function getStockLabel(item: Item): string {
   return 'Dostępny';
 }
 
-function getStockBadgeStyle(item: Item) {
-  const quantity = item.quantity ?? 0;
-
-  if (item.isActive === false) {
-    return styles.archivedBadge;
-  }
-
-  if (quantity <= 0) {
-    return styles.emptyBadge;
-  }
-
-  if (quantity <= 5) {
-    return styles.lowBadge;
-  }
-
-  return styles.availableBadge;
-}
-
 function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems, deleteItem} = useItems();
 
@@ -100,6 +80,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('default');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
 
@@ -201,20 +182,12 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
       sorted.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
     }
 
-    if (sortMode === 'nameDesc') {
-      sorted.sort((a, b) => (b.name ?? '').localeCompare(a.name ?? ''));
-    }
-
     if (sortMode === 'priceAsc') {
       sorted.sort((a, b) => (a.price ?? 0) - (b.price ?? 0));
     }
 
     if (sortMode === 'priceDesc') {
       sorted.sort((a, b) => (b.price ?? 0) - (a.price ?? 0));
-    }
-
-    if (sortMode === 'quantityAsc') {
-      sorted.sort((a, b) => (a.quantity ?? 0) - (b.quantity ?? 0));
     }
 
     if (sortMode === 'quantityDesc') {
@@ -241,12 +214,6 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     }, 0);
   }, [filteredItems]);
 
-  const visibleQuantity = useMemo(() => {
-    return filteredItems.reduce((sum, item) => {
-      return sum + (item.quantity ?? 0);
-    }, 0);
-  }, [filteredItems]);
-
   const closeDialog = (): void => {
     setDialog(previous => ({
       ...previous,
@@ -256,7 +223,13 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
   };
 
   const handleRefresh = async (): Promise<void> => {
-    await refreshItems();
+    setRefreshing(true);
+
+    try {
+      await refreshItems();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleArchive = (item: Item): void => {
@@ -265,8 +238,8 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Przenieść do archiwum?',
-      message: `Produkt "${item.name ?? 'produkt'}" zostanie ukryty z bieżącej listy.`,
+      title: 'Archiwum',
+      message: `Przenieść produkt "${item.name ?? 'produkt'}" do archiwum?`,
       loading: false,
     });
   };
@@ -290,7 +263,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Przeniesiono',
+        title: 'Zapisano',
         message: 'Produkt trafił do archiwum.',
         loading: false,
       });
@@ -298,7 +271,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie udało się wykonać operacji',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -354,13 +327,13 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`item-stock-${value}`}
-        style={[styles.stockButton, selected && styles.stockButtonSelected]}
+        style={[styles.filterButton, selected && styles.stockButtonSelected]}
         onPress={() => setStockFilter(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.stockButtonText,
-            selected && styles.stockButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -377,13 +350,13 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`item-sort-${value}`}
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        style={[styles.filterButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -397,16 +370,13 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`category-${categoryName}`}
-        style={[
-          styles.categoryButton,
-          selected && styles.categoryButtonSelected,
-        ]}
+        style={[styles.filterButton, selected && styles.categoryButtonSelected]}
         onPress={() => setSelectedCategory(categoryName)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.categoryButtonText,
-            selected && styles.categoryButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}
           numberOfLines={1}>
           {categoryName === 'all' ? 'Wszystkie' : categoryName}
@@ -415,15 +385,30 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
     );
   };
 
+  const getBadgeStyle = (item: Item) => {
+    const quantity = item.quantity ?? 0;
+
+    if (item.isActive === false) {
+      return styles.archivedBadge;
+    }
+
+    if (quantity <= 0) {
+      return styles.emptyBadge;
+    }
+
+    if (quantity <= 5) {
+      return styles.lowBadge;
+    }
+
+    return styles.availableBadge;
+  };
+
   const renderListHeader = (): React.JSX.Element => {
     return (
       <>
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Produkty</Text>
-          <Text style={styles.heroSubtitle}>
-            Lista produktów, cen i stanów magazynowych.
-          </Text>
         </View>
 
         <View style={styles.summaryBox}>
@@ -461,7 +446,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.valueBox}>
-          <Text style={styles.valueLabel}>Wartość bieżącego magazynu</Text>
+          <Text style={styles.valueLabel}>Magazyn</Text>
           <Text style={styles.valueText}>{formatMoney(totalStockValue)}</Text>
         </View>
 
@@ -486,7 +471,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj produktu..."
+            placeholder="Szukaj produktu"
             placeholderTextColor="#64748b"
           />
         </View>
@@ -527,10 +512,8 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.filterButtons}>
             {renderSortButton('Domyślnie', 'default')}
             {renderSortButton('A-Z', 'nameAsc')}
-            {renderSortButton('Z-A', 'nameDesc')}
             {renderSortButton('Cena ↑', 'priceAsc')}
             {renderSortButton('Cena ↓', 'priceDesc')}
-            {renderSortButton('Ilość ↑', 'quantityAsc')}
             {renderSortButton('Ilość ↓', 'quantityDesc')}
             {renderSortButton('Wartość ↓', 'valueDesc')}
           </View>
@@ -542,18 +525,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.filterSummaryText}>
-            Ilość widoczna: {visibleQuantity}
-          </Text>
-
-          <Text style={styles.filterSummaryText}>
-            Wartość widoczna: {formatMoney(visibleStockValue)}
-          </Text>
-
-          <Text style={styles.filterSummaryText}>
-            Szukaj:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
+            Wartość: {formatMoney(visibleStockValue)}
           </Text>
 
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
@@ -597,7 +569,7 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
             {item.categoryName ?? 'Brak kategorii'}
           </Text>
 
-          <Text style={getStockBadgeStyle(item)}>{getStockLabel(item)}</Text>
+          <Text style={getBadgeStyle(item)}>{getStockLabel(item)}</Text>
         </View>
 
         <View style={styles.infoGrid}>
@@ -618,12 +590,6 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.valueSmallLabel}>Wartość</Text>
           <Text style={styles.valueSmallText}>{formatMoney(stockValue)}</Text>
         </View>
-
-        {item.description ? (
-          <Text style={styles.descriptionText} numberOfLines={3}>
-            {item.description}
-          </Text>
-        ) : null}
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -701,19 +667,13 @@ function AdminItemsScreen({navigation}: Props): React.JSX.Element {
         ListHeaderComponent={renderListHeader}
         contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
         }
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>🖨️</Text>
             <Text style={styles.emptyTitle}>Brak produktów</Text>
-
-            <Text style={styles.emptyText}>
-              {items.length === 0
-                ? 'Dodaj pierwszy produkt.'
-                : 'Brak wyników dla aktualnych filtrów.'}
-            </Text>
 
             <TouchableOpacity
               style={styles.emptyButton}
@@ -845,14 +805,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
   summaryBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -955,7 +907,7 @@ const styles = StyleSheet.create({
 
   panelButton: {
     flex: 1,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#334155',
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
@@ -999,31 +951,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
 
-  categoryButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    maxWidth: 160,
-  },
-
-  categoryButtonSelected: {
-    backgroundColor: '#a855f7',
-    borderColor: '#a855f7',
-  },
-
-  categoryButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  categoryButtonTextSelected: {
-    color: '#ffffff',
-  },
-
   filterButton: {
     backgroundColor: '#111827',
     borderWidth: 1,
@@ -1031,9 +958,25 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 7,
+    maxWidth: '100%',
   },
 
   filterButtonSelected: {
+    backgroundColor: '#f97316',
+    borderColor: '#f97316',
+  },
+
+  stockButtonSelected: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
+  },
+
+  sortButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
+  categoryButtonSelected: {
     backgroundColor: '#f97316',
     borderColor: '#f97316',
   },
@@ -1045,54 +988,6 @@ const styles = StyleSheet.create({
   },
 
   filterButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  stockButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
-  stockButtonSelected: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-
-  stockButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  stockButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  sortButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
-  sortButtonSelected: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-
-  sortButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  sortButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -1143,24 +1038,22 @@ const styles = StyleSheet.create({
 
   cardTopRow: {
     flexDirection: 'row',
-    gap: 10,
     alignItems: 'flex-start',
+    gap: 10,
     marginBottom: 10,
   },
 
   itemIconBox: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
   },
 
   itemIcon: {
-    fontSize: 26,
+    fontSize: 24,
   },
 
   cardTitleBox: {
@@ -1171,13 +1064,13 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
-    marginBottom: 4,
   },
 
   itemCode: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
+    marginTop: 4,
   },
 
   currentBadge: {
@@ -1210,46 +1103,48 @@ const styles = StyleSheet.create({
   },
 
   categoryBadge: {
-    backgroundColor: '#581c87',
-    color: '#f3e8ff',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#0f172a',
+    color: '#cbd5e1',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    borderWidth: 1,
+    borderColor: '#334155',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   availableBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   lowBadge: {
-    backgroundColor: '#422006',
-    color: '#fed7aa',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#facc15',
+    color: '#1f2937',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   emptyBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
@@ -1275,15 +1170,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
 
-  priceValue: {
-    color: '#16a34a',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
   infoValue: {
     color: '#f8fafc',
     fontSize: 13,
+    fontWeight: '900',
+  },
+
+  priceValue: {
+    color: '#f97316',
+    fontSize: 15,
     fontWeight: '900',
   },
 
@@ -1309,18 +1204,9 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  descriptionText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: '700',
-    marginBottom: 10,
-  },
-
   actions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 2,
   },
 
   editButton: {
@@ -1368,14 +1254,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 20,
     fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  emptyText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
     marginBottom: 16,
   },
 
