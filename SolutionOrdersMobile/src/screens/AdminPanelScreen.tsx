@@ -34,11 +34,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
       <View style={styles.centerContainer}>
         <Text style={styles.lockIcon}>🔒</Text>
 
-        <Text style={styles.accessTitle}>Zaloguj się</Text>
-
-        <Text style={styles.accessText}>
-          Zaloguj się, aby przejść dalej.
-        </Text>
+        <Text style={styles.accessTitle}>Panel obsługi</Text>
 
         <TouchableOpacity
           style={styles.primaryAccessButton}
@@ -61,7 +57,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
             })
           }
           activeOpacity={0.85}>
-          <Text style={styles.secondaryAccessButtonText}>Wróć do sklepu</Text>
+          <Text style={styles.secondaryAccessButtonText}>Sklep</Text>
         </TouchableOpacity>
       </View>
     );
@@ -73,9 +69,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroTopRow}>
           <View style={styles.heroTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
-
             <Text style={styles.title}>Panel obsługi</Text>
-
             <Text style={styles.userText}>
               {user?.name ?? 'Zalogowany użytkownik'}
             </Text>
@@ -95,14 +89,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
         onPress={() => navigation.navigate('Dashboard')}
         activeOpacity={0.85}>
         <Text style={styles.bigIcon}>📊</Text>
-
-        <View style={styles.bigTextBox}>
-          <Text style={styles.bigTitle}>Dashboard</Text>
-          <Text style={styles.bigDescription}>
-            Podsumowanie sprzedaży, zamówień i magazynu
-          </Text>
-        </View>
-
+        <Text style={styles.bigTitle}>Dashboard</Text>
         <Text style={styles.arrow}>{'>'}</Text>
       </TouchableOpacity>
 
@@ -186,12 +173,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
           onPress={() => navigation.navigate('Home')}
           activeOpacity={0.85}>
           <Text style={styles.shortcutIcon}>🏠</Text>
-
-          <View style={styles.shortcutTextBox}>
-            <Text style={styles.shortcutTitle}>Strona główna</Text>
-            <Text style={styles.shortcutText}>Powrót do ekranu startowego</Text>
-          </View>
-
+          <Text style={styles.shortcutTitle}>Strona główna</Text>
           <Text style={styles.shortcutArrow}>{'>'}</Text>
         </TouchableOpacity>
 
@@ -200,12 +182,7 @@ function AdminPanelScreen({navigation}: Props): React.JSX.Element {
           onPress={() => navigation.navigate('Items')}
           activeOpacity={0.85}>
           <Text style={styles.shortcutIcon}>🛍️</Text>
-
-          <View style={styles.shortcutTextBox}>
-            <Text style={styles.shortcutTitle}>Widok sklepu</Text>
-            <Text style={styles.shortcutText}>Podgląd produktów dla klienta</Text>
-          </View>
-
+          <Text style={styles.shortcutTitle}>Sklep</Text>
           <Text style={styles.shortcutArrow}>{'>'}</Text>
         </TouchableOpacity>
       </View>
@@ -236,14 +213,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 26,
     fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-
-  accessText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
     textAlign: 'center',
     marginBottom: 18,
   },
@@ -356,22 +325,11 @@ const styles = StyleSheet.create({
     fontSize: 38,
   },
 
-  bigTextBox: {
-    flex: 1,
-  },
-
   bigTitle: {
+    flex: 1,
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  bigDescription: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
   },
 
   arrow: {
@@ -396,7 +354,7 @@ const styles = StyleSheet.create({
 
   menuCard: {
     width: '30.8%',
-    minHeight: 120,
+    minHeight: 108,
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 12,
@@ -448,21 +406,11 @@ const styles = StyleSheet.create({
     fontSize: 26,
   },
 
-  shortcutTextBox: {
-    flex: 1,
-  },
-
   shortcutTitle: {
+    flex: 1,
     color: '#f8fafc',
     fontSize: 15,
     fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  shortcutText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
   },
 
   shortcutArrow: {

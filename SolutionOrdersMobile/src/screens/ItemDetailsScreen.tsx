@@ -33,6 +33,7 @@ function formatMoney(value?: number | null): string {
 
 function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
   const {item} = route.params;
+
   const {
     addToCart,
     cartItems,
@@ -44,7 +45,6 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
 
   const availableQuantity = item.quantity ?? 0;
   const isAvailable = availableQuantity > 0 && item.isActive !== false;
-  const isLowStock = isAvailable && availableQuantity <= 5;
 
   const cartItem = useMemo(() => {
     return cartItems.find(currentItem => {
@@ -68,7 +68,6 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
   });
 
   const selectedLineValue = selectedQuantity * (item.price ?? 0);
-  const valueIfAdded = totalValue + selectedLineValue;
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -137,8 +136,8 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Produkt nieaktywny',
-        message: 'Tego produktu nie można aktualnie kupić.',
+        title: 'Produkt',
+        message: 'Produkt jest niedostępny.',
         loading: false,
       });
 
@@ -149,8 +148,8 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Brak produktu',
-        message: 'Tego produktu nie ma aktualnie na stanie.',
+        title: 'Produkt',
+        message: 'Brak produktu na stanie.',
         loading: false,
       });
 
@@ -161,9 +160,8 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Maksymalna ilość w koszyku',
-        message:
-          'W koszyku masz już maksymalną dostępną ilość tego produktu.',
+        title: 'Koszyk',
+        message: 'Maksymalna ilość jest już w koszyku.',
         loading: false,
       });
 
@@ -174,8 +172,8 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Niepoprawna ilość',
-        message: 'Wybierz ilość większą od 0.',
+        title: 'Ilość',
+        message: 'Wybierz ilość.',
         loading: false,
       });
 
@@ -187,10 +185,8 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'success',
-      title: 'Dodano do koszyka',
-      message:
-        `Dodano "${item.name}" w ilości ${selectedQuantity}.\n\n` +
-        `Aktualna wartość koszyka po dodaniu: ${formatMoney(valueIfAdded)}.`,
+      title: 'Koszyk',
+      message: 'Dodano produkt.',
       loading: false,
     });
 
@@ -216,7 +212,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           disabled && styles.disabledButton,
         ]}
         onPress={() => setQuickQuantity(quantity)}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         disabled={disabled}>
         <Text
           style={[
@@ -247,14 +243,14 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.homeButton}
           onPress={() => navigation.navigate('Home')}
-          activeOpacity={0.8}>
+          activeOpacity={0.85}>
           <Text style={styles.homeButtonText}>3D Print Shop</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.accountButton}
           onPress={handleAccountPress}
-          activeOpacity={0.8}>
+          activeOpacity={0.85}>
           <Text style={styles.accountButtonText}>{getAccountLabel()}</Text>
         </TouchableOpacity>
       </View>
@@ -272,12 +268,8 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           <Text style={styles.codeBadge}>{item.code ?? 'Brak kodu'}</Text>
 
           <Text style={isAvailable ? styles.availableBadge : styles.emptyBadge}>
-            {isAvailable ? 'Dostępny' : 'Brak na stanie'}
+            {isAvailable ? 'Dostępny' : 'Brak'}
           </Text>
-
-          {isLowStock ? (
-            <Text style={styles.lowStockBadge}>Niski stan</Text>
-          ) : null}
         </View>
       </View>
 
@@ -292,7 +284,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.cartButton}
           onPress={() => navigation.navigate('Cart')}
-          activeOpacity={0.8}>
+          activeOpacity={0.85}>
           <Text style={styles.cartButtonText}>Otwórz</Text>
         </TouchableOpacity>
       </View>
@@ -312,28 +304,15 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       {quantityAlreadyInCart > 0 ? (
-        <View style={styles.cartInfoBox}>
-          <Text style={styles.cartInfoTitle}>Ten produkt jest już w koszyku</Text>
-          <Text style={styles.cartInfoText}>
-            W koszyku masz już {quantityAlreadyInCart} {item.unitName ?? 'szt'}.
-            Możesz dodać jeszcze maksymalnie {maxCanAddNow}{' '}
-            {item.unitName ?? 'szt'}.
-          </Text>
-        </View>
-      ) : null}
-
-      {isLowStock ? (
-        <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>Niski stan magazynowy</Text>
-          <Text style={styles.warningText}>
-            Produkt ma małą dostępność. Jeżeli chcesz go zamówić, dodaj go do
-            koszyka przed zmianą stanu magazynowego.
+        <View style={styles.smallInfoBox}>
+          <Text style={styles.smallInfoText}>
+            W koszyku: {quantityAlreadyInCart} {item.unitName ?? 'szt'}
           </Text>
         </View>
       ) : null}
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Opis produktu</Text>
+        <Text style={styles.sectionTitle}>Opis</Text>
 
         <Text style={styles.description}>
           {item.description ?? 'Brak opisu produktu'}
@@ -341,7 +320,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Ilość do dodania</Text>
+        <Text style={styles.sectionTitle}>Ilość</Text>
 
         <View style={styles.quantityRow}>
           <TouchableOpacity
@@ -350,7 +329,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
               (selectedQuantity <= 1 || !isAvailable) && styles.disabledButton,
             ]}
             onPress={decreaseQuantity}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={selectedQuantity <= 1 || !isAvailable}>
             <Text style={styles.quantityButtonText}>-</Text>
           </TouchableOpacity>
@@ -367,7 +346,7 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
                 styles.disabledButton,
             ]}
             onPress={increaseQuantity}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
             disabled={selectedQuantity >= maxCanAddNow || !isAvailable}>
             <Text style={styles.quantityButtonText}>+</Text>
           </TouchableOpacity>
@@ -380,22 +359,10 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           {renderQuickQuantityButton(5)}
         </View>
 
-        <Text style={styles.lineValue}>
-          Wartość wybranej ilości: {formatMoney(selectedLineValue)}
-        </Text>
-
-        <Text style={styles.lineHint}>
-          Po dodaniu koszyk będzie miał wartość około {formatMoney(valueIfAdded)}.
-        </Text>
-      </View>
-
-      <View style={styles.infoCard}>
-        <Text style={styles.infoTitle}>Co dalej?</Text>
-
-        <Text style={styles.infoText}>
-          Po dodaniu produktu przejdź do koszyka, wybierz dostawę i płatność.
-          Po złożeniu zamówienia otrzyma ono status „Nowe”.
-        </Text>
+        <View style={styles.lineValueBox}>
+          <Text style={styles.lineValueLabel}>Razem</Text>
+          <Text style={styles.lineValue}>{formatMoney(selectedLineValue)}</Text>
+        </View>
       </View>
 
       <TouchableOpacity
@@ -404,27 +371,18 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
           (!isAvailable || maxCanAddNow <= 0) && styles.disabledButton,
         ]}
         onPress={handleAddToCart}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
         disabled={!isAvailable || maxCanAddNow <= 0}>
         <Text style={styles.addToCartButtonText}>
-          {isAvailable && maxCanAddNow > 0
-            ? 'Dodaj do koszyka'
-            : 'Nie można dodać'}
+          {isAvailable && maxCanAddNow > 0 ? 'Dodaj do koszyka' : 'Niedostępny'}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.goToCartButton}
-        onPress={() => navigation.navigate('Cart')}
-        activeOpacity={0.8}>
-        <Text style={styles.goToCartButtonText}>Przejdź do koszyka</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.backButton}
+        style={styles.secondaryButton}
         onPress={() => navigation.navigate('Items')}
-        activeOpacity={0.8}>
-        <Text style={styles.backButtonText}>Wróć do produktów</Text>
+        activeOpacity={0.85}>
+        <Text style={styles.secondaryButtonText}>Produkty</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -437,17 +395,16 @@ const styles = StyleSheet.create({
   },
 
   content: {
+    padding: 16,
     paddingBottom: 32,
   },
 
   topBar: {
-    backgroundColor: '#111827',
-    padding: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
     alignItems: 'center',
+    marginBottom: 14,
   },
 
   homeButton: {
@@ -463,33 +420,35 @@ const styles = StyleSheet.create({
   accountButton: {
     backgroundColor: '#f97316',
     borderRadius: 999,
-    paddingHorizontal: 13,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
   },
 
   accountButtonText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '900',
   },
 
   heroBox: {
     backgroundColor: '#111827',
-    padding: 18,
-    borderBottomWidth: 1,
-    borderBottomColor: '#334155',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#334155',
     marginBottom: 14,
   },
 
   productIcon: {
-    fontSize: 44,
-    marginBottom: 8,
+    fontSize: 40,
+    marginBottom: 10,
   },
 
   title: {
     color: '#f8fafc',
-    fontSize: 26,
+    fontSize: 25,
     fontWeight: '900',
+    lineHeight: 31,
     marginBottom: 12,
   },
 
@@ -500,57 +459,46 @@ const styles = StyleSheet.create({
   },
 
   categoryBadge: {
-    backgroundColor: '#1e293b',
-    color: '#cbd5e1',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   codeBadge: {
-    backgroundColor: '#422006',
-    color: '#fed7aa',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#334155',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   availableBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   emptyBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
-    fontWeight: '800',
-    overflow: 'hidden',
-  },
-
-  lowStockBadge: {
-    backgroundColor: '#431407',
-    color: '#fed7aa',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
@@ -560,137 +508,102 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginHorizontal: 16,
     marginBottom: 14,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     gap: 12,
+    alignItems: 'center',
   },
 
   cartTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 4,
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 3,
   },
 
   cartText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
   },
 
   cartButton: {
     backgroundColor: '#16a34a',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
     borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
 
   cartButtonText: {
     color: '#ffffff',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
   },
 
   priceCard: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  priceBox: {
+    flex: 1,
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#f97316',
+  },
+
+  stockBox: {
+    flex: 1,
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginHorizontal: 16,
-    marginBottom: 14,
-    flexDirection: 'row',
-    gap: 12,
-  },
-
-  priceBox: {
-    flex: 1,
   },
 
   priceLabel: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 4,
-  },
-
-  priceValue: {
-    color: '#f97316',
-    fontSize: 28,
-    fontWeight: '900',
-  },
-
-  stockBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    minWidth: 105,
+    marginBottom: 5,
   },
 
   stockLabel: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 4,
+    marginBottom: 5,
+  },
+
+  priceValue: {
+    color: '#f97316',
+    fontSize: 24,
+    fontWeight: '900',
   },
 
   stockValue: {
     color: '#f8fafc',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '900',
   },
 
-  cartInfoBox: {
+  smallInfoBox: {
     backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#38bdf8',
-    marginHorizontal: 16,
     marginBottom: 14,
   },
 
-  cartInfoTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  cartInfoText: {
-    color: '#cbd5e1',
+  smallInfoText: {
+    color: '#38bdf8',
     fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-
-  warningBox: {
-    backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginHorizontal: 16,
-    marginBottom: 14,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 15,
     fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  warningText: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
   },
 
   card: {
@@ -699,7 +612,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginHorizontal: 16,
     marginBottom: 14,
   },
 
@@ -714,32 +626,29 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 14,
     lineHeight: 21,
+    fontWeight: '700',
   },
 
   quantityRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 18,
     marginBottom: 12,
   },
 
   quantityButton: {
-    backgroundColor: '#f97316',
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 999,
-    justifyContent: 'center',
+    backgroundColor: '#f97316',
     alignItems: 'center',
-  },
-
-  disabledButton: {
-    opacity: 0.55,
+    justifyContent: 'center',
   },
 
   quantityButtonText: {
     color: '#ffffff',
-    fontSize: 24,
+    fontSize: 25,
     fontWeight: '900',
   },
 
@@ -762,9 +671,8 @@ const styles = StyleSheet.create({
 
   quickQuantityRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     justifyContent: 'center',
+    gap: 8,
     marginBottom: 12,
   },
 
@@ -772,9 +680,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
+    width: 44,
+    height: 36,
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   quickQuantityButtonSelected: {
@@ -792,52 +702,31 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
 
-  lineValue: {
-    color: '#f97316',
-    fontSize: 17,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginTop: 4,
-  },
-
-  lineHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
-    textAlign: 'center',
-    marginTop: 5,
-  },
-
-  infoCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
+  lineValueBox: {
+    backgroundColor: '#052e16',
+    borderRadius: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginHorizontal: 16,
-    marginBottom: 14,
+    borderColor: '#16a34a',
   },
 
-  infoTitle: {
-    color: '#f8fafc',
-    fontSize: 16,
+  lineValueLabel: {
+    color: '#bbf7d0',
+    fontSize: 12,
     fontWeight: '900',
-    marginBottom: 5,
+    marginBottom: 4,
   },
 
-  infoText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
+  lineValue: {
+    color: '#bbf7d0',
+    fontSize: 20,
+    fontWeight: '900',
   },
 
   addToCartButton: {
     backgroundColor: '#16a34a',
-    marginHorizontal: 16,
-    paddingVertical: 14,
     borderRadius: 12,
+    paddingVertical: 15,
     alignItems: 'center',
     marginBottom: 12,
   },
@@ -848,33 +737,21 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  goToCartButton: {
-    backgroundColor: '#f97316',
-    marginHorizontal: 16,
-    paddingVertical: 13,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  goToCartButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  backButton: {
+  secondaryButton: {
     backgroundColor: '#334155',
-    marginHorizontal: 16,
-    paddingVertical: 13,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
-  backButtonText: {
+  secondaryButtonText: {
     color: '#ffffff',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
+  },
+
+  disabledButton: {
+    opacity: 0.5,
   },
 });
 
