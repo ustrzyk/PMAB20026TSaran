@@ -333,7 +333,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             style={styles.printButton}
             onPress={() => openOrderPrint(item)}
             activeOpacity={0.85}>
-            <Text style={styles.printButtonText}>Podgląd wydruku</Text>
+            <Text style={styles.printButtonText}>Wydruk</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -423,9 +423,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             <View style={styles.heroBox}>
               <Text style={styles.appName}>3D Print Shop</Text>
               <Text style={styles.title}>Moje zamówienia</Text>
-              <Text style={styles.subtitle}>
-                Szybko sprawdź status, datę i wartość swoich zamówień.
-              </Text>
+              <Text style={styles.subtitle}>Historia Twoich zamówień.</Text>
             </View>
 
             <View style={styles.summaryBox}>
@@ -454,7 +452,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               </View>
 
               <View style={styles.summaryColumnWide}>
-                <Text style={styles.summaryLabel}>Wartość zamówień</Text>
+                <Text style={styles.summaryLabel}>Wartość</Text>
                 <Text style={styles.summaryMoney}>
                   {formatMoney(totalOrdersValue)}
                 </Text>
@@ -466,7 +464,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
                 style={styles.searchInput}
                 value={searchText}
                 onChangeText={setSearchText}
-                placeholder="Szukaj numeru, statusu, daty..."
+                placeholder="Szukaj zamówienia"
                 placeholderTextColor="#64748b"
               />
             </View>
@@ -499,7 +497,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               </Text>
 
               <Text style={styles.filterSummaryText}>
-                Wartość widocznych: {formatMoney(visibleOrdersValue)}
+                Wartość: {formatMoney(visibleOrdersValue)}
               </Text>
 
               {(searchText.length > 0 ||
@@ -512,14 +510,6 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
                   <Text style={styles.clearButtonText}>Wyczyść filtry</Text>
                 </TouchableOpacity>
               )}
-            </View>
-
-            <View style={styles.printInfoBox}>
-              <Text style={styles.printInfoTitle}>Podgląd wydruku</Text>
-              <Text style={styles.printInfoText}>
-                Przy każdym zamówieniu możesz otworzyć dokument z pozycjami,
-                wartością i danymi zamówienia.
-              </Text>
             </View>
           </>
         }
@@ -830,29 +820,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '900',
-  },
-
-  printInfoBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginBottom: 14,
-  },
-
-  printInfoTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  printInfoText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
   },
 
   orderCard: {
