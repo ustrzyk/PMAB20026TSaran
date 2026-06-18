@@ -185,7 +185,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -203,6 +203,18 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
     setSearchText('');
     setStatusFilter('all');
     setSortMode('newest');
+  };
+
+  const openOrderDetails = (order: OrderDto): void => {
+    navigation.navigate('TrackOrder', {
+      idOrder: order.idOrder,
+    });
+  };
+
+  const openOrderPrint = (order: OrderDto): void => {
+    navigation.navigate('OrderPrint', {
+      idOrder: order.idOrder,
+    });
   };
 
   const renderFilterButton = (
@@ -261,9 +273,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.cardTopRow}>
           <View style={styles.cardTitleBox}>
             <Text style={styles.orderTitle}>Zamówienie #{item.idOrder}</Text>
-            <Text style={styles.orderDate}>
-              {formatDate(item.dataOrder)}
-            </Text>
+            <Text style={styles.orderDate}>{formatDate(item.dataOrder)}</Text>
           </View>
 
           <Text
@@ -311,16 +321,21 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
           </View>
         ) : null}
 
-        <TouchableOpacity
-          style={styles.detailsButton}
-          onPress={() =>
-            navigation.navigate('TrackOrder', {
-              idOrder: item.idOrder,
-            })
-          }
-          activeOpacity={0.85}>
-          <Text style={styles.detailsButtonText}>Sprawdź szczegóły</Text>
-        </TouchableOpacity>
+        <View style={styles.orderActions}>
+          <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={() => openOrderDetails(item)}
+            activeOpacity={0.85}>
+            <Text style={styles.detailsButtonText}>Szczegóły</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.printButton}
+            onPress={() => openOrderPrint(item)}
+            activeOpacity={0.85}>
+            <Text style={styles.printButtonText}>Podgląd wydruku</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   };
@@ -420,7 +435,7 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               </View>
 
               <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>W toku</Text>
+                <Text style={styles.summaryLabel}>Aktywne</Text>
                 <Text style={styles.summaryActive}>{activeOrdersCount}</Text>
               </View>
 
@@ -433,18 +448,13 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
             <View style={styles.summaryBox}>
               <View style={styles.summaryColumn}>
                 <Text style={styles.summaryLabel}>Anulowane</Text>
-                <Text style={styles.summaryCancelled}>{cancelledOrdersCount}</Text>
-              </View>
-
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Wartość widoczna</Text>
-                <Text style={styles.summaryMoney}>
-                  {formatMoney(visibleOrdersValue)}
+                <Text style={styles.summaryCancelled}>
+                  {cancelledOrdersCount}
                 </Text>
               </View>
 
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Razem</Text>
+              <View style={styles.summaryColumnWide}>
+                <Text style={styles.summaryLabel}>Wartość zamówień</Text>
                 <Text style={styles.summaryMoney}>
                   {formatMoney(totalOrdersValue)}
                 </Text>
@@ -456,24 +466,23 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
                 style={styles.searchInput}
                 value={searchText}
                 onChangeText={setSearchText}
-                placeholder="Szukaj po numerze, statusie lub dacie..."
+                placeholder="Szukaj numeru, statusu, daty..."
                 placeholderTextColor="#64748b"
-                keyboardType="default"
               />
             </View>
 
-            <View style={styles.filterBox}>
+            <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Status</Text>
 
               <View style={styles.filterButtons}>
                 {renderFilterButton('Wszystkie', 'all')}
-                {renderFilterButton('W toku', 'active')}
+                {renderFilterButton('Aktywne', 'active')}
                 {renderFilterButton('Zakończone', 'finished')}
                 {renderFilterButton('Anulowane', 'cancelled')}
               </View>
             </View>
 
-            <View style={styles.filterBox}>
+            <View style={styles.filterSection}>
               <Text style={styles.filterTitle}>Sortowanie</Text>
 
               <View style={styles.filterButtons}>
@@ -490,60 +499,60 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
               </Text>
 
               <Text style={styles.filterSummaryText}>
-                Szukaj:{' '}
-                {searchText.trim().length > 0
-                  ? searchText.trim()
-                  : 'brak wyszukiwania'}
+                Wartość widocznych: {formatMoney(visibleOrdersValue)}
               </Text>
 
-              <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
-                <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
-              </TouchableOpacity>
+              {(searchText.length > 0 ||
+                statusFilter !== 'all' ||
+                sortMode !== 'newest') && (
+                <TouchableOpacity
+                  style={styles.clearButton}
+                  onPress={clearFilters}
+                  activeOpacity={0.85}>
+                  <Text style={styles.clearButtonText}>Wyczyść filtry</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={handleRefresh}
-              activeOpacity={0.85}>
-              <Text style={styles.refreshButtonText}>Odśwież</Text>
-            </TouchableOpacity>
+            <View style={styles.printInfoBox}>
+              <Text style={styles.printInfoTitle}>Podgląd wydruku</Text>
+              <Text style={styles.printInfoText}>
+                Przy każdym zamówieniu możesz otworzyć dokument z pozycjami,
+                wartością i danymi zamówienia.
+              </Text>
+            </View>
           </>
         }
         ListEmptyComponent={
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>📦</Text>
             <Text style={styles.emptyTitle}>Brak zamówień</Text>
-
             <Text style={styles.emptyText}>
-              {orders.length === 0
-                ? 'Złóż pierwsze zamówienie w sklepie, a pojawi się tutaj.'
-                : 'Brak zamówień pasujących do filtrów.'}
+              Nie znaleziono zamówień dla wybranych filtrów.
             </Text>
 
             <TouchableOpacity
               style={styles.primaryButton}
-              onPress={orders.length === 0 ? () => navigation.navigate('Items') : clearFilters}
+              onPress={() => navigation.navigate('Items')}
               activeOpacity={0.85}>
-              <Text style={styles.primaryButtonText}>
-                {orders.length === 0 ? 'Przejdź do sklepu' : 'Wyczyść filtry'}
-              </Text>
+              <Text style={styles.primaryButtonText}>Przejdź do sklepu</Text>
             </TouchableOpacity>
           </View>
         }
         ListFooterComponent={
-          <View style={styles.footerBox}>
+          <View style={styles.footerButtons}>
             <TouchableOpacity
-              style={styles.footerPrimaryButton}
-              onPress={() => navigation.navigate('ClientPanel')}
+              style={styles.shopButton}
+              onPress={() => navigation.navigate('Items')}
               activeOpacity={0.85}>
-              <Text style={styles.footerPrimaryButtonText}>Moje konto</Text>
+              <Text style={styles.shopButtonText}>Produkty</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.footerSecondaryButton}
-              onPress={() => navigation.navigate('Items')}
+              style={styles.accountButton}
+              onPress={() => navigation.navigate('ClientPanel')}
               activeOpacity={0.85}>
-              <Text style={styles.footerSecondaryButtonText}>Produkty</Text>
+              <Text style={styles.accountButtonText}>Moje konto</Text>
             </TouchableOpacity>
           </View>
         }
@@ -558,21 +567,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
   },
 
-  centerContainer: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-
   listContent: {
     padding: 16,
     paddingBottom: 32,
   },
 
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+
   lockIcon: {
-    fontSize: 48,
+    fontSize: 46,
     marginBottom: 12,
   },
 
@@ -594,13 +603,14 @@ const styles = StyleSheet.create({
 
   loadingText: {
     color: '#cbd5e1',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '700',
     marginTop: 12,
   },
 
   errorTitle: {
     color: '#f8fafc',
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
@@ -609,8 +619,9 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#fca5a5',
     fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 18,
   },
 
   heroBox: {
@@ -633,7 +644,7 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 27,
     fontWeight: '900',
   },
 
@@ -642,32 +653,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
+    fontWeight: '700',
   },
 
   summaryBox: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
     flexDirection: 'row',
     gap: 10,
+    marginBottom: 12,
   },
 
   summaryColumn: {
     flex: 1,
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+
+  summaryColumnWide: {
+    flex: 2,
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
   },
 
   summaryLabel: {
     color: '#94a3b8',
     fontSize: 11,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 5,
   },
 
   summaryValue: {
-    color: '#38bdf8',
+    color: '#f8fafc',
     fontSize: 22,
     fontWeight: '900',
   },
@@ -692,32 +713,37 @@ const styles = StyleSheet.create({
 
   summaryMoney: {
     color: '#16a34a',
-    fontSize: 15,
+    fontSize: 20,
     fontWeight: '900',
   },
 
   searchBox: {
-    marginBottom: 12,
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
   },
 
   searchInput: {
-    backgroundColor: '#111827',
+    backgroundColor: '#0f172a',
     borderWidth: 1,
     borderColor: '#334155',
     color: '#f8fafc',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 14,
+    paddingVertical: 12,
+    fontSize: 15,
   },
 
-  filterBox: {
-    marginBottom: 12,
+  filterSection: {
+    marginBottom: 14,
   },
 
   filterTitle: {
-    color: '#cbd5e1',
-    fontSize: 13,
+    color: '#f8fafc',
+    fontSize: 15,
     fontWeight: '900',
     marginBottom: 8,
   },
@@ -732,9 +758,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
   },
 
   filterButtonSelected: {
@@ -745,7 +771,7 @@ const styles = StyleSheet.create({
   filterButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
   },
 
   filterButtonTextSelected: {
@@ -756,9 +782,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#111827',
     borderWidth: 1,
     borderColor: '#334155',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
   },
 
   sortButtonSelected: {
@@ -769,7 +795,7 @@ const styles = StyleSheet.create({
   sortButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
   },
 
   sortButtonTextSelected: {
@@ -778,38 +804,55 @@ const styles = StyleSheet.create({
 
   filterSummaryBox: {
     backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#334155',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    marginBottom: 14,
   },
 
   filterSummaryText: {
     color: '#cbd5e1',
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
-  clearFiltersText: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  refreshButton: {
+  clearButton: {
     backgroundColor: '#334155',
+    paddingVertical: 10,
     borderRadius: 12,
-    paddingVertical: 12,
     alignItems: 'center',
-    marginBottom: 4,
+    marginTop: 8,
   },
 
-  refreshButtonText: {
+  clearButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
+  },
+
+  printInfoBox: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
+  },
+
+  printInfoTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 5,
+  },
+
+  printInfoText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
 
   orderCard: {
@@ -818,15 +861,15 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    marginTop: 12,
+    marginBottom: 14,
   },
 
   cardTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 10,
+    justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   cardTitleBox: {
@@ -837,13 +880,13 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
+    marginBottom: 4,
   },
 
   orderDate: {
     color: '#94a3b8',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    marginTop: 4,
   },
 
   activeBadge: {
@@ -858,8 +901,8 @@ const styles = StyleSheet.create({
   },
 
   finishedBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -869,8 +912,8 @@ const styles = StyleSheet.create({
   },
 
   cancelledBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
+    backgroundColor: '#ef4444',
+    color: '#ffffff',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 999,
@@ -881,8 +924,8 @@ const styles = StyleSheet.create({
 
   infoGrid: {
     flexDirection: 'row',
-    gap: 9,
-    marginBottom: 9,
+    gap: 10,
+    marginBottom: 10,
   },
 
   infoBox: {
@@ -898,18 +941,12 @@ const styles = StyleSheet.create({
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
   infoValue: {
     color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-
-  statusValue: {
-    color: '#f97316',
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '900',
   },
 
@@ -919,33 +956,58 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
+  statusValue: {
+    color: '#f97316',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
   notesBox: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
-    marginBottom: 10,
+    marginBottom: 12,
   },
 
   notesText: {
     color: '#cbd5e1',
-    fontSize: 12,
+    fontSize: 13,
     lineHeight: 18,
     fontWeight: '700',
   },
 
+  orderActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
   detailsButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 12,
+    flex: 1,
+    backgroundColor: '#38bdf8',
     paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
-    marginTop: 2,
   },
 
   detailsButtonText: {
+    color: '#0f172a',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  printButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  printButtonText: {
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
   },
 
@@ -955,12 +1017,11 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: '#334155',
-    marginTop: 14,
     alignItems: 'center',
   },
 
   emptyIcon: {
-    fontSize: 44,
+    fontSize: 42,
     marginBottom: 10,
   },
 
@@ -972,11 +1033,42 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: '#cbd5e1',
+    color: '#94a3b8',
     fontSize: 14,
     lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
+  },
+
+  footerButtons: {
+    marginTop: 4,
+  },
+
+  shopButton: {
+    backgroundColor: '#f97316',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  shopButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  accountButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  accountButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
   },
 
   primaryButton: {
@@ -1005,37 +1097,6 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     color: '#ffffff',
     fontSize: 15,
-    fontWeight: '900',
-  },
-
-  footerBox: {
-    paddingTop: 16,
-    gap: 10,
-  },
-
-  footerPrimaryButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-
-  footerPrimaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  footerSecondaryButton: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-
-  footerSecondaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
     fontWeight: '900',
   },
 });
