@@ -1,8 +1,8 @@
-import React, {useCallback, useMemo, useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
-  ActivityIndicator,
-  FlatList,
-  RefreshControl,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,330 +10,195 @@ import {
   View,
 } from 'react-native';
 
-import {useFocusEffect} from '@react-navigation/native';
 import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
-import apiService from '../api/apiService.ts';
+import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
 import {useAuth} from '../context/AuthContext.tsx';
 
 import type {RootStackParamList} from '../navigation/types.ts';
-import type {OrderDto} from '../types/models.ts';
 
-type Props = NativeStackScreenProps<RootStackParamList, 'CustomerOrders'>;
+type Props = NativeStackScreenProps<RootStackParamList, 'CustomerProfile'>;
 
-type OrderStatusFilter = 'all' | 'active' | 'finished' | 'cancelled';
-type OrderSortMode = 'newest' | 'oldest' | 'valueDesc' | 'valueAsc';
-
-type OrderWithStatus = OrderDto & {
-  status?: string | null;
-};
-
-function formatMoney(value?: number | null): string {
-  const safeValue = value ?? 0;
-
-  return `${safeValue.toFixed(2)} zł`;
+interface DialogState {
+  visible: boolean;
+  type: AppDialogType;
+  title: string;
+  message: string;
+  loading: boolean;
 }
 
-function formatDate(value?: string | null): string {
-  if (!value) {
-    return 'Brak daty';
-  }
-
-  return value.substring(0, 10);
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function getDateTime(value?: string | null): number {
-  if (!value) {
-    return 0;
-  }
+function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
+  const {user, isCustomer, updateCustomerProfile} = useAuth();
 
-  return new Date(value).getTime();
-}
+  const [name, setName] = useState(user?.name ?? '');
+  const [email, setEmail] = useState(user?.login ?? '');
+  const [adress, setAdress] = useState(user?.adress ?? '');
+  const [phoneNumber, setPhoneNumber] = useState(user?.phoneNumber ?? '');
+  const [password, setPassword] = useState('');
 
-function getOrderStatus(order: OrderDto): string {
-  const status = (order as OrderWithStatus).status?.trim();
+  const [submitting, setSubmitting] = useState(false);
+  const [goBackAfterDialog, setGoBackAfterDialog] = useState(false);
 
-  if (!status || status.length === 0) {
-    return 'Nowe';
-  }
+  const [dialog, setDialog] = useState<DialogState>({
+    visible: false,
+    type: 'success',
+    title: '',
+    message: '',
+    loading: false,
+  });
 
-  return status;
-}
+  const safeName = name.trim();
+  const safeEmail = email.trim().toLowerCase();
+  const safeAdress = adress.trim();
+  const safePhoneNumber = phoneNumber.trim();
+  const safePassword = password.trim();
 
-function isFinishedStatus(status: string): boolean {
-  return status === 'Zakończone';
-}
+  const nameReady = useMemo(() => {
+    return safeName.length >= 3 && safeName.length <= 80;
+  }, [safeName]);
 
-function isCancelledStatus(status: string): boolean {
-  return status === 'Anulowane';
-}
+  const emailReady = useMemo(() => {
+    return safeEmail.length > 0 && isValidEmail(safeEmail);
+  }, [safeEmail]);
 
-function isActiveStatus(status: string): boolean {
-  return !isFinishedStatus(status) && !isCancelledStatus(status);
-}
+  const passwordReady = useMemo(() => {
+    return safePassword.length === 0 || safePassword.length >= 4;
+  }, [safePassword]);
 
-function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
-  const {user, isCustomer} = useAuth();
+  const deliveryReady = useMemo(() => {
+    return safeAdress.length > 0 && safePhoneNumber.length > 0;
+  }, [safeAdress, safePhoneNumber]);
 
-  const [orders, setOrders] = useState<OrderDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const formReady = useMemo(() => {
+    return nameReady && emailReady && passwordReady;
+  }, [emailReady, nameReady, passwordReady]);
 
-  const [searchText, setSearchText] = useState('');
-  const [statusFilter, setStatusFilter] = useState<OrderStatusFilter>('all');
-  const [sortMode, setSortMode] = useState<OrderSortMode>('newest');
+  const showDialog = (
+    type: AppDialogType,
+    title: string,
+    message: string,
+    shouldGoBack = false,
+  ): void => {
+    setGoBackAfterDialog(shouldGoBack);
 
-  const totalOrdersValue = useMemo(() => {
-    return orders.reduce((sum, order) => {
-      return sum + (order.totalValue ?? 0);
-    }, 0);
-  }, [orders]);
+    setDialog({
+      visible: true,
+      type,
+      title,
+      message,
+      loading: false,
+    });
+  };
 
-  const activeOrdersCount = useMemo(() => {
-    return orders.filter(order => isActiveStatus(getOrderStatus(order))).length;
-  }, [orders]);
+  const closeDialog = (): void => {
+    setDialog(previous => ({
+      ...previous,
+      visible: false,
+      loading: false,
+    }));
 
-  const finishedOrdersCount = useMemo(() => {
-    return orders.filter(order => isFinishedStatus(getOrderStatus(order))).length;
-  }, [orders]);
+    if (goBackAfterDialog) {
+      setGoBackAfterDialog(false);
+      navigation.goBack();
+    }
+  };
 
-  const cancelledOrdersCount = useMemo(() => {
-    return orders.filter(order => isCancelledStatus(getOrderStatus(order))).length;
-  }, [orders]);
-
-  const filteredOrders = useMemo(() => {
-    const search = searchText.trim().toLowerCase();
-
-    let result = orders;
-
-    if (statusFilter === 'active') {
-      result = result.filter(order => isActiveStatus(getOrderStatus(order)));
+  const validateForm = (): string | null => {
+    if (safeName.length === 0) {
+      return 'Podaj imię i nazwisko.';
     }
 
-    if (statusFilter === 'finished') {
-      result = result.filter(order => isFinishedStatus(getOrderStatus(order)));
+    if (safeName.length < 3) {
+      return 'Imię i nazwisko powinno mieć minimum 3 znaki.';
     }
 
-    if (statusFilter === 'cancelled') {
-      result = result.filter(order => isCancelledStatus(getOrderStatus(order)));
+    if (safeName.length > 80) {
+      return 'Imię i nazwisko może mieć maksymalnie 80 znaków.';
     }
 
-    if (search.length > 0) {
-      result = result.filter(order => {
-        const orderNumber = order.idOrder.toString();
-        const status = getOrderStatus(order).toLowerCase();
-        const notes = order.notes?.toLowerCase() ?? '';
-        const date = order.dataOrder?.toLowerCase() ?? '';
-        const deliveryDate = order.deliveryDate?.toLowerCase() ?? '';
-
-        return (
-          orderNumber.includes(search) ||
-          status.includes(search) ||
-          notes.includes(search) ||
-          date.includes(search) ||
-          deliveryDate.includes(search)
-        );
-      });
+    if (safeEmail.length === 0) {
+      return 'Podaj adres e-mail.';
     }
 
-    const sorted = [...result];
-
-    if (sortMode === 'newest') {
-      sorted.sort((a, b) => getDateTime(b.dataOrder) - getDateTime(a.dataOrder));
+    if (!isValidEmail(safeEmail)) {
+      return 'Podaj poprawny adres e-mail.';
     }
 
-    if (sortMode === 'oldest') {
-      sorted.sort((a, b) => getDateTime(a.dataOrder) - getDateTime(b.dataOrder));
+    if (safePhoneNumber.length > 30) {
+      return 'Numer telefonu może mieć maksymalnie 30 znaków.';
     }
 
-    if (sortMode === 'valueDesc') {
-      sorted.sort((a, b) => (b.totalValue ?? 0) - (a.totalValue ?? 0));
+    if (safePassword.length > 0 && safePassword.length < 4) {
+      return 'Nowe hasło powinno mieć minimum 4 znaki.';
     }
 
-    if (sortMode === 'valueAsc') {
-      sorted.sort((a, b) => (a.totalValue ?? 0) - (b.totalValue ?? 0));
+    return null;
+  };
+
+  const handleSavePress = (): void => {
+    const validationError = validateForm();
+
+    if (validationError) {
+      showDialog('error', 'Sprawdź formularz', validationError);
+      return;
     }
 
-    return sorted;
-  }, [orders, searchText, sortMode, statusFilter]);
+    setDialog({
+      visible: true,
+      type: 'confirm',
+      title: 'Zapisać dane?',
+      message: 'Zaktualizować dane konta klienta?',
+      loading: false,
+    });
+  };
 
-  const visibleOrdersValue = useMemo(() => {
-    return filteredOrders.reduce((sum, order) => {
-      return sum + (order.totalValue ?? 0);
-    }, 0);
-  }, [filteredOrders]);
-
-  const loadOrders = useCallback(async (): Promise<void> => {
+  const submitForm = async (): Promise<void> => {
     try {
-      setError(null);
+      setSubmitting(true);
 
-      if (!user?.id) {
-        setOrders([]);
-        return;
-      }
+      setDialog(previous => ({
+        ...previous,
+        loading: true,
+      }));
 
-      const data = await apiService.getOrdersByClient(user.id);
+      await updateCustomerProfile({
+        name: safeName,
+        email: safeEmail,
+        adress: safeAdress.length > 0 ? safeAdress : null,
+        phoneNumber: safePhoneNumber.length > 0 ? safePhoneNumber : null,
+        password: safePassword.length > 0 ? safePassword : null,
+      });
 
-      setOrders(data);
+      showDialog('success', 'Zapisano', 'Dane konta zostały zapisane.', true);
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Nieznany błąd pobierania danych';
-
-      setError(message);
+      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setSubmitting(false);
     }
-  }, [user]);
-
-  useFocusEffect(
-    useCallback(() => {
-      setLoading(true);
-      loadOrders();
-    }, [loadOrders]),
-  );
-
-  const handleRefresh = async (): Promise<void> => {
-    setRefreshing(true);
-    await loadOrders();
   };
 
-  const clearFilters = (): void => {
-    setSearchText('');
-    setStatusFilter('all');
-    setSortMode('newest');
-  };
+  const handleDialogConfirm = (): void => {
+    if (dialog.type === 'confirm') {
+      submitForm();
+      return;
+    }
 
-  const renderFilterButton = (
-    label: string,
-    value: OrderStatusFilter,
-  ): React.JSX.Element => {
-    const selected = statusFilter === value;
-
-    return (
-      <TouchableOpacity
-        key={`order-filter-${value}`}
-        style={[styles.filterButton, selected && styles.filterButtonSelected]}
-        onPress={() => setStatusFilter(value)}
-        activeOpacity={0.85}>
-        <Text
-          style={[
-            styles.filterButtonText,
-            selected && styles.filterButtonTextSelected,
-          ]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderSortButton = (
-    label: string,
-    value: OrderSortMode,
-  ): React.JSX.Element => {
-    const selected = sortMode === value;
-
-    return (
-      <TouchableOpacity
-        key={`order-sort-${value}`}
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
-        onPress={() => setSortMode(value)}
-        activeOpacity={0.85}>
-        <Text
-          style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
-          ]}>
-          {label}
-        </Text>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderOrder = ({item}: {item: OrderDto}): React.JSX.Element => {
-    const status = getOrderStatus(item);
-    const cancelled = isCancelledStatus(status);
-    const finished = isFinishedStatus(status);
-
-    return (
-      <View style={styles.orderCard}>
-        <View style={styles.cardTopRow}>
-          <View style={styles.cardTitleBox}>
-            <Text style={styles.orderTitle}>Zamówienie #{item.idOrder}</Text>
-            <Text style={styles.orderDate}>
-              {formatDate(item.dataOrder)}
-            </Text>
-          </View>
-
-          <Text
-            style={
-              cancelled
-                ? styles.cancelledBadge
-                : finished
-                  ? styles.finishedBadge
-                  : styles.activeBadge
-            }>
-            {status}
-          </Text>
-        </View>
-
-        <View style={styles.infoGrid}>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Wartość</Text>
-            <Text style={styles.orderValue}>{formatMoney(item.totalValue)}</Text>
-          </View>
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Pozycje</Text>
-            <Text style={styles.infoValue}>{item.orderItemsCount}</Text>
-          </View>
-        </View>
-
-        <View style={styles.infoGrid}>
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Dostawa</Text>
-            <Text style={styles.infoValue}>{formatDate(item.deliveryDate)}</Text>
-          </View>
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoLabel}>Status</Text>
-            <Text style={styles.statusValue}>{status}</Text>
-          </View>
-        </View>
-
-        {item.notes ? (
-          <View style={styles.notesBox}>
-            <Text style={styles.infoLabel}>Informacje</Text>
-            <Text style={styles.notesText} numberOfLines={4}>
-              {item.notes}
-            </Text>
-          </View>
-        ) : null}
-
-        <TouchableOpacity
-          style={styles.detailsButton}
-          onPress={() =>
-            navigation.navigate('TrackOrder', {
-              idOrder: item.idOrder,
-            })
-          }
-          activeOpacity={0.85}>
-          <Text style={styles.detailsButtonText}>Sprawdź szczegóły</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    closeDialog();
   };
 
   if (!isCustomer) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.lockIcon}>🔒</Text>
+        <Text style={styles.lockIcon}>👤</Text>
 
-        <Text style={styles.accessTitle}>Moje zamówienia</Text>
+        <Text style={styles.accessTitle}>Dane konta</Text>
 
         <Text style={styles.accessText}>
-          Zaloguj się, aby zobaczyć swoją historię zamówień.
+          Zaloguj się jako klient, aby edytować dane konta.
         </Text>
 
         <TouchableOpacity
@@ -363,192 +228,210 @@ function CustomerOrdersScreen({navigation}: Props): React.JSX.Element {
     );
   }
 
-  if (loading) {
-    return (
-      <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Ładowanie zamówień...</Text>
-      </View>
-    );
-  }
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <AppDialog
+        visible={dialog.visible}
+        type={dialog.type}
+        title={dialog.title}
+        message={dialog.message}
+        confirmText={dialog.type === 'confirm' ? 'Zapisz' : 'OK'}
+        cancelText="Anuluj"
+        loading={dialog.loading}
+        onConfirm={handleDialogConfirm}
+        onCancel={closeDialog}
+      />
 
-  if (error) {
-    return (
-      <View style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>Nie udało się pobrać zamówień</Text>
-        <Text style={styles.errorText}>{error}</Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.heroBox}>
+          <Text style={styles.appName}>3D Print Shop</Text>
+          <Text style={styles.title}>Dane konta</Text>
+          <Text style={styles.subtitle}>
+            Zmień dane kontaktowe i dane dostawy.
+          </Text>
+        </View>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={loadOrders}>
-          <Text style={styles.primaryButtonText}>Spróbuj ponownie</Text>
+        <View style={deliveryReady ? styles.readyBox : styles.warningBox}>
+          <Text style={deliveryReady ? styles.readyTitle : styles.warningTitle}>
+            {deliveryReady ? 'Dane dostawy zapisane' : 'Uzupełnij dostawę'}
+          </Text>
+
+          <Text style={deliveryReady ? styles.readyText : styles.warningText}>
+            {deliveryReady
+              ? 'Adres i telefon są gotowe do użycia przy zamówieniu.'
+              : 'Adres i telefon ułatwią składanie zamówienia.'}
+          </Text>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>Podgląd</Text>
+
+          <View style={styles.previewHeader}>
+            <View style={styles.previewIconBox}>
+              <Text style={styles.previewIcon}>👤</Text>
+            </View>
+
+            <View style={styles.previewTextBox}>
+              <Text style={styles.previewName}>
+                {safeName.length > 0 ? safeName : 'Imię i nazwisko'}
+              </Text>
+
+              <Text style={styles.currentBadge}>Klient</Text>
+            </View>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>E-mail</Text>
+            <Text style={styles.previewValue}>
+              {safeEmail.length > 0 ? safeEmail : 'Brak e-maila'}
+            </Text>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Adres</Text>
+            <Text style={styles.previewValue}>
+              {safeAdress.length > 0 ? safeAdress : 'Brak adresu'}
+            </Text>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Telefon</Text>
+            <Text style={styles.previewValue}>
+              {safePhoneNumber.length > 0 ? safePhoneNumber : 'Brak telefonu'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statusGrid}>
+          <View style={nameReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{nameReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>Nazwa</Text>
+            <Text style={styles.statusText}>
+              {nameReady ? 'Uzupełniona' : 'Wymagana'}
+            </Text>
+          </View>
+
+          <View style={emailReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{emailReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>E-mail</Text>
+            <Text style={styles.statusText}>
+              {emailReady ? 'Poprawny' : 'Wymagany'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Dane podstawowe</Text>
+
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Imię i nazwisko</Text>
+            <Text style={nameReady ? styles.counterOk : styles.counterWarning}>
+              {safeName.length}/80
+            </Text>
+          </View>
+
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Np. Jan Kowalski"
+            placeholderTextColor="#64748b"
+            editable={!submitting}
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>E-mail</Text>
+
+          <TextInput
+            style={[styles.input, !emailReady && styles.inputWarning]}
+            value={email}
+            onChangeText={setEmail}
+            placeholder="Np. jan@3dshop.pl"
+            placeholderTextColor="#64748b"
+            autoCapitalize="none"
+            keyboardType="email-address"
+            editable={!submitting}
+            returnKeyType="next"
+          />
+
+          <Text style={styles.label}>Nowe hasło</Text>
+
+          <TextInput
+            style={[styles.input, !passwordReady && styles.inputWarning]}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="Opcjonalnie"
+            placeholderTextColor="#64748b"
+            secureTextEntry
+            editable={!submitting}
+            returnKeyType="next"
+          />
+
+          <View style={styles.hintBox}>
+            <Text style={styles.hintTitle}>Hasło</Text>
+            <Text style={styles.hintText}>
+              Zostaw puste, jeśli hasło ma pozostać bez zmian.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Dane dostawy</Text>
+
+          <Text style={styles.label}>Adres</Text>
+
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            value={adress}
+            onChangeText={setAdress}
+            placeholder="Np. ul. Testowa 10, Warszawa"
+            placeholderTextColor="#64748b"
+            multiline
+            editable={!submitting}
+          />
+
+          <Text style={styles.label}>Telefon</Text>
+
+          <TextInput
+            style={[
+              styles.input,
+              safePhoneNumber.length > 30 && styles.inputWarning,
+            ]}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            placeholder="Np. 500-100-200"
+            placeholderTextColor="#64748b"
+            keyboardType="phone-pad"
+            editable={!submitting}
+            returnKeyType="done"
+            onSubmitEditing={handleSavePress}
+          />
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.saveButton,
+            (!formReady || submitting) && styles.disabledButton,
+          ]}
+          onPress={handleSavePress}
+          activeOpacity={0.85}
+          disabled={!formReady || submitting}>
+          <Text style={styles.saveButtonText}>
+            {submitting ? 'Zapisywanie...' : 'Zapisz dane'}
+          </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('ClientPanel')}
-          activeOpacity={0.85}>
-          <Text style={styles.secondaryButtonText}>Wróć do konta</Text>
+          style={styles.cancelButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.85}
+          disabled={submitting}>
+          <Text style={styles.cancelButtonText}>Anuluj</Text>
         </TouchableOpacity>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={filteredOrders}
-        renderItem={renderOrder}
-        keyExtractor={item => item.idOrder.toString()}
-        contentContainerStyle={styles.listContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
-        }
-        keyboardShouldPersistTaps="handled"
-        ListHeaderComponent={
-          <>
-            <View style={styles.heroBox}>
-              <Text style={styles.appName}>3D Print Shop</Text>
-              <Text style={styles.title}>Moje zamówienia</Text>
-              <Text style={styles.subtitle}>
-                Szybko sprawdź status, datę i wartość swoich zamówień.
-              </Text>
-            </View>
-
-            <View style={styles.summaryBox}>
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Wszystkie</Text>
-                <Text style={styles.summaryValue}>{orders.length}</Text>
-              </View>
-
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>W toku</Text>
-                <Text style={styles.summaryActive}>{activeOrdersCount}</Text>
-              </View>
-
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Zakończone</Text>
-                <Text style={styles.summaryFinished}>{finishedOrdersCount}</Text>
-              </View>
-            </View>
-
-            <View style={styles.summaryBox}>
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Anulowane</Text>
-                <Text style={styles.summaryCancelled}>{cancelledOrdersCount}</Text>
-              </View>
-
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Wartość widoczna</Text>
-                <Text style={styles.summaryMoney}>
-                  {formatMoney(visibleOrdersValue)}
-                </Text>
-              </View>
-
-              <View style={styles.summaryColumn}>
-                <Text style={styles.summaryLabel}>Razem</Text>
-                <Text style={styles.summaryMoney}>
-                  {formatMoney(totalOrdersValue)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.searchBox}>
-              <TextInput
-                style={styles.searchInput}
-                value={searchText}
-                onChangeText={setSearchText}
-                placeholder="Szukaj po numerze, statusie lub dacie..."
-                placeholderTextColor="#64748b"
-                keyboardType="default"
-              />
-            </View>
-
-            <View style={styles.filterBox}>
-              <Text style={styles.filterTitle}>Status</Text>
-
-              <View style={styles.filterButtons}>
-                {renderFilterButton('Wszystkie', 'all')}
-                {renderFilterButton('W toku', 'active')}
-                {renderFilterButton('Zakończone', 'finished')}
-                {renderFilterButton('Anulowane', 'cancelled')}
-              </View>
-            </View>
-
-            <View style={styles.filterBox}>
-              <Text style={styles.filterTitle}>Sortowanie</Text>
-
-              <View style={styles.filterButtons}>
-                {renderSortButton('Najnowsze', 'newest')}
-                {renderSortButton('Najstarsze', 'oldest')}
-                {renderSortButton('Wartość ↓', 'valueDesc')}
-                {renderSortButton('Wartość ↑', 'valueAsc')}
-              </View>
-            </View>
-
-            <View style={styles.filterSummaryBox}>
-              <Text style={styles.filterSummaryText}>
-                Wyświetlane: {filteredOrders.length} / {orders.length}
-              </Text>
-
-              <Text style={styles.filterSummaryText}>
-                Szukaj:{' '}
-                {searchText.trim().length > 0
-                  ? searchText.trim()
-                  : 'brak wyszukiwania'}
-              </Text>
-
-              <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
-                <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity
-              style={styles.refreshButton}
-              onPress={handleRefresh}
-              activeOpacity={0.85}>
-              <Text style={styles.refreshButtonText}>Odśwież</Text>
-            </TouchableOpacity>
-          </>
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyBox}>
-            <Text style={styles.emptyIcon}>📦</Text>
-            <Text style={styles.emptyTitle}>Brak zamówień</Text>
-
-            <Text style={styles.emptyText}>
-              {orders.length === 0
-                ? 'Złóż pierwsze zamówienie w sklepie, a pojawi się tutaj.'
-                : 'Brak zamówień pasujących do filtrów.'}
-            </Text>
-
-            <TouchableOpacity
-              style={styles.primaryButton}
-              onPress={orders.length === 0 ? () => navigation.navigate('Items') : clearFilters}
-              activeOpacity={0.85}>
-              <Text style={styles.primaryButtonText}>
-                {orders.length === 0 ? 'Przejdź do sklepu' : 'Wyczyść filtry'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        }
-        ListFooterComponent={
-          <View style={styles.footerBox}>
-            <TouchableOpacity
-              style={styles.footerPrimaryButton}
-              onPress={() => navigation.navigate('ClientPanel')}
-              activeOpacity={0.85}>
-              <Text style={styles.footerPrimaryButtonText}>Moje konto</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.footerSecondaryButton}
-              onPress={() => navigation.navigate('Items')}
-              activeOpacity={0.85}>
-              <Text style={styles.footerSecondaryButtonText}>Produkty</Text>
-            </TouchableOpacity>
-          </View>
-        }
-      />
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -558,21 +441,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
   },
 
-  centerContainer: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-
-  listContent: {
+  content: {
     padding: 16,
     paddingBottom: 32,
   },
 
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+
   lockIcon: {
-    fontSize: 48,
+    fontSize: 46,
     marginBottom: 12,
   },
 
@@ -590,27 +473,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
     marginBottom: 18,
-  },
-
-  loadingText: {
-    color: '#cbd5e1',
-    fontSize: 16,
-    marginTop: 12,
-  },
-
-  errorTitle: {
-    color: '#f8fafc',
-    fontSize: 20,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-
-  errorText: {
-    color: '#fca5a5',
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 16,
   },
 
   heroBox: {
@@ -633,7 +495,7 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 27,
     fontWeight: '900',
   },
 
@@ -642,211 +504,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     marginTop: 8,
+    fontWeight: '700',
   },
 
-  summaryBox: {
-    backgroundColor: '#111827',
+  readyBox: {
+    backgroundColor: '#052e16',
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-    flexDirection: 'row',
-    gap: 10,
+    borderColor: '#16a34a',
+    marginBottom: 14,
   },
 
-  summaryColumn: {
-    flex: 1,
-  },
-
-  summaryLabel: {
-    color: '#94a3b8',
-    fontSize: 11,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  summaryValue: {
-    color: '#38bdf8',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  summaryActive: {
-    color: '#f97316',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  summaryFinished: {
-    color: '#16a34a',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  summaryCancelled: {
-    color: '#ef4444',
-    fontSize: 22,
-    fontWeight: '900',
-  },
-
-  summaryMoney: {
-    color: '#16a34a',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  searchBox: {
-    marginBottom: 12,
-  },
-
-  searchInput: {
-    backgroundColor: '#111827',
+  warningBox: {
+    backgroundColor: '#431407',
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 14,
-  },
-
-  filterBox: {
-    marginBottom: 12,
-  },
-
-  filterTitle: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 8,
-  },
-
-  filterButtons: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-
-  filterButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
-  filterButtonSelected: {
-    backgroundColor: '#f97316',
     borderColor: '#f97316',
+    marginBottom: 14,
   },
 
-  filterButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
+  readyTitle: {
+    color: '#bbf7d0',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
   },
 
-  filterButtonTextSelected: {
-    color: '#ffffff',
+  warningTitle: {
+    color: '#fed7aa',
+    fontSize: 16,
+    fontWeight: '900',
+    marginBottom: 5,
   },
 
-  sortButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
-  sortButtonSelected: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-
-  sortButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  sortButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  filterSummaryBox: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-  },
-
-  filterSummaryText: {
-    color: '#cbd5e1',
-    fontSize: 12,
+  readyText: {
+    color: '#bbf7d0',
+    fontSize: 13,
     fontWeight: '700',
-    marginBottom: 6,
+    lineHeight: 18,
   },
 
-  clearFiltersText: {
-    color: '#f97316',
-    fontSize: 12,
-    fontWeight: '900',
+  warningText: {
+    color: '#fed7aa',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
   },
 
-  refreshButton: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-
-  refreshButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  orderCard: {
+  previewCard: {
     backgroundColor: '#111827',
     borderRadius: 18,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginTop: 12,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
   },
 
-  cardTopRow: {
+  previewHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    alignItems: 'flex-start',
-    marginBottom: 10,
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 12,
   },
 
-  cardTitleBox: {
+  previewIconBox: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  previewIcon: {
+    fontSize: 28,
+  },
+
+  previewTextBox: {
     flex: 1,
   },
 
-  orderTitle: {
+  previewName: {
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
+    marginBottom: 6,
   },
 
-  orderDate: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '700',
-    marginTop: 4,
-  },
-
-  activeBadge: {
+  currentBadge: {
+    alignSelf: 'flex-start',
     backgroundColor: '#f97316',
     color: '#ffffff',
     paddingHorizontal: 10,
@@ -857,126 +607,190 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  finishedBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  cancelledBadge: {
-    backgroundColor: '#7f1d1d',
-    color: '#fecaca',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  infoGrid: {
-    flexDirection: 'row',
-    gap: 9,
-    marginBottom: 9,
-  },
-
-  infoBox: {
-    flex: 1,
+  previewInfoBox: {
     backgroundColor: '#0f172a',
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
+    marginBottom: 8,
   },
 
-  infoLabel: {
+  previewLabel: {
     color: '#94a3b8',
     fontSize: 12,
     fontWeight: '800',
-    marginBottom: 3,
+    marginBottom: 4,
   },
 
-  infoValue: {
+  previewValue: {
     color: '#f8fafc',
     fontSize: 13,
-    fontWeight: '900',
-  },
-
-  statusValue: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-
-  orderValue: {
-    color: '#16a34a',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  notesBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 10,
-  },
-
-  notesText: {
-    color: '#cbd5e1',
-    fontSize: 12,
+    fontWeight: '800',
     lineHeight: 18,
-    fontWeight: '700',
   },
 
-  detailsButton: {
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 2,
+  statusGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
   },
 
-  detailsButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  emptyBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 20,
+  readyStatusCard: {
+    flex: 1,
+    backgroundColor: '#052e16',
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#334155',
-    marginTop: 14,
-    alignItems: 'center',
+    borderColor: '#16a34a',
   },
 
-  emptyIcon: {
-    fontSize: 44,
-    marginBottom: 10,
+  warningStatusCard: {
+    flex: 1,
+    backgroundColor: '#431407',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#f97316',
   },
 
-  emptyTitle: {
-    color: '#f8fafc',
+  statusIcon: {
+    color: '#ffffff',
     fontSize: 20,
     fontWeight: '900',
     marginBottom: 6,
   },
 
-  emptyText: {
+  statusTitle: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  statusText: {
+    color: '#cbd5e1',
+    fontSize: 11,
+    fontWeight: '700',
+    lineHeight: 16,
+  },
+
+  card: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    marginBottom: 14,
+  },
+
+  sectionTitle: {
+    color: '#f8fafc',
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 12,
+  },
+
+  labelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 10,
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+
+  label: {
     color: '#cbd5e1',
     fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: 16,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+
+  counterOk: {
+    color: '#16a34a',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  counterWarning: {
+    color: '#f97316',
+    fontSize: 12,
+    fontWeight: '900',
+  },
+
+  input: {
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    marginBottom: 14,
+  },
+
+  inputWarning: {
+    borderColor: '#f97316',
+  },
+
+  textArea: {
+    minHeight: 96,
+    textAlignVertical: 'top',
+  },
+
+  hintBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+
+  hintTitle: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  hintText: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 17,
+  },
+
+  saveButton: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+
+  disabledButton: {
+    opacity: 0.65,
+  },
+
+  saveButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+
+  cancelButton: {
+    backgroundColor: '#334155',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 12,
+  },
+
+  cancelButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '800',
   },
 
   primaryButton: {
@@ -1007,37 +821,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '900',
   },
-
-  footerBox: {
-    paddingTop: 16,
-    gap: 10,
-  },
-
-  footerPrimaryButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-
-  footerPrimaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  footerSecondaryButton: {
-    backgroundColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-
-  footerSecondaryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '900',
-  },
 });
 
-export default CustomerOrdersScreen;
+export default CustomerProfileScreen;
