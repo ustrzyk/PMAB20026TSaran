@@ -115,6 +115,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
   const [clientAddress, setClientAddress] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [blikCode, setBlikCode] = useState('');
 
   const [deliveryMethod, setDeliveryMethod] =
     useState<DeliveryMethod>('courier');
@@ -181,6 +182,12 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     }));
   };
 
+  const handleBlikCodeChange = (value: string): void => {
+    const onlyDigits = value.replace(/\D/g, '').slice(0, 6);
+
+    setBlikCode(onlyDigits);
+  };
+
   const validateCheckout = (): string | null => {
     if (cartItems.length === 0) {
       return 'Koszyk jest pusty.';
@@ -202,7 +209,32 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       return 'Podaj numer telefonu.';
     }
 
+    if (paymentMethod === 'blik' && blikCode.trim().length !== 6) {
+      return 'Kod BLIK musi mieć 6 cyfr.';
+    }
+
     return null;
+  };
+
+  const buildPaymentNote = (): string => {
+    if (paymentMethod === 'blik') {
+      return 'Płatność BLIK: kod potwierdzony symulacyjnie';
+    }
+
+    if (paymentMethod === 'transfer') {
+      return [
+        'Płatność przelewem',
+        'Odbiorca: 3D Print Shop',
+        'Numer konta: 12 3456 7890 1234 5678 9012 3456',
+        'Tytuł: Zamówienie 3D Print Shop',
+      ].join('\n');
+    }
+
+    if (paymentMethod === 'card') {
+      return 'Płatność kartą: płatność symulowana';
+    }
+
+    return 'Płatność przy odbiorze';
   };
 
   const buildCheckoutNotes = (): string => {
@@ -215,6 +247,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       `Metoda dostawy: ${getDeliveryMethodLabel(deliveryMethod)}`,
       `Koszt dostawy: ${formatMoney(deliveryPrice)}`,
       `Metoda płatności: ${getPaymentMethodLabel(paymentMethod)}`,
+      buildPaymentNote(),
       `Przewidywana data dostawy: ${formatDate(estimatedDeliveryDate)}`,
       userNotes.length > 0 ? `Notatka klienta: ${userNotes}` : null,
     ];
@@ -279,6 +312,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       setClientAddress('');
       setClientPhone('');
       setNotes('');
+      setBlikCode('');
       setDeliveryMethod('courier');
       setPaymentMethod('blik');
 
@@ -370,6 +404,68 @@ function CartScreen({navigation}: Props): React.JSX.Element {
         disabled={submitting}>
         <Text style={styles.optionTitle}>{title}</Text>
       </TouchableOpacity>
+    );
+  };
+
+  const renderPaymentDetails = (): React.JSX.Element | null => {
+    if (paymentMethod === 'blik') {
+      return (
+        <View style={styles.paymentDetailsBox}>
+          <Text style={styles.paymentDetailsTitle}>Kod BLIK</Text>
+
+          <TextInput
+            style={styles.blikInput}
+            value={blikCode}
+            onChangeText={handleBlikCodeChange}
+            placeholder="000000"
+            placeholderTextColor="#64748b"
+            keyboardType="number-pad"
+            maxLength={6}
+            editable={!submitting}
+          />
+
+          <Text style={styles.paymentDetailsText}>
+            Wpisz 6 cyfr. Płatność jest symulowana.
+          </Text>
+        </View>
+      );
+    }
+
+    if (paymentMethod === 'transfer') {
+      return (
+        <View style={styles.paymentDetailsBox}>
+          <Text style={styles.paymentDetailsTitle}>Dane do przelewu</Text>
+
+          <Text style={styles.transferText}>Odbiorca: 3D Print Shop</Text>
+          <Text style={styles.transferText}>
+            Konto: 12 3456 7890 1234 5678 9012 3456
+          </Text>
+          <Text style={styles.transferText}>
+            Tytuł: Zamówienie 3D Print Shop
+          </Text>
+          <Text style={styles.transferText}>Kwota: {formatMoney(finalValue)}</Text>
+        </View>
+      );
+    }
+
+    if (paymentMethod === 'card') {
+      return (
+        <View style={styles.paymentDetailsBox}>
+          <Text style={styles.paymentDetailsTitle}>Karta</Text>
+          <Text style={styles.paymentDetailsText}>
+            Płatność kartą jest symulowana.
+          </Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.paymentDetailsBox}>
+        <Text style={styles.paymentDetailsTitle}>Przy odbiorze</Text>
+        <Text style={styles.paymentDetailsText}>
+          Zapłacisz przy odbiorze zamówienia.
+        </Text>
+      </View>
     );
   };
 
@@ -583,6 +679,8 @@ function CartScreen({navigation}: Props): React.JSX.Element {
                 {renderPaymentOption('transfer', 'Przelew')}
                 {renderPaymentOption('cashOnDelivery', 'Przy odbiorze')}
               </View>
+
+              {renderPaymentDetails()}
             </View>
 
             <Text style={styles.sectionTitle}>Dane dostawy</Text>
@@ -651,6 +749,10 @@ function CartScreen({navigation}: Props): React.JSX.Element {
 
               <Text style={styles.finalText}>
                 Dostawa: {formatMoney(deliveryPrice)}
+              </Text>
+
+              <Text style={styles.finalText}>
+                Płatność: {getPaymentMethodLabel(paymentMethod)}
               </Text>
 
               <Text style={styles.finalTotal}>
@@ -1080,6 +1182,51 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
     marginTop: 12,
+  },
+
+  paymentDetailsBox: {
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+    marginTop: 12,
+  },
+
+  paymentDetailsTitle: {
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+    marginBottom: 8,
+  },
+
+  paymentDetailsText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+
+  blikInput: {
+    backgroundColor: '#111827',
+    borderWidth: 1,
+    borderColor: '#334155',
+    color: '#f8fafc',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 20,
+    fontWeight: '900',
+    letterSpacing: 5,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  transferText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 20,
   },
 
   formGroup: {
