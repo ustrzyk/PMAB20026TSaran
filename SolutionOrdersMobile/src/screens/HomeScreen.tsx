@@ -44,6 +44,22 @@ function getCategoryIcon(categoryName?: string | null): string {
   return '🏷️';
 }
 
+function getProductOfDay(items: Item[]): Item | null {
+  const availableItems = items.filter(item => {
+    return item.isActive !== false && (item.quantity ?? 0) > 0;
+  });
+
+  if (availableItems.length === 0) {
+    return null;
+  }
+
+  const today = new Date();
+  const dayNumber =
+    today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+
+  return availableItems[dayNumber % availableItems.length];
+}
+
 function HomeScreen({navigation}: Props): React.JSX.Element {
   const {user, isAdmin, isWorker, isCustomer, logout} = useAuth();
   const {totalQuantity, totalValue} = useCart();
@@ -91,6 +107,10 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
   const availableProductsCount = useMemo(() => {
     return activeItems.filter(item => (item.quantity ?? 0) > 0).length;
+  }, [activeItems]);
+
+  const productOfDay = useMemo(() => {
+    return getProductOfDay(activeItems);
   }, [activeItems]);
 
   const popularProducts = useMemo(() => {
@@ -215,6 +235,46 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
             {item.quantity ?? 0} {item.unitName ?? 'szt'}
           </Text>
         </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderProductOfDay = (): React.JSX.Element | null => {
+    if (!productOfDay) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        style={styles.productOfDayCard}
+        onPress={() => navigation.navigate('ItemDetails', {item: productOfDay})}
+        activeOpacity={0.85}>
+        <View style={styles.productOfDayHeader}>
+          <Text style={styles.productOfDayLabel}>Produkt dnia</Text>
+          <Text style={styles.productOfDayIcon}>
+            {getCategoryIcon(productOfDay.categoryName)}
+          </Text>
+        </View>
+
+        <Text style={styles.productOfDayName} numberOfLines={2}>
+          {productOfDay.name}
+        </Text>
+
+        <Text style={styles.productOfDayCategory} numberOfLines={1}>
+          {productOfDay.categoryName ?? 'Produkt'}
+        </Text>
+
+        <View style={styles.productOfDayBottom}>
+          <Text style={styles.productOfDayPrice}>
+            {formatMoney(productOfDay.price)}
+          </Text>
+
+          <Text style={styles.productOfDayStock}>
+            {productOfDay.quantity ?? 0} {productOfDay.unitName ?? 'szt'}
+          </Text>
+        </View>
+
+        <Text style={styles.productOfDayButton}>Zobacz produkt</Text>
       </TouchableOpacity>
     );
   };
@@ -350,6 +410,8 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
       {!loading && !error ? (
         <>
+          {renderProductOfDay()}
+
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Kategorie</Text>
 
@@ -636,6 +698,81 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '900',
+  },
+
+  productOfDayCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 18,
+  },
+
+  productOfDayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  productOfDayLabel: {
+    color: '#f97316',
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+
+  productOfDayIcon: {
+    fontSize: 34,
+  },
+
+  productOfDayName: {
+    color: '#f8fafc',
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  productOfDayCategory: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+
+  productOfDayBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  productOfDayPrice: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  productOfDayStock: {
+    color: '#bbf7d0',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  productOfDayButton: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    textAlign: 'center',
+    paddingVertical: 11,
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: '900',
+    overflow: 'hidden',
   },
 
   sectionHeader: {
