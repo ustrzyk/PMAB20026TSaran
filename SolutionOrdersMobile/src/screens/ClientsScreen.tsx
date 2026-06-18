@@ -134,7 +134,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [clients, searchText, viewFilter, accountFilter, sortMode]);
+  }, [accountFilter, clients, searchText, sortMode, viewFilter]);
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -180,8 +180,8 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Przenieść do archiwum?',
-      message: `Klient "${client.name ?? 'bez nazwy'}" zostanie ukryty z bieżącej listy.`,
+      title: 'Archiwum',
+      message: `Przenieść klienta "${client.name ?? 'bez nazwy'}" do archiwum?`,
       loading: false,
     });
   };
@@ -217,7 +217,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Przeniesiono',
+        title: 'Zapisano',
         message: 'Klient trafił do archiwum.',
         loading: false,
       });
@@ -225,7 +225,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie udało się wykonać operacji',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -280,13 +280,13 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`client-account-${value}`}
-        style={[styles.accountButton, selected && styles.accountButtonSelected]}
+        style={[styles.filterButton, selected && styles.accountButtonSelected]}
         onPress={() => setAccountFilter(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.accountButtonText,
-            selected && styles.accountButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -303,13 +303,13 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`client-sort-${value}`}
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        style={[styles.filterButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -323,9 +323,6 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Klienci</Text>
-          <Text style={styles.heroSubtitle}>
-            Lista klientów i dane kontaktowe.
-          </Text>
         </View>
 
         <View style={styles.summaryBox}>
@@ -383,7 +380,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj klienta..."
+            placeholder="Szukaj klienta"
             placeholderTextColor="#64748b"
           />
         </View>
@@ -424,13 +421,6 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
             Wyświetlane: {filteredClients.length} / {clients.length}
           </Text>
 
-          <Text style={styles.filterSummaryText}>
-            Szukaj:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
-          </Text>
-
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
             <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
@@ -459,10 +449,7 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
 
           <View style={styles.cardTitleBox}>
             <Text style={styles.clientName}>{item.name ?? 'Brak nazwy'}</Text>
-
-            <Text style={styles.clientEmail}>
-              {item.email ?? 'Brak e-maila'}
-            </Text>
+            <Text style={styles.clientEmail}>{item.email ?? 'Brak e-maila'}</Text>
           </View>
 
           <Text style={isCurrent ? styles.currentBadge : styles.archivedBadge}>
@@ -478,16 +465,12 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
 
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>Telefon</Text>
-          <Text style={styles.infoValue}>
-            {item.phoneNumber ?? 'Brak telefonu'}
-          </Text>
+          <Text style={styles.infoValue}>{item.phoneNumber ?? 'Brak telefonu'}</Text>
         </View>
 
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>Adres</Text>
-          <Text style={styles.infoValue}>
-            {item.adress ?? 'Brak adresu'}
-          </Text>
+          <Text style={styles.infoValue}>{item.adress ?? 'Brak adresu'}</Text>
         </View>
 
         <View style={styles.actions}>
@@ -573,12 +556,6 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>👥</Text>
             <Text style={styles.emptyTitle}>Brak klientów</Text>
-
-            <Text style={styles.emptyText}>
-              {clients.length === 0
-                ? 'Dodaj pierwszego klienta.'
-                : 'Brak wyników dla aktualnych filtrów.'}
-            </Text>
 
             <TouchableOpacity
               style={styles.emptyButton}
@@ -708,14 +685,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 27,
     fontWeight: '900',
-  },
-
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
   },
 
   summaryBox: {
@@ -856,47 +825,9 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
-  filterButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  filterButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  accountButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
   accountButtonSelected: {
     backgroundColor: '#16a34a',
     borderColor: '#16a34a',
-  },
-
-  accountButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  accountButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  sortButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
   },
 
   sortButtonSelected: {
@@ -904,13 +835,13 @@ const styles = StyleSheet.create({
     borderColor: '#2563eb',
   },
 
-  sortButtonText: {
+  filterButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '800',
   },
 
-  sortButtonTextSelected: {
+  filterButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -1022,30 +953,29 @@ const styles = StyleSheet.create({
 
   badgeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     gap: 8,
     marginBottom: 10,
   },
 
   accountBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   noAccountBadge: {
     backgroundColor: '#334155',
     color: '#cbd5e1',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
@@ -1068,14 +998,12 @@ const styles = StyleSheet.create({
   infoValue: {
     color: '#f8fafc',
     fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
+    fontWeight: '900',
   },
 
   actions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 2,
   },
 
   editButton: {
@@ -1123,14 +1051,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 20,
     fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  emptyText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
     marginBottom: 16,
   },
 
