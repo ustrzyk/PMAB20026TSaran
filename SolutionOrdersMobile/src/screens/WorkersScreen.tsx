@@ -190,8 +190,8 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie można wykonać operacji',
-        message: 'Nie można przenieść aktualnie używanego konta do archiwum.',
+        title: 'Błąd',
+        message: 'Nie można przenieść własnego konta do archiwum.',
         loading: false,
       });
 
@@ -203,8 +203,8 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Przenieść do archiwum?',
-      message: `Pracownik "${getFullName(worker)}" zostanie ukryty z bieżącej listy.`,
+      title: 'Archiwum',
+      message: `Przenieść pracownika "${getFullName(worker)}" do archiwum?`,
       loading: false,
     });
   };
@@ -240,7 +240,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Przeniesiono',
+        title: 'Zapisano',
         message: 'Pracownik trafił do archiwum.',
         loading: false,
       });
@@ -248,7 +248,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie udało się wykonać operacji',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -303,13 +303,13 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`worker-role-${value}`}
-        style={[styles.roleFilterButton, selected && styles.roleFilterSelected]}
+        style={[styles.filterButton, selected && styles.roleButtonSelected]}
         onPress={() => setRoleFilter(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.roleFilterText,
-            selected && styles.roleFilterTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -326,13 +326,13 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`worker-sort-${value}`}
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        style={[styles.filterButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -346,9 +346,6 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Pracownicy</Text>
-          <Text style={styles.heroSubtitle}>
-            Lista kont obsługujących sklep.
-          </Text>
         </View>
 
         <View style={styles.summaryBox}>
@@ -406,7 +403,7 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj pracownika..."
+            placeholder="Szukaj pracownika"
             placeholderTextColor="#64748b"
           />
         </View>
@@ -447,13 +444,6 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
             Wyświetlane: {filteredWorkers.length} / {workers.length}
           </Text>
 
-          <Text style={styles.filterSummaryText}>
-            Szukaj:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
-          </Text>
-
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
             <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
@@ -478,13 +468,14 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
       <View style={styles.workerCard}>
         <View style={styles.cardTopRow}>
           <View style={styles.workerIconBox}>
-            <Text style={styles.workerIcon}>{role === 'Admin' ? '⭐' : '🛠️'}</Text>
+            <Text style={styles.workerIcon}>
+              {role === 'Admin' ? '⭐' : '🛠️'}
+            </Text>
           </View>
 
           <View style={styles.cardTitleBox}>
             <Text style={styles.workerName}>{getFullName(item)}</Text>
-
-            <Text style={styles.workerLogin}>{item.login}</Text>
+            <Text style={styles.workerLogin}>{item.login ?? 'Brak loginu'}</Text>
           </View>
 
           <Text style={isCurrent ? styles.currentBadge : styles.archivedBadge}>
@@ -497,21 +488,23 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
             {getRoleLabel(item)}
           </Text>
 
-          {isCurrentUser ? (
-            <Text style={styles.meBadge}>To konto</Text>
-          ) : null}
+          {isCurrentUser ? <Text style={styles.meBadge}>To konto</Text> : null}
         </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Imię</Text>
-          <Text style={styles.infoValue}>{item.firstName ?? 'Brak imienia'}</Text>
-        </View>
+        <View style={styles.infoGrid}>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Imię</Text>
+            <Text style={styles.infoValue}>
+              {item.firstName ?? 'Brak imienia'}
+            </Text>
+          </View>
 
-        <View style={styles.infoBox}>
-          <Text style={styles.infoLabel}>Nazwisko</Text>
-          <Text style={styles.infoValue}>
-            {item.lastName ?? 'Brak nazwiska'}
-          </Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoLabel}>Nazwisko</Text>
+            <Text style={styles.infoValue}>
+              {item.lastName ?? 'Brak nazwiska'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.actions}>
@@ -597,12 +590,6 @@ function WorkersScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>🛠️</Text>
             <Text style={styles.emptyTitle}>Brak pracowników</Text>
-
-            <Text style={styles.emptyText}>
-              {workers.length === 0
-                ? 'Dodaj pierwsze konto pracownika.'
-                : 'Brak wyników dla aktualnych filtrów.'}
-            </Text>
 
             <TouchableOpacity
               style={styles.emptyButton}
@@ -732,14 +719,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 27,
     fontWeight: '900',
-  },
-
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
   },
 
   summaryBox: {
@@ -880,47 +859,9 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
-  filterButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  filterButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  roleFilterButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
-  roleFilterSelected: {
-    backgroundColor: '#a855f7',
-    borderColor: '#a855f7',
-  },
-
-  roleFilterText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  roleFilterTextSelected: {
-    color: '#ffffff',
-  },
-
-  sortButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+  roleButtonSelected: {
+    backgroundColor: '#16a34a',
+    borderColor: '#16a34a',
   },
 
   sortButtonSelected: {
@@ -928,13 +869,13 @@ const styles = StyleSheet.create({
     borderColor: '#2563eb',
   },
 
-  sortButtonText: {
+  filterButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
     fontWeight: '800',
   },
 
-  sortButtonTextSelected: {
+  filterButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -1052,45 +993,51 @@ const styles = StyleSheet.create({
   },
 
   adminBadge: {
-    backgroundColor: '#581c87',
-    color: '#f3e8ff',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#a855f7',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   workerBadge: {
-    backgroundColor: '#052e16',
-    color: '#bbf7d0',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#16a34a',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
   meBadge: {
-    backgroundColor: '#1e3a8a',
-    color: '#dbeafe',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#38bdf8',
+    color: '#0f172a',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
+  infoGrid: {
+    flexDirection: 'row',
+    gap: 9,
+    marginBottom: 9,
+  },
+
   infoBox: {
+    flex: 1,
     backgroundColor: '#0f172a',
     borderRadius: 12,
     padding: 10,
     borderWidth: 1,
     borderColor: '#1e293b',
-    marginBottom: 9,
   },
 
   infoLabel: {
@@ -1103,14 +1050,12 @@ const styles = StyleSheet.create({
   infoValue: {
     color: '#f8fafc',
     fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
+    fontWeight: '900',
   },
 
   actions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 2,
   },
 
   editButton: {
@@ -1158,14 +1103,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 20,
     fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  emptyText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
     marginBottom: 16,
   },
 
