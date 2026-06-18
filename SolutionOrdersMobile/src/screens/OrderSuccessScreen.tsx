@@ -1,7 +1,6 @@
 import React from 'react';
 import {
   ScrollView,
-  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -66,42 +65,6 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
     navigation.reset({
       index: 0,
       routes: [{name: 'AdminPanel'}],
-    });
-  };
-
-  const buildOrderPrintText = (): string => {
-    return [
-      '3D PRINT SHOP',
-      'PODSUMOWANIE ZAMÓWIENIA',
-      '',
-      `Numer zamówienia: #${idOrder}`,
-      `Status: ${initialStatus}`,
-      `Komunikat: ${message ?? 'Zamówienie zostało złożone'}`,
-      '',
-      'Wartość:',
-      `Produkty: ${formatMoney(totalValue)}`,
-      `Dostawa: ${formatMoney(safeDeliveryPrice)}`,
-      `Razem do zapłaty: ${formatMoney(safeFinalValue)}`,
-      '',
-      'Dostawa i płatność:',
-      `Metoda dostawy: ${deliveryMethod ?? 'Brak informacji'}`,
-      `Metoda płatności: ${paymentMethod ?? 'Brak informacji'}`,
-      `Przewidywana data dostawy: ${formatDate(deliveryDate)}`,
-      '',
-      'Etapy realizacji:',
-      '1. Nowe - zamówienie przyjęte do systemu',
-      '2. W realizacji - pracownik przygotowuje produkty',
-      '3. Gotowe / Wysłane - zamówienie gotowe lub przekazane do dostawy',
-      '4. Zakończone - zamówienie zakończone',
-      '',
-      'Dziękujemy za zakupy w 3D Print Shop.',
-    ].join('\n');
-  };
-
-  const shareOrderSummary = async (): Promise<void> => {
-    await Share.share({
-      title: `Zamówienie #${idOrder}`,
-      message: buildOrderPrintText(),
     });
   };
 
@@ -185,15 +148,19 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.sectionTitle}>Wydruk / potwierdzenie</Text>
 
         <Text style={styles.printText}>
-          Możesz udostępnić podsumowanie zamówienia jako tekst. To prosty krok
-          przygotowujący aplikację pod późniejszy eksport do PDF.
+          Otwórz podgląd wydruku, aby zobaczyć pełne dane zamówienia i pozycje.
+          Z tego ekranu możesz udostępnić podsumowanie zamówienia.
         </Text>
 
         <TouchableOpacity
           style={styles.printButton}
-          onPress={shareOrderSummary}
+          onPress={() =>
+            navigation.navigate('OrderPrint', {
+              idOrder,
+            })
+          }
           activeOpacity={0.85}>
-          <Text style={styles.printButtonText}>Udostępnij podsumowanie</Text>
+          <Text style={styles.printButtonText}>Otwórz podgląd wydruku</Text>
         </TouchableOpacity>
       </View>
 
