@@ -43,7 +43,10 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
 
   const calculatedTotal = useMemo(() => {
     return orderItems.reduce((sum, item) => {
-      return sum + (item.lineValue ?? 0);
+      const quantity = item.quantity ?? 0;
+      const price = item.itemPrice ?? 0;
+
+      return sum + (item.lineValue ?? price * quantity);
     }, 0);
   }, [orderItems]);
 
@@ -58,7 +61,7 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
       ]);
 
       setOrder(orderFromApi);
-      setOrderItems(orderItemsFromApi);
+      setOrderItems(orderItemsFromApi.filter(item => item.isActive !== false));
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Nieznany błąd pobierania danych';
@@ -90,40 +93,41 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
     }
   };
 
-  const renderOrderItem = (item: OrderItemDto, index: number): React.JSX.Element => {
+  const renderOrderItem = (
+    item: OrderItemDto,
+    index: number,
+  ): React.JSX.Element => {
     const quantity = item.quantity ?? 0;
-    const itemPrice = item.itemPrice ?? 0;
-    const lineValue = item.lineValue ?? itemPrice * quantity;
+    const price = item.itemPrice ?? 0;
+    const lineValue = item.lineValue ?? price * quantity;
 
     return (
       <View key={item.idOrderItem} style={styles.itemCard}>
-        <View style={styles.itemHeader}>
-          <Text style={styles.itemNumber}>{index + 1}</Text>
+        <View style={styles.itemTopRow}>
+          <Text style={styles.itemIndex}>{index + 1}</Text>
 
-          <View style={styles.itemTitleBox}>
-            <Text style={styles.itemName}>
+          <View style={styles.itemNameBox}>
+            <Text style={styles.itemName} numberOfLines={2}>
               {item.itemName ?? 'Produkt'}
             </Text>
 
-            <Text style={styles.itemCode}>
-              Kod: {item.itemCode ?? 'brak'}
-            </Text>
+            <Text style={styles.itemCode}>Kod: {item.itemCode ?? 'brak'}</Text>
           </View>
         </View>
 
-        <View style={styles.itemGrid}>
-          <View style={styles.itemInfoBox}>
-            <Text style={styles.infoLabel}>Ilość</Text>
-            <Text style={styles.infoValue}>{quantity}</Text>
+        <View style={styles.itemValues}>
+          <View style={styles.itemValueBox}>
+            <Text style={styles.itemValueLabel}>Ilość</Text>
+            <Text style={styles.itemValue}>{quantity}</Text>
           </View>
 
-          <View style={styles.itemInfoBox}>
-            <Text style={styles.infoLabel}>Cena</Text>
-            <Text style={styles.infoValue}>{formatPrintMoney(itemPrice)}</Text>
+          <View style={styles.itemValueBox}>
+            <Text style={styles.itemValueLabel}>Cena</Text>
+            <Text style={styles.itemValue}>{formatPrintMoney(price)}</Text>
           </View>
 
-          <View style={styles.itemInfoBox}>
-            <Text style={styles.infoLabel}>Wartość</Text>
+          <View style={styles.itemValueBox}>
+            <Text style={styles.itemValueLabel}>Razem</Text>
             <Text style={styles.itemMoney}>{formatPrintMoney(lineValue)}</Text>
           </View>
         </View>
@@ -135,7 +139,7 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Przygotowywanie wydruku...</Text>
+        <Text style={styles.loadingText}>Ładowanie...</Text>
       </View>
     );
   }
@@ -143,9 +147,7 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
   if (error || !order) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorIcon}>⚠️</Text>
-
-        <Text style={styles.errorTitle}>Nie udało się przygotować wydruku</Text>
+        <Text style={styles.errorTitle}>Nie udało się pobrać zamówienia</Text>
 
         <Text style={styles.errorText}>
           {error ?? 'Brak danych zamówienia.'}
@@ -155,7 +157,7 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
           style={styles.primaryButton}
           onPress={loadPrintData}
           activeOpacity={0.85}>
-          <Text style={styles.primaryButtonText}>Spróbuj ponownie</Text>
+          <Text style={styles.primaryButtonText}>Odśwież</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -170,26 +172,14 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.heroBox}>
+      <View style={styles.headerCard}>
         <Text style={styles.appName}>3D Print Shop</Text>
-
-        <Text style={styles.title}>Wydruk zamówienia</Text>
-
-        <Text style={styles.subtitle}>
-          Podgląd danych do późniejszego PDF albo wydruku.
-        </Text>
+        <Text style={styles.title}>Zamówienie #{order.idOrder}</Text>
+        <Text style={styles.statusBadge}>{orderStatus}</Text>
       </View>
 
-      <View style={styles.printCard}>
-        <Text style={styles.documentTitle}>Potwierdzenie zamówienia</Text>
-        <Text style={styles.documentNumber}>#{order.idOrder}</Text>
-
-        <View style={styles.divider} />
-
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>Status</Text>
-          <Text style={styles.statusBadge}>{orderStatus}</Text>
-        </View>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>Dane zamówienia</Text>
 
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Data zamówienia</Text>
@@ -205,7 +195,7 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
 
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Klient</Text>
-          <Text style={styles.rowValue}>{order.clientName ?? 'Brak klienta'}</Text>
+          <Text style={styles.rowValue}>{order.clientName ?? 'Brak danych'}</Text>
         </View>
 
         <View style={styles.rowLast}>
@@ -217,47 +207,42 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.summaryCard}>
-        <Text style={styles.sectionTitle}>Podsumowanie</Text>
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryLabel}>Pozycje</Text>
+          <Text style={styles.summaryValue}>
+            {order.orderItemsCount ?? orderItems.length}
+          </Text>
+        </View>
 
-        <View style={styles.summaryGrid}>
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryLabel}>Pozycje</Text>
-            <Text style={styles.summaryValue}>
-              {order.orderItemsCount ?? orderItems.length}
-            </Text>
-          </View>
+        <View style={styles.summaryBox}>
+          <Text style={styles.summaryLabel}>Na liście</Text>
+          <Text style={styles.summaryValue}>{orderItems.length}</Text>
+        </View>
 
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryLabel}>Z listy</Text>
-            <Text style={styles.summaryValue}>{orderItems.length}</Text>
-          </View>
-
-          <View style={styles.summaryBox}>
-            <Text style={styles.summaryLabel}>Suma</Text>
-            <Text style={styles.summaryMoney}>
-              {formatPrintMoney(order.totalValue ?? calculatedTotal)}
-            </Text>
-          </View>
+        <View style={styles.summaryBoxWide}>
+          <Text style={styles.summaryLabel}>Wartość</Text>
+          <Text style={styles.summaryMoney}>
+            {formatPrintMoney(order.totalValue ?? calculatedTotal)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Pozycje zamówienia</Text>
+        <Text style={styles.sectionTitle}>Pozycje</Text>
 
         {orderItems.length > 0 ? (
           orderItems.map(renderOrderItem)
         ) : (
-          <Text style={styles.emptyText}>Brak pozycji zamówienia.</Text>
+          <Text style={styles.emptyText}>Brak pozycji.</Text>
         )}
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Notatki</Text>
-
-        <Text style={styles.notesText}>
-          {order.notes ?? 'Brak notatek.'}
-        </Text>
-      </View>
+      {order.notes ? (
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>Informacje</Text>
+          <Text style={styles.notesText}>{order.notes}</Text>
+        </View>
+      ) : null}
 
       <TouchableOpacity
         style={[styles.shareButton, sharing && styles.disabledButton]}
@@ -265,7 +250,7 @@ function OrderPrintScreen({navigation, route}: Props): React.JSX.Element {
         activeOpacity={0.85}
         disabled={sharing}>
         <Text style={styles.shareButtonText}>
-          {sharing ? 'Przygotowywanie...' : 'Udostępnij podsumowanie'}
+          {sharing ? 'Udostępnianie...' : 'Udostępnij'}
         </Text>
       </TouchableOpacity>
 
@@ -300,14 +285,9 @@ const styles = StyleSheet.create({
 
   loadingText: {
     color: '#cbd5e1',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     marginTop: 12,
-  },
-
-  errorIcon: {
-    fontSize: 42,
-    marginBottom: 12,
   },
 
   errorTitle: {
@@ -326,10 +306,10 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
 
-  heroBox: {
+  headerCard: {
     backgroundColor: '#111827',
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 18,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 14,
@@ -346,66 +326,9 @@ const styles = StyleSheet.create({
 
   title: {
     color: '#f8fafc',
-    fontSize: 27,
+    fontSize: 26,
     fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
-  printCard: {
-    backgroundColor: '#ffffff',
-    borderRadius: 18,
-    padding: 16,
-    marginBottom: 14,
-  },
-
-  documentTitle: {
-    color: '#0f172a',
-    fontSize: 21,
-    fontWeight: '900',
-    textTransform: 'uppercase',
-  },
-
-  documentNumber: {
-    color: '#f97316',
-    fontSize: 30,
-    fontWeight: '900',
-    marginTop: 4,
-  },
-
-  divider: {
-    height: 1,
-    backgroundColor: '#e2e8f0',
-    marginVertical: 14,
-  },
-
-  row: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
-    paddingVertical: 10,
-  },
-
-  rowLast: {
-    paddingVertical: 10,
-  },
-
-  rowLabel: {
-    color: '#64748b',
-    fontSize: 12,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  rowValue: {
-    color: '#0f172a',
-    fontSize: 15,
-    fontWeight: '800',
+    marginBottom: 10,
   },
 
   statusBadge: {
@@ -418,15 +341,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     overflow: 'hidden',
-  },
-
-  summaryCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 14,
   },
 
   card: {
@@ -445,36 +359,69 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  summaryGrid: {
+  row: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#1e293b',
+    paddingVertical: 10,
+  },
+
+  rowLast: {
+    paddingVertical: 10,
+  },
+
+  rowLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+
+  rowValue: {
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  summaryCard: {
     flexDirection: 'row',
     gap: 8,
+    marginBottom: 14,
   },
 
   summaryBox: {
     flex: 1,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1,
-    borderColor: '#1e293b',
+    borderColor: '#334155',
+  },
+
+  summaryBoxWide: {
+    flex: 2,
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#16a34a',
   },
 
   summaryLabel: {
     color: '#94a3b8',
     fontSize: 11,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 5,
   },
 
   summaryValue: {
     color: '#f8fafc',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '900',
   },
 
   summaryMoney: {
     color: '#16a34a',
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: '900',
   },
 
@@ -487,14 +434,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
-  itemHeader: {
+  itemTopRow: {
     flexDirection: 'row',
     gap: 10,
     alignItems: 'center',
     marginBottom: 10,
   },
 
-  itemNumber: {
+  itemIndex: {
     width: 30,
     height: 30,
     borderRadius: 999,
@@ -507,7 +454,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  itemTitleBox: {
+  itemNameBox: {
     flex: 1,
   },
 
@@ -524,26 +471,26 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 
-  itemGrid: {
+  itemValues: {
     flexDirection: 'row',
     gap: 8,
   },
 
-  itemInfoBox: {
+  itemValueBox: {
     flex: 1,
     backgroundColor: '#111827',
     borderRadius: 10,
     padding: 8,
   },
 
-  infoLabel: {
+  itemValueLabel: {
     color: '#94a3b8',
     fontSize: 11,
     fontWeight: '900',
     marginBottom: 4,
   },
 
-  infoValue: {
+  itemValue: {
     color: '#f8fafc',
     fontSize: 13,
     fontWeight: '900',
@@ -556,7 +503,7 @@ const styles = StyleSheet.create({
   },
 
   emptyText: {
-    color: '#fca5a5',
+    color: '#94a3b8',
     fontSize: 13,
     fontWeight: '800',
     lineHeight: 18,
@@ -570,7 +517,7 @@ const styles = StyleSheet.create({
   },
 
   shareButton: {
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#16a34a',
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -578,7 +525,7 @@ const styles = StyleSheet.create({
   },
 
   shareButtonText: {
-    color: '#0f172a',
+    color: '#ffffff',
     fontSize: 16,
     fontWeight: '900',
   },
