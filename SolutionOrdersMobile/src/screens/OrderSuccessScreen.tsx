@@ -72,20 +72,12 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.successBox}>
         <Text style={styles.successIcon}>✓</Text>
-
         <Text style={styles.title}>Zamówienie złożone</Text>
-
-        <Text style={styles.subtitle}>
-          Zamówienie zostało przyjęte do systemu.
-        </Text>
       </View>
 
       <View style={styles.statusCard}>
-        <Text style={styles.statusLabel}>Aktualny status</Text>
+        <Text style={styles.statusLabel}>Status</Text>
         <Text style={styles.statusValue}>{initialStatus}</Text>
-        <Text style={styles.statusDescription}>
-          Zamówienie czeka na obsługę przez pracownika sklepu.
-        </Text>
       </View>
 
       <View style={styles.card}>
@@ -104,7 +96,7 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Wartość produktów</Text>
+          <Text style={styles.infoLabel}>Produkty</Text>
           <Text style={styles.productValue}>{formatMoney(totalValue)}</Text>
         </View>
 
@@ -116,7 +108,7 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.infoRowLast}>
-          <Text style={styles.infoLabel}>Razem do zapłaty</Text>
+          <Text style={styles.infoLabel}>Razem</Text>
           <Text style={styles.finalValue}>{formatMoney(safeFinalValue)}</Text>
         </View>
       </View>
@@ -125,89 +117,35 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.sectionTitle}>Dostawa i płatność</Text>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Metoda dostawy</Text>
+          <Text style={styles.infoLabel}>Dostawa</Text>
           <Text style={styles.infoValue}>
             {deliveryMethod ?? 'Brak informacji'}
           </Text>
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Metoda płatności</Text>
+          <Text style={styles.infoLabel}>Płatność</Text>
           <Text style={styles.infoValue}>
             {paymentMethod ?? 'Brak informacji'}
           </Text>
         </View>
 
         <View style={styles.infoRowLast}>
-          <Text style={styles.infoLabel}>Przewidywana data dostawy</Text>
+          <Text style={styles.infoLabel}>Data dostawy</Text>
           <Text style={styles.infoValue}>{formatDate(deliveryDate)}</Text>
         </View>
       </View>
 
-      <View style={styles.printCard}>
-        <Text style={styles.sectionTitle}>Wydruk / potwierdzenie</Text>
-
-        <Text style={styles.printText}>
-          Otwórz podgląd wydruku, aby zobaczyć pełne dane zamówienia i pozycje.
-          Z tego ekranu możesz udostępnić podsumowanie zamówienia.
-        </Text>
-
-        <TouchableOpacity
-          style={styles.printButton}
-          onPress={() =>
-            navigation.navigate('OrderPrint', {
-              idOrder,
-            })
-          }
-          activeOpacity={0.85}>
-          <Text style={styles.printButtonText}>Otwórz podgląd wydruku</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.stepsCard}>
-        <Text style={styles.sectionTitle}>Etapy realizacji</Text>
-
-        <View style={styles.stepRow}>
-          <Text style={styles.stepNumber}>1</Text>
-          <View style={styles.stepTextBox}>
-            <Text style={styles.stepTitle}>Nowe</Text>
-            <Text style={styles.stepDescription}>
-              Zamówienie zostało złożone i czeka na obsługę.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.stepRow}>
-          <Text style={styles.stepNumber}>2</Text>
-          <View style={styles.stepTextBox}>
-            <Text style={styles.stepTitle}>W realizacji</Text>
-            <Text style={styles.stepDescription}>
-              Pracownik przygotowuje produkty lub wydruk.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.stepRow}>
-          <Text style={styles.stepNumber}>3</Text>
-          <View style={styles.stepTextBox}>
-            <Text style={styles.stepTitle}>Gotowe / Wysłane</Text>
-            <Text style={styles.stepDescription}>
-              Zamówienie jest gotowe do odbioru albo zostało przekazane do
-              dostawy.
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.stepRow}>
-          <Text style={styles.stepNumber}>4</Text>
-          <View style={styles.stepTextBox}>
-            <Text style={styles.stepTitle}>Zakończone</Text>
-            <Text style={styles.stepDescription}>
-              Zamówienie zostało poprawnie zakończone.
-            </Text>
-          </View>
-        </View>
-      </View>
+      <TouchableOpacity
+        style={styles.printButton}
+        onPress={() =>
+          navigation.navigate('OrderPrint', {
+            idOrder,
+          })
+        }
+        activeOpacity={0.85}>
+        <Text style={styles.printButtonText}>Wydruk</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.trackButton}
@@ -216,22 +154,22 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
             idOrder,
           })
         }
-        activeOpacity={0.8}>
-        <Text style={styles.trackButtonText}>Sprawdź to zamówienie</Text>
+        activeOpacity={0.85}>
+        <Text style={styles.trackButtonText}>Status zamówienia</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.primaryButton}
         onPress={() => navigation.navigate('Items')}
-        activeOpacity={0.8}>
-        <Text style={styles.primaryButtonText}>Kontynuuj zakupy</Text>
+        activeOpacity={0.85}>
+        <Text style={styles.primaryButtonText}>Produkty</Text>
       </TouchableOpacity>
 
       {isCustomer ? (
         <TouchableOpacity
           style={styles.customerButton}
           onPress={goToCustomerPanel}
-          activeOpacity={0.8}>
+          activeOpacity={0.85}>
           <Text style={styles.customerButtonText}>Moje konto</Text>
         </TouchableOpacity>
       ) : null}
@@ -240,15 +178,12 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.adminButton}
           onPress={goToAdminPanel}
-          activeOpacity={0.8}>
-          <Text style={styles.adminButtonText}>Panel pracownika</Text>
+          activeOpacity={0.85}>
+          <Text style={styles.adminButtonText}>Panel obsługi</Text>
         </TouchableOpacity>
       ) : null}
 
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={goHome}
-        activeOpacity={0.8}>
+      <TouchableOpacity style={styles.secondaryButton} onPress={goHome}>
         <Text style={styles.secondaryButtonText}>Strona główna</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -290,15 +225,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  subtitle: {
-    color: '#bbf7d0',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
   statusCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -321,35 +247,9 @@ const styles = StyleSheet.create({
     color: '#f97316',
     fontSize: 26,
     fontWeight: '900',
-    marginBottom: 8,
-  },
-
-  statusDescription: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '700',
   },
 
   card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  printCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginBottom: 14,
-  },
-
-  stepsCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
@@ -412,67 +312,18 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  printText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 19,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-
   printButton: {
-    backgroundColor: '#38bdf8',
+    backgroundColor: '#16a34a',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
+    marginBottom: 12,
   },
 
   printButtonText: {
-    color: '#0f172a',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  stepRow: {
-    flexDirection: 'row',
-    gap: 10,
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 9,
-  },
-
-  stepNumber: {
-    width: 28,
-    height: 28,
-    borderRadius: 999,
-    backgroundColor: '#f97316',
     color: '#ffffff',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '900',
-    textAlign: 'center',
-    lineHeight: 28,
-    overflow: 'hidden',
-  },
-
-  stepTextBox: {
-    flex: 1,
-  },
-
-  stepTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 3,
-  },
-
-  stepDescription: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
   },
 
   trackButton: {
@@ -504,7 +355,7 @@ const styles = StyleSheet.create({
   },
 
   customerButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#2563eb',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
@@ -518,7 +369,7 @@ const styles = StyleSheet.create({
   },
 
   adminButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#a855f7',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
