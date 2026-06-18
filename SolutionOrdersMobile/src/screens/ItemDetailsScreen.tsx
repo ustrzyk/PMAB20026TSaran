@@ -1,6 +1,7 @@
 import React, {useMemo, useState} from 'react';
 import {
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -129,6 +130,41 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
     }
 
     setSelectedQuantity(Math.min(quantity, maxCanAddNow));
+  };
+
+  const buildShareMessage = (): string => {
+    const stockText = isAvailable
+      ? `${availableQuantity} ${item.unitName ?? 'szt'}`
+      : 'Brak';
+
+    return [
+      '3D Print Shop',
+      '',
+      `Produkt: ${item.name ?? 'Brak nazwy'}`,
+      `Kod: ${item.code ?? 'Brak kodu'}`,
+      `Kategoria: ${item.categoryName ?? 'Brak kategorii'}`,
+      `Cena: ${formatMoney(item.price)}`,
+      `Dostępność: ${stockText}`,
+      '',
+      item.description ?? 'Brak opisu produktu',
+    ].join('\n');
+  };
+
+  const handleShareProduct = async (): Promise<void> => {
+    try {
+      await Share.share({
+        title: item.name ?? 'Produkt',
+        message: buildShareMessage(),
+      });
+    } catch {
+      setDialog({
+        visible: true,
+        type: 'error',
+        title: 'Udostępnianie',
+        message: 'Nie udało się udostępnić produktu.',
+        loading: false,
+      });
+    }
   };
 
   const handleAddToCart = (): void => {
@@ -376,6 +412,15 @@ function ItemDetailsScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.addToCartButtonText}>
           {isAvailable && maxCanAddNow > 0 ? 'Dodaj do koszyka' : 'Niedostępny'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.shareButton}
+        onPress={() => {
+          void handleShareProduct();
+        }}
+        activeOpacity={0.85}>
+        <Text style={styles.shareButtonText}>Udostępnij</Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -734,6 +779,20 @@ const styles = StyleSheet.create({
   addToCartButtonText: {
     color: '#ffffff',
     fontSize: 16,
+    fontWeight: '900',
+  },
+
+  shareButton: {
+    backgroundColor: '#0ea5e9',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  shareButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
     fontWeight: '900',
   },
 
