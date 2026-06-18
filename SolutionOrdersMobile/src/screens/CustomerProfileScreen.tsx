@@ -69,13 +69,13 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
     return safePassword.length === 0 || safePassword.length >= 4;
   }, [safePassword]);
 
-  const deliveryReady = useMemo(() => {
-    return safeAdress.length > 0 && safePhoneNumber.length > 0;
-  }, [safeAdress, safePhoneNumber]);
+  const phoneReady = useMemo(() => {
+    return safePhoneNumber.length <= 30;
+  }, [safePhoneNumber]);
 
   const formReady = useMemo(() => {
-    return nameReady && emailReady && passwordReady;
-  }, [emailReady, nameReady, passwordReady]);
+    return nameReady && emailReady && passwordReady && phoneReady;
+  }, [emailReady, nameReady, passwordReady, phoneReady]);
 
   const showDialog = (
     type: AppDialogType,
@@ -143,15 +143,15 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Sprawdź formularz', validationError);
+      showDialog('error', 'Błąd', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Zapisać dane?',
-      message: 'Zaktualizować dane konta klienta?',
+      title: 'Zapisać zmiany?',
+      message: 'Dane konta zostaną zaktualizowane.',
       loading: false,
     });
   };
@@ -173,9 +173,9 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
         password: safePassword.length > 0 ? safePassword : null,
       });
 
-      showDialog('success', 'Zapisano', 'Dane konta zostały zapisane.', true);
+      showDialog('success', 'Zapisano', 'Dane konta zapisane.', true);
     } catch (err) {
-      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
+      showDialog('error', 'Błąd', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -196,10 +196,6 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
         <Text style={styles.lockIcon}>👤</Text>
 
         <Text style={styles.accessTitle}>Dane konta</Text>
-
-        <Text style={styles.accessText}>
-          Zaloguj się jako klient, aby edytować dane konta.
-        </Text>
 
         <TouchableOpacity
           style={styles.primaryButton}
@@ -222,7 +218,7 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
             })
           }
           activeOpacity={0.85}>
-          <Text style={styles.secondaryButtonText}>Wróć do sklepu</Text>
+          <Text style={styles.secondaryButtonText}>Sklep</Text>
         </TouchableOpacity>
       </View>
     );
@@ -248,78 +244,7 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.title}>Dane konta</Text>
-          <Text style={styles.subtitle}>
-            Zmień dane kontaktowe i dane dostawy.
-          </Text>
-        </View>
-
-        <View style={deliveryReady ? styles.readyBox : styles.warningBox}>
-          <Text style={deliveryReady ? styles.readyTitle : styles.warningTitle}>
-            {deliveryReady ? 'Dane dostawy zapisane' : 'Uzupełnij dostawę'}
-          </Text>
-
-          <Text style={deliveryReady ? styles.readyText : styles.warningText}>
-            {deliveryReady
-              ? 'Adres i telefon są gotowe do użycia przy zamówieniu.'
-              : 'Adres i telefon ułatwią składanie zamówienia.'}
-          </Text>
-        </View>
-
-        <View style={styles.previewCard}>
-          <Text style={styles.sectionTitle}>Podgląd</Text>
-
-          <View style={styles.previewHeader}>
-            <View style={styles.previewIconBox}>
-              <Text style={styles.previewIcon}>👤</Text>
-            </View>
-
-            <View style={styles.previewTextBox}>
-              <Text style={styles.previewName}>
-                {safeName.length > 0 ? safeName : 'Imię i nazwisko'}
-              </Text>
-
-              <Text style={styles.currentBadge}>Klient</Text>
-            </View>
-          </View>
-
-          <View style={styles.previewInfoBox}>
-            <Text style={styles.previewLabel}>E-mail</Text>
-            <Text style={styles.previewValue}>
-              {safeEmail.length > 0 ? safeEmail : 'Brak e-maila'}
-            </Text>
-          </View>
-
-          <View style={styles.previewInfoBox}>
-            <Text style={styles.previewLabel}>Adres</Text>
-            <Text style={styles.previewValue}>
-              {safeAdress.length > 0 ? safeAdress : 'Brak adresu'}
-            </Text>
-          </View>
-
-          <View style={styles.previewInfoBox}>
-            <Text style={styles.previewLabel}>Telefon</Text>
-            <Text style={styles.previewValue}>
-              {safePhoneNumber.length > 0 ? safePhoneNumber : 'Brak telefonu'}
-            </Text>
-          </View>
-        </View>
-
-        <View style={styles.statusGrid}>
-          <View style={nameReady ? styles.readyStatusCard : styles.warningStatusCard}>
-            <Text style={styles.statusIcon}>{nameReady ? '✓' : '!'}</Text>
-            <Text style={styles.statusTitle}>Nazwa</Text>
-            <Text style={styles.statusText}>
-              {nameReady ? 'Uzupełniona' : 'Wymagana'}
-            </Text>
-          </View>
-
-          <View style={emailReady ? styles.readyStatusCard : styles.warningStatusCard}>
-            <Text style={styles.statusIcon}>{emailReady ? '✓' : '!'}</Text>
-            <Text style={styles.statusTitle}>E-mail</Text>
-            <Text style={styles.statusText}>
-              {emailReady ? 'Poprawny' : 'Wymagany'}
-            </Text>
-          </View>
+          <Text style={styles.userText}>{user?.name}</Text>
         </View>
 
         <View style={styles.card}>
@@ -333,10 +258,10 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
           </View>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, !nameReady && styles.inputWarning]}
             value={name}
             onChangeText={setName}
-            placeholder="Np. Jan Kowalski"
+            placeholder="Imię i nazwisko"
             placeholderTextColor="#64748b"
             editable={!submitting}
             returnKeyType="next"
@@ -348,7 +273,7 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
             style={[styles.input, !emailReady && styles.inputWarning]}
             value={email}
             onChangeText={setEmail}
-            placeholder="Np. jan@3dshop.pl"
+            placeholder="E-mail"
             placeholderTextColor="#64748b"
             autoCapitalize="none"
             keyboardType="email-address"
@@ -362,23 +287,16 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
             style={[styles.input, !passwordReady && styles.inputWarning]}
             value={password}
             onChangeText={setPassword}
-            placeholder="Opcjonalnie"
+            placeholder="Bez zmian"
             placeholderTextColor="#64748b"
             secureTextEntry
             editable={!submitting}
             returnKeyType="next"
           />
-
-          <View style={styles.hintBox}>
-            <Text style={styles.hintTitle}>Hasło</Text>
-            <Text style={styles.hintText}>
-              Zostaw puste, jeśli hasło ma pozostać bez zmian.
-            </Text>
-          </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Dane dostawy</Text>
+          <Text style={styles.sectionTitle}>Dostawa</Text>
 
           <Text style={styles.label}>Adres</Text>
 
@@ -386,7 +304,7 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
             style={[styles.input, styles.textArea]}
             value={adress}
             onChangeText={setAdress}
-            placeholder="Np. ul. Testowa 10, Warszawa"
+            placeholder="Adres"
             placeholderTextColor="#64748b"
             multiline
             editable={!submitting}
@@ -395,18 +313,14 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.label}>Telefon</Text>
 
           <TextInput
-            style={[
-              styles.input,
-              safePhoneNumber.length > 30 && styles.inputWarning,
-            ]}
+            style={[styles.input, !phoneReady && styles.inputWarning]}
             value={phoneNumber}
             onChangeText={setPhoneNumber}
-            placeholder="Np. 500-100-200"
+            placeholder="Telefon"
             placeholderTextColor="#64748b"
             keyboardType="phone-pad"
             editable={!submitting}
             returnKeyType="done"
-            onSubmitEditing={handleSavePress}
           />
         </View>
 
@@ -419,16 +333,16 @@ function CustomerProfileScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}
           disabled={!formReady || submitting}>
           <Text style={styles.saveButtonText}>
-            {submitting ? 'Zapisywanie...' : 'Zapisz dane'}
+            {submitting ? 'Zapisywanie...' : 'Zapisz'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.cancelButton}
+          style={styles.secondaryButton}
           onPress={() => navigation.goBack()}
           activeOpacity={0.85}
           disabled={submitting}>
-          <Text style={styles.cancelButtonText}>Anuluj</Text>
+          <Text style={styles.secondaryButtonText}>Anuluj</Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -441,38 +355,30 @@ const styles = StyleSheet.create({
     backgroundColor: '#0f172a',
   },
 
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
   centerContainer: {
     flex: 1,
     backgroundColor: '#0f172a',
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    justifyContent: 'center',
+    padding: 20,
   },
 
   lockIcon: {
-    fontSize: 46,
+    fontSize: 48,
     marginBottom: 12,
   },
 
   accessTitle: {
     color: '#f8fafc',
-    fontSize: 25,
+    fontSize: 26,
     fontWeight: '900',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: 18,
   },
 
-  accessText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
-    marginBottom: 18,
+  content: {
+    padding: 16,
+    paddingBottom: 32,
   },
 
   heroBox: {
@@ -499,180 +405,11 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
-  readyBox: {
-    backgroundColor: '#052e16',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-    marginBottom: 14,
-  },
-
-  warningBox: {
-    backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 14,
-  },
-
-  readyTitle: {
-    color: '#bbf7d0',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  warningTitle: {
-    color: '#fed7aa',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  readyText: {
-    color: '#bbf7d0',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  warningText: {
-    color: '#fed7aa',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-
-  previewCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#38bdf8',
-    marginBottom: 14,
-  },
-
-  previewHeader: {
-    flexDirection: 'row',
-    gap: 12,
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-
-  previewIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  previewIcon: {
-    fontSize: 28,
-  },
-
-  previewTextBox: {
-    flex: 1,
-  },
-
-  previewName: {
-    color: '#f8fafc',
-    fontSize: 18,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  currentBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#f97316',
-    color: '#ffffff',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '900',
-    overflow: 'hidden',
-  },
-
-  previewInfoBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#1e293b',
-    marginBottom: 8,
-  },
-
-  previewLabel: {
+  userText: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-
-  previewValue: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '800',
-    lineHeight: 18,
-  },
-
-  statusGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
-
-  readyStatusCard: {
-    flex: 1,
-    backgroundColor: '#052e16',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#16a34a',
-  },
-
-  warningStatusCard: {
-    flex: 1,
-    backgroundColor: '#431407',
-    borderRadius: 16,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#f97316',
-  },
-
-  statusIcon: {
-    color: '#ffffff',
-    fontSize: 20,
-    fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  statusTitle: {
-    color: '#f8fafc',
     fontSize: 14,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  statusText: {
-    color: '#cbd5e1',
-    fontSize: 11,
-    fontWeight: '700',
-    lineHeight: 16,
+    fontWeight: '800',
+    marginTop: 6,
   },
 
   card: {
@@ -696,14 +433,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 10,
     alignItems: 'center',
-    marginBottom: 6,
   },
 
   label: {
     color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '900',
     marginBottom: 6,
+    marginTop: 10,
   },
 
   counterOk: {
@@ -727,7 +464,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 15,
-    marginBottom: 14,
+    marginBottom: 6,
   },
 
   inputWarning: {
@@ -735,62 +472,22 @@ const styles = StyleSheet.create({
   },
 
   textArea: {
-    minHeight: 96,
+    minHeight: 86,
     textAlignVertical: 'top',
-  },
-
-  hintBox: {
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#334155',
-  },
-
-  hintTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  hintText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    lineHeight: 17,
   },
 
   saveButton: {
     backgroundColor: '#16a34a',
-    paddingVertical: 14,
     borderRadius: 12,
+    paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 4,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
+    marginBottom: 12,
   },
 
   saveButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '900',
-  },
-
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
   },
 
   primaryButton: {
@@ -813,13 +510,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 13,
     alignItems: 'center',
-    alignSelf: 'stretch',
   },
 
   secondaryButtonText: {
     color: '#ffffff',
     fontSize: 15,
     fontWeight: '900',
+  },
+
+  disabledButton: {
+    opacity: 0.55,
   },
 });
 
