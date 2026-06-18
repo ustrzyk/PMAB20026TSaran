@@ -78,12 +78,7 @@ function getStockLabel(item: Item): string {
 function ItemsScreen({navigation, route}: Props): React.JSX.Element {
   const {items, loading, error, refreshItems} = useItems();
 
-  const {
-    cartItems,
-    addToCart,
-    totalQuantity,
-    totalValue,
-  } = useCart();
+  const {cartItems, addToCart, totalQuantity, totalValue} = useCart();
 
   const {isAdmin, isWorker, isCustomer} = useAuth();
 
@@ -187,13 +182,7 @@ function ItemsScreen({navigation, route}: Props): React.JSX.Element {
     }
 
     return sorted;
-  }, [
-    activeItems,
-    searchText,
-    selectedCategory,
-    sortMode,
-    stockFilter,
-  ]);
+  }, [activeItems, searchText, selectedCategory, sortMode, stockFilter]);
 
   const getQuantityInCart = (idItem: number): number => {
     const cartItem = cartItems.find(item => item.item.idItem === idItem);
@@ -245,7 +234,7 @@ function ItemsScreen({navigation, route}: Props): React.JSX.Element {
     }
   };
 
-  const handleAddToCart = (item: Item): void => {
+  const handleQuickAddToCart = (item: Item): void => {
     const quantity = item.quantity ?? 0;
     const quantityInCart = getQuantityInCart(item.idItem);
     const canAddQuantity = quantity - quantityInCart;
@@ -254,7 +243,7 @@ function ItemsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Brak produktu',
+        title: 'Produkt',
         message: 'Produkt niedostępny.',
         loading: false,
       });
@@ -267,7 +256,7 @@ function ItemsScreen({navigation, route}: Props): React.JSX.Element {
         visible: true,
         type: 'error',
         title: 'Koszyk',
-        message: 'Maksymalna dostępna ilość jest już w koszyku.',
+        message: 'Maksymalna ilość jest już w koszyku.',
         loading: false,
       });
 
@@ -280,7 +269,7 @@ function ItemsScreen({navigation, route}: Props): React.JSX.Element {
       visible: true,
       type: 'success',
       title: 'Koszyk',
-      message: 'Dodano produkt.',
+      message: 'Dodano 1 sztukę.',
       loading: false,
     });
   };
@@ -536,11 +525,11 @@ function ItemsScreen({navigation, route}: Props): React.JSX.Element {
               styles.addButton,
               !canAdd && styles.disabledButton,
             ]}
-            onPress={() => handleAddToCart(item)}
+            onPress={() => handleQuickAddToCart(item)}
             activeOpacity={0.85}
             disabled={!canAdd}>
             <Text style={styles.addButtonText}>
-              {canAdd ? 'Dodaj' : 'Brak'}
+              {canAdd ? '+ Koszyk' : 'Brak'}
             </Text>
           </TouchableOpacity>
         </View>
