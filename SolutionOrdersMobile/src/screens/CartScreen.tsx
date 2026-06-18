@@ -231,7 +231,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
     }
 
     if (paymentMethod === 'card') {
-      return 'Płatność kartą: płatność symulowana';
+      return 'Płatność kartą';
     }
 
     return 'Płatność przy odbiorze';
@@ -452,9 +452,7 @@ function CartScreen({navigation}: Props): React.JSX.Element {
       return (
         <View style={styles.paymentDetailsBox}>
           <Text style={styles.paymentDetailsTitle}>Karta</Text>
-          <Text style={styles.paymentDetailsText}>
-            Płatność kartą jest symulowana.
-          </Text>
+          <Text style={styles.paymentDetailsText}>Płatność kartą.</Text>
         </View>
       );
     }
