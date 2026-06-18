@@ -23,14 +23,6 @@ type OrderWithStatus = OrderDto & {
   status?: string | null;
 };
 
-const STATUS_STEPS = [
-  'Nowe',
-  'W realizacji',
-  'Gotowe',
-  'Wysłane',
-  'Zakończone',
-];
-
 function formatMoney(value?: number | null): string {
   const safeValue = value ?? 0;
 
@@ -59,48 +51,6 @@ function getOrderStatus(order?: OrderDto | null): string {
   return status;
 }
 
-function getStatusIndex(status: string): number {
-  const index = STATUS_STEPS.indexOf(status);
-
-  if (index >= 0) {
-    return index;
-  }
-
-  if (status === 'Anulowane') {
-    return -1;
-  }
-
-  return 0;
-}
-
-function getFriendlyStatusDescription(status: string): string {
-  if (status === 'Nowe') {
-    return 'Zamówienie zostało przyjęte i czeka na obsługę.';
-  }
-
-  if (status === 'W realizacji') {
-    return 'Zamówienie jest aktualnie przygotowywane.';
-  }
-
-  if (status === 'Gotowe') {
-    return 'Zamówienie jest gotowe do odbioru albo do wysyłki.';
-  }
-
-  if (status === 'Wysłane') {
-    return 'Zamówienie zostało przekazane do dostawy.';
-  }
-
-  if (status === 'Zakończone') {
-    return 'Zamówienie zostało zakończone.';
-  }
-
-  if (status === 'Anulowane') {
-    return 'Zamówienie zostało anulowane.';
-  }
-
-  return 'Zamówienie jest w trakcie obsługi.';
-}
-
 function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
   const {user, isAdmin, isWorker, isCustomer} = useAuth();
 
@@ -116,10 +66,6 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
   const [error, setError] = useState<string | null>(null);
 
   const currentStatus = getOrderStatus(order);
-
-  const currentStatusIndex = useMemo(() => {
-    return getStatusIndex(currentStatus);
-  }, [currentStatus]);
 
   const orderTotalFromItems = useMemo(() => {
     return orderItems.reduce((sum, item) => {
@@ -213,40 +159,14 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     navigation.navigate('AuthLogin');
   };
 
-  const renderStatusStep = (
-    step: string,
-    index: number,
-  ): React.JSX.Element => {
-    const isCancelled = currentStatus === 'Anulowane';
-    const isCurrent = currentStatus === step;
-    const isDone = !isCancelled && index <= currentStatusIndex;
+  const openPrintPreview = (): void => {
+    if (!order) {
+      return;
+    }
 
-    return (
-      <View key={`status-step-${step}`} style={styles.statusStep}>
-        <View
-          style={[
-            styles.statusDot,
-            isDone && styles.statusDotDone,
-            isCurrent && styles.statusDotCurrent,
-          ]}>
-          <Text style={styles.statusDotText}>{isDone ? '✓' : index + 1}</Text>
-        </View>
-
-        <View style={styles.statusStepTextBox}>
-          <Text
-            style={[
-              styles.statusStepTitle,
-              isDone && styles.statusStepTitleDone,
-            ]}>
-            {step}
-          </Text>
-
-          <Text style={styles.statusStepText}>
-            {isCurrent ? 'Aktualny etap' : isDone ? 'Zrealizowano' : 'Przed nami'}
-          </Text>
-        </View>
-      </View>
-    );
+    navigation.navigate('OrderPrint', {
+      idOrder: order.idOrder,
+    });
   };
 
   const renderOrderItem = (item: OrderItemDto): React.JSX.Element => {
@@ -272,7 +192,7 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.itemSummaryBox}>
-          <Text style={styles.itemSummaryLabel}>Wartość pozycji</Text>
+          <Text style={styles.itemSummaryLabel}>Wartość</Text>
           <Text style={styles.itemSummaryValue}>{formatMoney(item.lineValue)}</Text>
         </View>
       </View>
@@ -283,12 +203,7 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroBox}>
         <Text style={styles.appName}>3D Print Shop</Text>
-
         <Text style={styles.title}>Status zamówienia</Text>
-
-        <Text style={styles.subtitle}>
-          Wpisz numer zamówienia i sprawdź, na jakim etapie jest realizacja.
-        </Text>
       </View>
 
       <View style={styles.searchCard}>
@@ -320,38 +235,26 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
             </Text>
           </TouchableOpacity>
         </View>
-
-        <Text style={styles.searchHint}>
-          Numer znajdziesz na ekranie po złożeniu zamówienia albo w zakładce
-          „Moje zamówienia”.
-        </Text>
       </View>
 
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color="#f97316" />
-          <Text style={styles.loadingText}>Pobieranie zamówienia...</Text>
+          <Text style={styles.loadingText}>Pobieranie...</Text>
         </View>
       ) : null}
 
       {error ? (
         <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Nie udało się pobrać zamówienia</Text>
+          <Text style={styles.errorTitle}>Błąd</Text>
           <Text style={styles.errorText}>{error}</Text>
-
-          <TouchableOpacity
-            style={styles.errorActionButton}
-            onPress={() => navigation.navigate('Items')}
-            activeOpacity={0.85}>
-            <Text style={styles.errorActionButtonText}>Przejdź do sklepu</Text>
-          </TouchableOpacity>
         </View>
       ) : null}
 
       {order ? (
         <>
           <View style={styles.statusCard}>
-            <Text style={styles.statusLabel}>Aktualny status</Text>
+            <Text style={styles.statusLabel}>Status</Text>
 
             <Text
               style={
@@ -361,38 +264,19 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
               }>
               {currentStatus}
             </Text>
-
-            <Text style={styles.statusDescription}>
-              {getFriendlyStatusDescription(currentStatus)}
-            </Text>
           </View>
-
-          {currentStatus === 'Anulowane' ? (
-            <View style={styles.cancelledBox}>
-              <Text style={styles.cancelledTitle}>Zamówienie anulowane</Text>
-              <Text style={styles.cancelledText}>
-                To zamówienie nie będzie dalej realizowane.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.timelineCard}>
-              <Text style={styles.sectionTitle}>Przebieg realizacji</Text>
-
-              {STATUS_STEPS.map(renderStatusStep)}
-            </View>
-          )}
 
           <View style={styles.orderCard}>
             <Text style={styles.sectionTitle}>Zamówienie #{order.idOrder}</Text>
 
             <View style={styles.infoGrid}>
               <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Data zamówienia</Text>
+                <Text style={styles.infoLabel}>Zamówiono</Text>
                 <Text style={styles.infoValue}>{formatDate(order.dataOrder)}</Text>
               </View>
 
               <View style={styles.infoBox}>
-                <Text style={styles.infoLabel}>Data dostawy</Text>
+                <Text style={styles.infoLabel}>Dostawa</Text>
                 <Text style={styles.infoValue}>
                   {formatDate(order.deliveryDate)}
                 </Text>
@@ -402,7 +286,9 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
             <View style={styles.infoGrid}>
               <View style={styles.infoBox}>
                 <Text style={styles.infoLabel}>Pozycje</Text>
-                <Text style={styles.infoValue}>{order.orderItemsCount}</Text>
+                <Text style={styles.infoValue}>
+                  {order.orderItemsCount ?? orderItems.length}
+                </Text>
               </View>
 
               <View style={styles.infoBox}>
@@ -423,19 +309,32 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
 
           {order.notes ? (
             <View style={styles.notesCard}>
-              <Text style={styles.sectionTitle}>Dostawa i płatność</Text>
-
+              <Text style={styles.sectionTitle}>Informacje</Text>
               <Text style={styles.notesText}>{order.notes}</Text>
             </View>
           ) : null}
+
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.printButton}
+              onPress={openPrintPreview}
+              activeOpacity={0.85}>
+              <Text style={styles.printButtonText}>Wydruk</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.refreshButton}
+              onPress={() => loadOrder(order.idOrder)}
+              activeOpacity={0.85}>
+              <Text style={styles.refreshButtonText}>Odśwież</Text>
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.sectionTitleOutside}>Produkty</Text>
 
           {orderItems.length === 0 ? (
             <View style={styles.emptyBox}>
-              <Text style={styles.emptyText}>
-                Brak pozycji dla tego zamówienia.
-              </Text>
+              <Text style={styles.emptyText}>Brak pozycji.</Text>
             </View>
           ) : (
             orderItems.map(renderOrderItem)
@@ -443,7 +342,6 @@ function TrackOrderScreen({navigation, route}: Props): React.JSX.Element {
 
           <View style={styles.totalCard}>
             <Text style={styles.totalLabel}>Suma pozycji</Text>
-
             <Text style={styles.totalValue}>
               {formatMoney(orderTotalFromItems)}
             </Text>
@@ -530,14 +428,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
   searchCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -585,14 +475,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  searchHint: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
-    marginTop: 10,
-  },
-
   loadingBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -629,20 +511,6 @@ const styles = StyleSheet.create({
     color: '#fecaca',
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 12,
-  },
-
-  errorActionButton: {
-    backgroundColor: '#ef4444',
-    paddingVertical: 11,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-
-  errorActionButtonText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
   },
 
   statusCard: {
@@ -667,47 +535,15 @@ const styles = StyleSheet.create({
     color: '#f97316',
     fontSize: 30,
     fontWeight: '900',
-    marginBottom: 8,
   },
 
   cancelledStatusValue: {
     color: '#fca5a5',
     fontSize: 30,
     fontWeight: '900',
-    marginBottom: 8,
   },
 
-  statusDescription: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-
-  cancelledBox: {
-    backgroundColor: '#7f1d1d',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#ef4444',
-    marginBottom: 14,
-  },
-
-  cancelledTitle: {
-    color: '#fecaca',
-    fontSize: 16,
-    fontWeight: '900',
-    marginBottom: 5,
-  },
-
-  cancelledText: {
-    color: '#fecaca',
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 19,
-  },
-
-  timelineCard: {
+  orderCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
@@ -721,66 +557,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginBottom: 12,
-  },
-
-  statusStep: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 12,
-  },
-
-  statusDot: {
-    width: 34,
-    height: 34,
-    borderRadius: 999,
-    backgroundColor: '#334155',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  statusDotDone: {
-    backgroundColor: '#16a34a',
-  },
-
-  statusDotCurrent: {
-    backgroundColor: '#f97316',
-  },
-
-  statusDotText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-
-  statusStepTextBox: {
-    flex: 1,
-  },
-
-  statusStepTitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  statusStepTitleDone: {
-    color: '#f8fafc',
-  },
-
-  statusStepText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 2,
-  },
-
-  orderCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
   },
 
   infoGrid: {
@@ -839,6 +615,40 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 19,
     fontWeight: '700',
+  },
+
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 14,
+  },
+
+  printButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  printButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  refreshButton: {
+    flex: 1,
+    backgroundColor: '#38bdf8',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  refreshButtonText: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   sectionTitleOutside: {

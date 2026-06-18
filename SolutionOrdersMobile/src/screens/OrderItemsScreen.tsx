@@ -187,10 +187,8 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Przenieść do archiwum?',
-      message: `Pozycja "${
-        orderItem.itemName ?? 'produkt'
-      }" zostanie ukryta z bieżącej listy.`,
+      title: 'Archiwum',
+      message: `Przenieść pozycję "${orderItem.itemName ?? 'produkt'}" do archiwum?`,
       loading: false,
     });
   };
@@ -226,7 +224,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Pozycja przeniesiona',
+        title: 'Zapisano',
         message: 'Pozycja trafiła do archiwum.',
         loading: false,
       });
@@ -234,7 +232,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie udało się wykonać operacji',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -262,6 +260,12 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
     navigation.navigate('CreateOrderItem');
   };
 
+  const openOrderPrint = (idOrder: number): void => {
+    navigation.navigate('OrderPrint', {
+      idOrder,
+    });
+  };
+
   const clearFilters = (): void => {
     setSearchText('');
     setViewFilter('current');
@@ -271,10 +275,6 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
   const screenTitle = isOrderFiltered
     ? orderTitleFromRoute ?? `Zamówienie #${idOrderFromRoute}`
     : 'Pozycje zamówień';
-
-  const screenSubtitle = isOrderFiltered
-    ? 'Produkty przypisane do wybranego zamówienia.'
-    : 'Produkty przypisane do zamówień klientów.';
 
   const renderViewButton = (
     label: string,
@@ -328,7 +328,6 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>{screenTitle}</Text>
-          <Text style={styles.heroSubtitle}>{screenSubtitle}</Text>
         </View>
 
         <View style={styles.summaryBox}>
@@ -349,7 +348,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.valueBox}>
-          <Text style={styles.valueLabel}>Wartość bieżących pozycji</Text>
+          <Text style={styles.valueLabel}>Wartość</Text>
           <Text style={styles.valueText}>{formatMoney(currentTotalValue)}</Text>
         </View>
 
@@ -358,8 +357,17 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
             style={styles.createButton}
             onPress={openCreateOrderItem}
             activeOpacity={0.85}>
-            <Text style={styles.createButtonText}>+ Dodaj pozycję</Text>
+            <Text style={styles.createButtonText}>+ Dodaj</Text>
           </TouchableOpacity>
+
+          {isOrderFiltered && idOrderFromRoute ? (
+            <TouchableOpacity
+              style={styles.printButton}
+              onPress={() => openOrderPrint(idOrderFromRoute)}
+              activeOpacity={0.85}>
+              <Text style={styles.printButtonText}>Wydruk</Text>
+            </TouchableOpacity>
+          ) : null}
 
           <TouchableOpacity
             style={styles.ordersButton}
@@ -374,7 +382,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj produktu, kodu albo numeru zamówienia..."
+            placeholder="Szukaj pozycji"
             placeholderTextColor="#64748b"
           />
         </View>
@@ -407,26 +415,23 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.filterSummaryText}>
-            Wartość widocznych: {formatMoney(visibleTotalValue)}
+            Wartość: {formatMoney(visibleTotalValue)}
           </Text>
 
-          <Text style={styles.filterSummaryText}>
-            Szukaj:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
-          </Text>
-
-          <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
-            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
-          </TouchableOpacity>
+          {(searchText.trim().length > 0 ||
+            viewFilter !== 'current' ||
+            sortMode !== 'default') && (
+            <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
+              <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity
           style={styles.refreshButton}
           onPress={handleRefresh}
           activeOpacity={0.85}>
-          <Text style={styles.refreshButtonText}>Odśwież listę</Text>
+          <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
       </>
     );
@@ -446,9 +451,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
               {item.itemName ?? `Produkt ID ${item.idItem}`}
             </Text>
 
-            <Text style={styles.itemSubtitle}>
-              Zamówienie #{item.idOrder}
-            </Text>
+            <Text style={styles.itemSubtitle}>Zamówienie #{item.idOrder}</Text>
           </View>
 
           <Text style={isCurrent ? styles.currentBadge : styles.archivedBadge}>
@@ -473,7 +476,7 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.lineValueBox}>
-          <Text style={styles.lineValueLabel}>Wartość pozycji</Text>
+          <Text style={styles.lineValueLabel}>Wartość</Text>
           <Text style={styles.lineValueText}>{formatMoney(lineValue)}</Text>
         </View>
 
@@ -485,6 +488,15 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
             <Text style={styles.cardButtonText}>Edytuj</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.printCardButton}
+            onPress={() => openOrderPrint(item.idOrder)}
+            activeOpacity={0.85}>
+            <Text style={styles.cardButtonText}>Wydruk</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.cardActions}>
           <TouchableOpacity
             style={[
               styles.archiveButton,
@@ -563,8 +575,8 @@ function OrderItemsScreen({navigation, route}: Props): React.JSX.Element {
 
             <Text style={styles.emptyText}>
               {orderItems.length === 0
-                ? 'To zamówienie nie ma jeszcze dodanych produktów.'
-                : 'Brak pozycji pasujących do filtrów.'}
+                ? 'To zamówienie nie ma jeszcze produktów.'
+                : 'Brak pozycji dla wybranych filtrów.'}
             </Text>
 
             <TouchableOpacity
@@ -693,14 +705,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
   summaryBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -778,6 +782,20 @@ const styles = StyleSheet.create({
   },
 
   createButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  printButton: {
+    flex: 1,
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+
+  printButtonText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
@@ -938,13 +956,13 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 17,
     fontWeight: '900',
-    marginBottom: 4,
   },
 
   itemSubtitle: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '700',
+    marginTop: 4,
   },
 
   currentBadge: {
@@ -971,19 +989,19 @@ const styles = StyleSheet.create({
 
   badgeRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     marginBottom: 10,
   },
 
   codeBadge: {
-    backgroundColor: '#422006',
-    color: '#fed7aa',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    backgroundColor: '#0f172a',
+    color: '#cbd5e1',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 999,
-    fontSize: 11,
-    fontWeight: '800',
+    borderWidth: 1,
+    borderColor: '#334155',
+    fontSize: 12,
+    fontWeight: '900',
     overflow: 'hidden',
   },
 
@@ -1011,7 +1029,7 @@ const styles = StyleSheet.create({
 
   infoValue: {
     color: '#f8fafc',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '900',
   },
 
@@ -1021,7 +1039,6 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     borderColor: '#16a34a',
-    marginBottom: 10,
   },
 
   lineValueLabel: {
@@ -1033,18 +1050,27 @@ const styles = StyleSheet.create({
 
   lineValueText: {
     color: '#bbf7d0',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '900',
   },
 
   cardActions: {
     flexDirection: 'row',
     gap: 8,
+    marginTop: 10,
   },
 
   editButton: {
     flex: 1,
     backgroundColor: '#2563eb',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  printCardButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',

@@ -57,7 +57,7 @@ function formatMoney(value?: number | null): string {
 
 function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const isEditMode = route.name === 'EditOrderItem';
-  const editedOrderItem = isEditMode ? route.params.orderItem : undefined;
+  const editedOrderItem = isEditMode ? route.params.orderItem : null;
 
   const idOrderFromRoute =
     route.name === 'CreateOrderItem' ? route.params?.idOrder : undefined;
@@ -109,7 +109,9 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
   const currentItemStock = selectedItem?.quantity ?? 0;
 
   const editQuantityBonus =
-    isEditMode && editedOrderItem?.idItem === selectedItem?.idItem
+    isEditMode &&
+    editedOrderItem !== null &&
+    editedOrderItem.idItem === selectedItem?.idItem
       ? editedOrderItem.quantity ?? 0
       : 0;
 
@@ -288,7 +290,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
-      if (isEditMode && editedOrderItem) {
+      if (isEditMode && editedOrderItem !== null) {
         await apiService.updateOrderItem(editedOrderItem.idOrderItem, {
           idOrderItem: editedOrderItem.idOrderItem,
           idOrder: Number(idOrder),
@@ -394,10 +396,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <Text
-          style={[
-            styles.optionText,
-            selected && styles.optionTextSelected,
-          ]}
+          style={[styles.optionText, selected && styles.optionTextSelected]}
           numberOfLines={2}>
           {order.clientName ?? 'Brak klienta'} | {formatDate(order.dataOrder)}
         </Text>
@@ -437,10 +436,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <Text
-          style={[
-            styles.optionText,
-            selected && styles.optionTextSelected,
-          ]}
+          style={[styles.optionText, selected && styles.optionTextSelected]}
           numberOfLines={2}>
           {formatMoney(item.price)} | stan: {availableQuantity}{' '}
           {item.unitName ?? 'szt'} | {item.code ?? 'brak kodu'}
@@ -553,9 +549,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
               <Text style={styles.loadingText}>Ładowanie zamówień...</Text>
             </View>
           ) : orders.length > 0 ? (
-            <View style={styles.optionList}>
-              {orders.map(renderOrderButton)}
-            </View>
+            <View style={styles.optionList}>{orders.map(renderOrderButton)}</View>
           ) : (
             <Text style={styles.emptyText}>Brak zamówień do wyboru.</Text>
           )}
@@ -570,9 +564,7 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
               <Text style={styles.loadingText}>Ładowanie produktów...</Text>
             </View>
           ) : items.length > 0 ? (
-            <View style={styles.optionList}>
-              {items.map(renderItemButton)}
-            </View>
+            <View style={styles.optionList}>{items.map(renderItemButton)}</View>
           ) : (
             <Text style={styles.emptyText}>Brak produktów do wyboru.</Text>
           )}
@@ -610,37 +602,16 @@ function OrderItemFormScreen({navigation, route}: Props): React.JSX.Element {
           </View>
 
           <View style={styles.quickButtons}>
-            <TouchableOpacity
-              style={styles.quickButton}
-              onPress={() => setQuickQuantity(1)}
-              activeOpacity={0.85}
-              disabled={submitting}>
-              <Text style={styles.quickButtonText}>1</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickButton}
-              onPress={() => setQuickQuantity(2)}
-              activeOpacity={0.85}
-              disabled={submitting}>
-              <Text style={styles.quickButtonText}>2</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickButton}
-              onPress={() => setQuickQuantity(5)}
-              activeOpacity={0.85}
-              disabled={submitting}>
-              <Text style={styles.quickButtonText}>5</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickButton}
-              onPress={() => setQuickQuantity(10)}
-              activeOpacity={0.85}
-              disabled={submitting}>
-              <Text style={styles.quickButtonText}>10</Text>
-            </TouchableOpacity>
+            {[1, 2, 5, 10].map(value => (
+              <TouchableOpacity
+                key={`quick-${value}`}
+                style={styles.quickButton}
+                onPress={() => setQuickQuantity(value)}
+                activeOpacity={0.85}
+                disabled={submitting}>
+                <Text style={styles.quickButtonText}>{value}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           <View style={styles.stockBox}>
@@ -1039,25 +1010,21 @@ const styles = StyleSheet.create({
 
   stockValue: {
     color: '#bbf7d0',
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
   },
 
   visibleSwitch: {
-    backgroundColor: '#052e16',
-    borderWidth: 1,
-    borderColor: '#16a34a',
+    backgroundColor: '#16a34a',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
   archiveSwitch: {
     backgroundColor: '#334155',
-    borderWidth: 1,
-    borderColor: '#475569',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
@@ -1069,10 +1036,10 @@ const styles = StyleSheet.create({
 
   saveButton: {
     backgroundColor: '#16a34a',
-    borderRadius: 12,
     paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
-    marginBottom: 12,
+    marginTop: 4,
   },
 
   disabledButton: {
@@ -1087,15 +1054,16 @@ const styles = StyleSheet.create({
 
   cancelButton: {
     backgroundColor: '#334155',
+    paddingVertical: 14,
     borderRadius: 12,
-    paddingVertical: 13,
     alignItems: 'center',
+    marginTop: 12,
   },
 
   cancelButtonText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });
 

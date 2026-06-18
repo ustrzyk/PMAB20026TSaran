@@ -1,9 +1,8 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {sharedStyles as styles} from '../components/styles/sharedStyles.ts';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
@@ -51,6 +51,24 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const safeName = name.trim();
+  const safeDescription = description.trim();
+
+  const nameLength = safeName.length;
+  const descriptionLength = safeDescription.length;
+
+  const nameReady = useMemo(() => {
+    return safeName.length >= 2 && safeName.length <= 64;
+  }, [safeName]);
+
+  const descriptionReady = useMemo(() => {
+    return safeDescription.length <= 300;
+  }, [safeDescription]);
+
+  const formReady = useMemo(() => {
+    return nameReady && descriptionReady;
+  }, [descriptionReady, nameReady]);
+
   const showDialog = (
     type: AppDialogType,
     title: string,
@@ -82,12 +100,20 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const validateForm = (): string | null => {
-    if (name.trim().length === 0) {
-      return 'Podaj nazwę kategorii';
+    if (safeName.length === 0) {
+      return 'Podaj nazwę kategorii.';
     }
 
-    if (name.trim().length > 64) {
-      return 'Nazwa kategorii może mieć maksymalnie 64 znaki';
+    if (safeName.length < 2) {
+      return 'Nazwa kategorii powinna mieć minimum 2 znaki.';
+    }
+
+    if (safeName.length > 64) {
+      return 'Nazwa kategorii może mieć maksymalnie 64 znaki.';
+    }
+
+    if (safeDescription.length > 300) {
+      return 'Opis może mieć maksymalnie 300 znaków.';
     }
 
     return null;
@@ -97,17 +123,17 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Błąd formularza', validationError);
+      showDialog('error', 'Sprawdź formularz', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      title: isEditMode ? 'Zapisać zmiany?' : 'Dodać kategorię?',
       message: isEditMode
-        ? `Czy zapisać zmiany w kategorii "${name.trim()}"?`
-        : `Czy dodać nową kategorię "${name.trim()}"?`,
+        ? `Zapisać kategorię "${safeName}"?`
+        : `Dodać kategorię "${safeName}"?`,
       loading: false,
     });
   };
@@ -121,38 +147,26 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
+      const command = {
+        name: safeName,
+        description: safeDescription.length > 0 ? safeDescription : null,
+        isActive,
+      };
+
       if (isEditMode && editedCategory) {
         await apiService.updateCategory(editedCategory.idCategory, {
           idCategory: editedCategory.idCategory,
-          name: name.trim(),
-          description:
-            description.trim().length > 0 ? description.trim() : null,
-          isActive,
+          ...command,
         });
 
-        showDialog(
-          'success',
-          'Kategoria zaktualizowana',
-          'Zmiany kategorii zostały zapisane.',
-          true,
-        );
+        showDialog('success', 'Zapisano', 'Kategoria została zapisana.', true);
       } else {
-        await apiService.createCategory({
-          name: name.trim(),
-          description:
-            description.trim().length > 0 ? description.trim() : null,
-          isActive,
-        });
+        await apiService.createCategory(command);
 
-        showDialog(
-          'success',
-          'Kategoria dodana',
-          'Nowa kategoria została zapisana w systemie.',
-          true,
-        );
+        showDialog('success', 'Dodano', 'Kategoria została dodana.', true);
       }
     } catch (err) {
-      showDialog('error', 'Błąd zapisu', (err as Error).message);
+      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -198,14 +212,58 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Kategorie pomagają uporządkować produkty sklepu.
+            Nazwa kategorii będzie widoczna przy produktach.
+          </Text>
+        </View>
+
+        <View style={formReady ? styles.readyBox : styles.warningBox}>
+          <Text style={formReady ? styles.readyTitle : styles.warningTitle}>
+            {formReady ? 'Gotowe do zapisu' : 'Uzupełnij nazwę'}
+          </Text>
+
+          <Text style={formReady ? styles.readyText : styles.warningText}>
+            {formReady
+              ? 'Możesz zapisać kategorię.'
+              : 'Wpisz krótką i czytelną nazwę kategorii.'}
+          </Text>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>Podgląd</Text>
+
+          <View style={styles.previewHeader}>
+            <View style={styles.previewIconBox}>
+              <Text style={styles.previewIcon}>🏷️</Text>
+            </View>
+
+            <View style={styles.previewTextBox}>
+              <Text style={styles.previewName}>
+                {safeName.length > 0 ? safeName : 'Nazwa kategorii'}
+              </Text>
+
+              <Text style={isActive ? styles.currentBadge : styles.archiveBadge}>
+                {isActive ? 'Bieżąca' : 'Archiwum'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={styles.previewDescription}>
+            {safeDescription.length > 0
+              ? safeDescription
+              : 'Opis pojawi się tutaj.'}
           </Text>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Dane kategorii</Text>
 
-          <Text style={styles.label}>Nazwa kategorii</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Nazwa</Text>
+            <Text style={nameReady ? styles.counterOk : styles.counterWarning}>
+              {nameLength}/64
+            </Text>
+          </View>
+
           <TextInput
             style={styles.input}
             value={name}
@@ -213,14 +271,28 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
             placeholder="Np. Drukarki 3D"
             placeholderTextColor="#64748b"
             editable={!submitting}
+            returnKeyType="next"
           />
 
-          <Text style={styles.label}>Opis</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Opis</Text>
+            <Text
+              style={
+                descriptionReady ? styles.counterMuted : styles.counterWarning
+              }>
+              {descriptionLength}/300
+            </Text>
+          </View>
+
           <TextInput
-            style={[styles.input, styles.textArea]}
+            style={[
+              styles.input,
+              styles.textArea,
+              !descriptionReady && styles.inputWarning,
+            ]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Krótki opis kategorii"
+            placeholder="Opcjonalnie"
             placeholderTextColor="#64748b"
             multiline
             editable={!submitting}
@@ -228,7 +300,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Status kategorii</Text>
+          <Text style={styles.sectionTitle}>Widoczność</Text>
 
           <View style={styles.statusButtons}>
             <TouchableOpacity
@@ -237,41 +309,44 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
                 isActive && styles.statusButtonActive,
               ]}
               onPress={() => setIsActive(true)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
                   styles.statusButtonText,
                   isActive && styles.statusButtonTextSelected,
                 ]}>
-                Aktywna
+                Bieżąca
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.statusButton,
-                !isActive && styles.statusButtonInactive,
+                !isActive && styles.statusButtonArchive,
               ]}
               onPress={() => setIsActive(false)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
                   styles.statusButtonText,
                   !isActive && styles.statusButtonTextSelected,
                 ]}>
-                Nieaktywna
+                Archiwum
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, submitting && styles.disabledButton]}
+          style={[
+            styles.saveButton,
+            (!formReady || submitting) && styles.disabledButton,
+          ]}
           onPress={handleSavePress}
-          activeOpacity={0.8}
-          disabled={submitting}>
+          activeOpacity={0.85}
+          disabled={!formReady || submitting}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
@@ -284,7 +359,7 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           disabled={submitting}>
           <Text style={styles.cancelButtonText}>Anuluj</Text>
         </TouchableOpacity>
@@ -292,155 +367,5 @@ function CategoryFormScreen({navigation, route}: Props): React.JSX.Element {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
-  heroBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 26,
-    fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-
-  card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-
-  label: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-
-  input: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-
-  statusButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  statusButtonActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-
-  statusButtonInactive: {
-    backgroundColor: '#7f1d1d',
-    borderColor: '#7f1d1d',
-  },
-
-  statusButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  statusButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  saveButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default CategoryFormScreen;

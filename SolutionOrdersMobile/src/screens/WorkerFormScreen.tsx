@@ -1,9 +1,8 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {sharedStyles as styles} from '../components/styles/sharedStyles.ts';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 import type {WorkerRole} from '../types/models.ts';
@@ -63,6 +63,37 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const safeFirstName = firstName.trim();
+  const safeLastName = lastName.trim();
+  const safeLogin = login.trim();
+  const safePassword = password.trim();
+
+  const fullName = `${safeFirstName} ${safeLastName}`.trim();
+
+  const firstNameReady = useMemo(() => {
+    return safeFirstName.length >= 2 && safeFirstName.length <= 50;
+  }, [safeFirstName]);
+
+  const lastNameReady = useMemo(() => {
+    return safeLastName.length >= 2 && safeLastName.length <= 50;
+  }, [safeLastName]);
+
+  const loginReady = useMemo(() => {
+    return safeLogin.length >= 3 && safeLogin.length <= 50;
+  }, [safeLogin]);
+
+  const passwordReady = useMemo(() => {
+    if (isEditMode && safePassword.length === 0) {
+      return true;
+    }
+
+    return safePassword.length >= 4;
+  }, [isEditMode, safePassword]);
+
+  const formReady = useMemo(() => {
+    return firstNameReady && lastNameReady && loginReady && passwordReady;
+  }, [firstNameReady, lastNameReady, loginReady, passwordReady]);
+
   const showDialog = (
     type: AppDialogType,
     title: string,
@@ -94,20 +125,48 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const validateForm = (): string | null => {
-    if (firstName.trim().length === 0) {
-      return 'Podaj imię pracownika';
+    if (safeFirstName.length === 0) {
+      return 'Podaj imię.';
     }
 
-    if (lastName.trim().length === 0) {
-      return 'Podaj nazwisko pracownika';
+    if (safeFirstName.length < 2) {
+      return 'Imię powinno mieć minimum 2 znaki.';
     }
 
-    if (login.trim().length === 0) {
-      return 'Podaj login pracownika';
+    if (safeFirstName.length > 50) {
+      return 'Imię może mieć maksymalnie 50 znaków.';
     }
 
-    if (!isEditMode && password.trim().length === 0) {
-      return 'Podaj hasło dla nowego pracownika';
+    if (safeLastName.length === 0) {
+      return 'Podaj nazwisko.';
+    }
+
+    if (safeLastName.length < 2) {
+      return 'Nazwisko powinno mieć minimum 2 znaki.';
+    }
+
+    if (safeLastName.length > 50) {
+      return 'Nazwisko może mieć maksymalnie 50 znaków.';
+    }
+
+    if (safeLogin.length === 0) {
+      return 'Podaj login.';
+    }
+
+    if (safeLogin.length < 3) {
+      return 'Login powinien mieć minimum 3 znaki.';
+    }
+
+    if (safeLogin.length > 50) {
+      return 'Login może mieć maksymalnie 50 znaków.';
+    }
+
+    if (!isEditMode && safePassword.length === 0) {
+      return 'Podaj hasło.';
+    }
+
+    if (safePassword.length > 0 && safePassword.length < 4) {
+      return 'Hasło powinno mieć minimum 4 znaki.';
     }
 
     return null;
@@ -117,17 +176,17 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Błąd formularza', validationError);
+      showDialog('error', 'Sprawdź formularz', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      title: isEditMode ? 'Zapisać zmiany?' : 'Dodać pracownika?',
       message: isEditMode
-        ? `Czy zapisać zmiany pracownika "${firstName.trim()} ${lastName.trim()}"?`
-        : `Czy dodać nowego pracownika "${firstName.trim()} ${lastName.trim()}"?`,
+        ? `Zapisać konto "${fullName}"?`
+        : `Dodać konto "${fullName}"?`,
       loading: false,
     });
   };
@@ -141,42 +200,34 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
+      const command = {
+        firstName: safeFirstName,
+        lastName: safeLastName,
+        login: safeLogin,
+        password: safePassword.length > 0 ? safePassword : null,
+        role,
+        isActive,
+      };
+
       if (isEditMode && editedWorker) {
         await apiService.updateWorker(editedWorker.idWorker, {
           idWorker: editedWorker.idWorker,
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          login: login.trim(),
-          password: password.trim().length > 0 ? password.trim() : null,
-          role,
-          isActive,
+          ...command,
         });
 
         showDialog(
           'success',
-          'Pracownik zaktualizowany',
+          'Zapisano',
           'Dane pracownika zostały zapisane.',
           true,
         );
       } else {
-        await apiService.createWorker({
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
-          login: login.trim(),
-          password: password.trim(),
-          role,
-          isActive,
-        });
+        await apiService.createWorker(command);
 
-        showDialog(
-          'success',
-          'Pracownik dodany',
-          'Nowy pracownik został zapisany w systemie.',
-          true,
-        );
+        showDialog('success', 'Dodano', 'Pracownik został dodany.', true);
       }
     } catch (err) {
-      showDialog('error', 'Błąd zapisu', (err as Error).message);
+      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -220,12 +271,89 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
           <Text style={styles.title}>
             {isEditMode ? 'Edytuj pracownika' : 'Dodaj pracownika'}
           </Text>
+
+          <Text style={styles.subtitle}>
+            Uzupełnij dane konta i zapisz zmiany.
+          </Text>
+        </View>
+
+        <View style={formReady ? styles.readyBox : styles.warningBox}>
+          <Text style={formReady ? styles.readyTitle : styles.warningTitle}>
+            {formReady ? 'Gotowe do zapisu' : 'Uzupełnij dane'}
+          </Text>
+
+          <Text style={formReady ? styles.readyText : styles.warningText}>
+            {formReady
+              ? 'Możesz zapisać konto pracownika.'
+              : 'Wpisz imię, nazwisko, login i hasło.'}
+          </Text>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>Podgląd</Text>
+
+          <View style={styles.previewHeader}>
+            <View style={styles.previewIconBox}>
+              <Text style={styles.previewIcon}>
+                {role === 'Admin' ? '⭐' : '🛠️'}
+              </Text>
+            </View>
+
+            <View style={styles.previewTextBox}>
+              <Text style={styles.previewName}>
+                {fullName.length > 0 ? fullName : 'Imię i nazwisko'}
+              </Text>
+
+              <Text style={isActive ? styles.currentBadge : styles.archiveBadge}>
+                {isActive ? 'Bieżący' : 'Archiwum'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Login</Text>
+            <Text style={styles.previewValue}>
+              {safeLogin.length > 0 ? safeLogin : 'Brak loginu'}
+            </Text>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Rola</Text>
+            <Text style={styles.previewValue}>
+              {role === 'Admin' ? 'Administrator' : 'Pracownik'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statusGrid}>
+          <View style={firstNameReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{firstNameReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>Imię</Text>
+            <Text style={styles.statusText}>
+              {firstNameReady ? 'Uzupełnione' : 'Wymagane'}
+            </Text>
+          </View>
+
+          <View style={loginReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{loginReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>Login</Text>
+            <Text style={styles.statusText}>
+              {loginReady ? 'Uzupełniony' : 'Wymagany'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Dane pracownika</Text>
 
-          <Text style={styles.label}>Imię</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Imię</Text>
+            <Text
+              style={firstNameReady ? styles.counterOk : styles.counterWarning}>
+              {safeFirstName.length}/50
+            </Text>
+          </View>
+
           <TextInput
             style={styles.input}
             value={firstName}
@@ -233,9 +361,17 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
             placeholder="Np. Adam"
             placeholderTextColor="#64748b"
             editable={!submitting}
+            returnKeyType="next"
           />
 
-          <Text style={styles.label}>Nazwisko</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Nazwisko</Text>
+            <Text
+              style={lastNameReady ? styles.counterOk : styles.counterWarning}>
+              {safeLastName.length}/50
+            </Text>
+          </View>
+
           <TextInput
             style={styles.input}
             value={lastName}
@@ -243,9 +379,16 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
             placeholder="Np. Kowalski"
             placeholderTextColor="#64748b"
             editable={!submitting}
+            returnKeyType="next"
           />
 
-          <Text style={styles.label}>Login</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Login</Text>
+            <Text style={loginReady ? styles.counterOk : styles.counterWarning}>
+              {safeLogin.length}/50
+            </Text>
+          </View>
+
           <TextInput
             style={styles.input}
             value={login}
@@ -254,32 +397,42 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
             placeholderTextColor="#64748b"
             autoCapitalize="none"
             editable={!submitting}
+            returnKeyType="next"
           />
 
-          <Text style={styles.label}>
-            {isEditMode ? 'Nowe hasło' : 'Hasło'}
-          </Text>
+          <Text style={styles.label}>{isEditMode ? 'Nowe hasło' : 'Hasło'}</Text>
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, !passwordReady && styles.inputWarning]}
             value={password}
             onChangeText={setPassword}
-            placeholder={
-              isEditMode ? 'Opcjonalnie - wpisz nowe hasło' : 'Hasło pracownika'
-            }
+            placeholder={isEditMode ? 'Opcjonalnie' : 'Wpisz hasło'}
             placeholderTextColor="#64748b"
             secureTextEntry
             editable={!submitting}
+            returnKeyType="done"
+            onSubmitEditing={handleSavePress}
           />
+
+          <View style={styles.hintBox}>
+            <Text style={styles.hintTitle}>Hasło</Text>
+            <Text style={styles.hintText}>
+              W edycji zostaw puste, jeśli hasło ma pozostać bez zmian.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Rola pracownika</Text>
+          <Text style={styles.sectionTitle}>Rola</Text>
 
           <View style={styles.roleButtons}>
             <TouchableOpacity
-              style={[styles.roleButton, role === 'Worker' && styles.roleWorker]}
+              style={[
+                styles.roleButton,
+                role === 'Worker' && styles.roleButtonWorker,
+              ]}
               onPress={() => setRole('Worker')}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
@@ -291,9 +444,12 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.roleButton, role === 'Admin' && styles.roleAdmin]}
+              style={[
+                styles.roleButton,
+                role === 'Admin' && styles.roleButtonAdmin,
+              ]}
               onPress={() => setRole('Admin')}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
@@ -307,7 +463,7 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Status pracownika</Text>
+          <Text style={styles.sectionTitle}>Widoczność</Text>
 
           <View style={styles.statusButtons}>
             <TouchableOpacity
@@ -316,41 +472,44 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
                 isActive && styles.statusButtonActive,
               ]}
               onPress={() => setIsActive(true)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
                   styles.statusButtonText,
                   isActive && styles.statusButtonTextSelected,
                 ]}>
-                Aktywny
+                Bieżący
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.statusButton,
-                !isActive && styles.statusButtonInactive,
+                !isActive && styles.statusButtonArchive,
               ]}
               onPress={() => setIsActive(false)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
                   styles.statusButtonText,
                   !isActive && styles.statusButtonTextSelected,
                 ]}>
-                Nieaktywny
+                Archiwum
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, submitting && styles.disabledButton]}
+          style={[
+            styles.saveButton,
+            (!formReady || submitting) && styles.disabledButton,
+          ]}
           onPress={handleSavePress}
-          activeOpacity={0.8}
-          disabled={submitting}>
+          activeOpacity={0.85}
+          disabled={!formReady || submitting}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
@@ -363,7 +522,7 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           disabled={submitting}>
           <Text style={styles.cancelButtonText}>Anuluj</Text>
         </TouchableOpacity>
@@ -371,178 +530,5 @@ function WorkerFormScreen({navigation, route}: Props): React.JSX.Element {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
-  heroBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 26,
-    fontWeight: '900',
-  },
-
-  card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-
-  label: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-
-  input: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-
-  roleButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  roleButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  roleWorker: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-
-  roleAdmin: {
-    backgroundColor: '#a855f7',
-    borderColor: '#a855f7',
-  },
-
-  roleButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  roleButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  statusButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  statusButtonActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-
-  statusButtonInactive: {
-    backgroundColor: '#7f1d1d',
-    borderColor: '#7f1d1d',
-  },
-
-  statusButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  statusButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  saveButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default WorkerFormScreen;

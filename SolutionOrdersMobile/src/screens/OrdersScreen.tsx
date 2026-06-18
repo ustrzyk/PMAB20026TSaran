@@ -205,8 +205,8 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Przenieść do archiwum?',
-      message: `Zamówienie #${order.idOrder} zostanie ukryte z bieżącej listy.`,
+      title: 'Archiwum',
+      message: `Przenieść zamówienie #${order.idOrder} do archiwum?`,
       loading: false,
     });
   };
@@ -242,7 +242,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Zamówienie przeniesione',
+        title: 'Zapisano',
         message: 'Zamówienie trafiło do archiwum.',
         loading: false,
       });
@@ -250,7 +250,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie udało się wykonać operacji',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -270,6 +270,12 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
     navigation.navigate('OrderItems', {
       idOrder: order.idOrder,
       orderTitle: `Zamówienie #${order.idOrder}`,
+    });
+  };
+
+  const openOrderPrint = (order: OrderDto): void => {
+    navigation.navigate('OrderPrint', {
+      idOrder: order.idOrder,
     });
   };
 
@@ -331,9 +337,6 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Zamówienia</Text>
-          <Text style={styles.heroSubtitle}>
-            Szybki podgląd zamówień, klientów i wartości sprzedaży.
-          </Text>
         </View>
 
         <View style={styles.summaryBox}>
@@ -354,7 +357,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.valueBox}>
-          <Text style={styles.valueLabel}>Wartość bieżących zamówień</Text>
+          <Text style={styles.valueLabel}>Wartość</Text>
           <Text style={styles.valueText}>{formatMoney(totalOrdersValue)}</Text>
         </View>
 
@@ -379,7 +382,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj numeru, klienta, daty..."
+            placeholder="Szukaj zamówienia"
             placeholderTextColor="#64748b"
           />
         </View>
@@ -412,26 +415,23 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.filterSummaryText}>
-            Wartość widocznych: {formatMoney(visibleOrdersValue)}
+            Wartość: {formatMoney(visibleOrdersValue)}
           </Text>
 
-          <Text style={styles.filterSummaryText}>
-            Szukaj:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
-          </Text>
-
-          <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
-            <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
-          </TouchableOpacity>
+          {(searchText.trim().length > 0 ||
+            viewFilter !== 'current' ||
+            sortMode !== 'newest') && (
+            <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
+              <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <TouchableOpacity
           style={styles.refreshButton}
           onPress={handleRefresh}
           activeOpacity={0.85}>
-          <Text style={styles.refreshButtonText}>Odśwież listę</Text>
+          <Text style={styles.refreshButtonText}>Odśwież</Text>
         </TouchableOpacity>
       </>
     );
@@ -445,6 +445,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.orderTopRow}>
           <View style={styles.orderTitleBox}>
             <Text style={styles.orderTitle}>Zamówienie #{item.idOrder}</Text>
+
             <Text style={styles.orderDate}>
               {formatDate(item.dataOrder)}
             </Text>
@@ -484,7 +485,7 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
         {item.notes ? (
           <View style={styles.notesBox}>
             <Text style={styles.notesLabel}>Informacje</Text>
-            <Text style={styles.notesText} numberOfLines={4}>
+            <Text style={styles.notesText} numberOfLines={3}>
               {item.notes}
             </Text>
           </View>
@@ -498,6 +499,15 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.cardButtonText}>Pozycje</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity
+            style={styles.printCardButton}
+            onPress={() => openOrderPrint(item)}
+            activeOpacity={0.85}>
+            <Text style={styles.cardButtonText}>Wydruk</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.cardActions}>
           <TouchableOpacity
             style={styles.secondaryCardButton}
             onPress={() => navigation.navigate('EditOrder', {order: item})}
@@ -584,12 +594,16 @@ function OrdersScreen({navigation}: Props): React.JSX.Element {
             <Text style={styles.emptyText}>
               {orders.length === 0
                 ? 'Nie ma jeszcze zamówień w systemie.'
-                : 'Brak zamówień pasujących do filtrów.'}
+                : 'Brak zamówień dla wybranych filtrów.'}
             </Text>
 
             <TouchableOpacity
               style={styles.emptyButton}
-              onPress={orders.length === 0 ? () => navigation.navigate('CreateOrder') : clearFilters}
+              onPress={
+                orders.length === 0
+                  ? () => navigation.navigate('CreateOrder')
+                  : clearFilters
+              }
               activeOpacity={0.85}>
               <Text style={styles.emptyButtonText}>
                 {orders.length === 0 ? 'Dodaj zamówienie' : 'Wyczyść filtry'}
@@ -711,14 +725,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 27,
     fontWeight: '900',
-  },
-
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
   },
 
   summaryBox: {
@@ -1049,12 +1055,20 @@ const styles = StyleSheet.create({
   cardActions: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 2,
+    marginTop: 8,
   },
 
   primaryCardButton: {
     flex: 1,
     backgroundColor: '#f97316',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  printCardButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
     borderRadius: 10,
     paddingVertical: 11,
     alignItems: 'center',

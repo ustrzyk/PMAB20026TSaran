@@ -26,8 +26,8 @@ function formatMoney(value?: number | null): string {
   return `${safeValue.toFixed(2)} zł`;
 }
 
-function getCategoryIcon(categoryName: string): string {
-  const name = categoryName.toLowerCase();
+function getCategoryIcon(categoryName?: string | null): string {
+  const name = categoryName?.toLowerCase() ?? '';
 
   if (name.includes('druk')) {
     return '🖨️';
@@ -42,6 +42,22 @@ function getCategoryIcon(categoryName: string): string {
   }
 
   return '🏷️';
+}
+
+function getProductOfDay(items: Item[]): Item | null {
+  const availableItems = items.filter(item => {
+    return item.isActive !== false && (item.quantity ?? 0) > 0;
+  });
+
+  if (availableItems.length === 0) {
+    return null;
+  }
+
+  const today = new Date();
+  const dayNumber =
+    today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+
+  return availableItems[dayNumber % availableItems.length];
 }
 
 function HomeScreen({navigation}: Props): React.JSX.Element {
@@ -89,6 +105,14 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     return activeCategories.slice(0, 8);
   }, [activeCategories]);
 
+  const availableProductsCount = useMemo(() => {
+    return activeItems.filter(item => (item.quantity ?? 0) > 0).length;
+  }, [activeItems]);
+
+  const productOfDay = useMemo(() => {
+    return getProductOfDay(activeItems);
+  }, [activeItems]);
+
   const popularProducts = useMemo(() => {
     const search = searchText.trim().toLowerCase();
 
@@ -112,10 +136,6 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
     return result.slice(0, 6);
   }, [activeItems, searchText]);
-
-  const availableProductsCount = useMemo(() => {
-    return activeItems.filter(item => (item.quantity ?? 0) > 0).length;
-  }, [activeItems]);
 
   const handleAccountPress = (): void => {
     if (isAdmin || isWorker) {
@@ -165,18 +185,6 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
     return 'Zaloguj';
   };
 
-  const getWelcomeText = (): string => {
-    if (isAdmin || isWorker) {
-      return 'Jesteś zalogowany. Możesz przejść do panelu obsługi sklepu.';
-    }
-
-    if (isCustomer) {
-      return 'Witaj ponownie. Sprawdź koszyk, zamówienia albo przejdź do zakupów.';
-    }
-
-    return 'Znajdź produkt, dodaj do koszyka i złóż zamówienie w kilku krokach.';
-  };
-
   const renderCategory = (category: CategoryDto): React.JSX.Element => {
     return (
       <TouchableOpacity
@@ -224,9 +232,49 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           <Text style={styles.productPrice}>{formatMoney(item.price)}</Text>
 
           <Text style={styles.productStock}>
-            Stan: {item.quantity ?? 0} {item.unitName ?? 'szt'}
+            {item.quantity ?? 0} {item.unitName ?? 'szt'}
           </Text>
         </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderProductOfDay = (): React.JSX.Element | null => {
+    if (!productOfDay) {
+      return null;
+    }
+
+    return (
+      <TouchableOpacity
+        style={styles.productOfDayCard}
+        onPress={() => navigation.navigate('ItemDetails', {item: productOfDay})}
+        activeOpacity={0.85}>
+        <View style={styles.productOfDayHeader}>
+          <Text style={styles.productOfDayLabel}>Produkt dnia</Text>
+          <Text style={styles.productOfDayIcon}>
+            {getCategoryIcon(productOfDay.categoryName)}
+          </Text>
+        </View>
+
+        <Text style={styles.productOfDayName} numberOfLines={2}>
+          {productOfDay.name}
+        </Text>
+
+        <Text style={styles.productOfDayCategory} numberOfLines={1}>
+          {productOfDay.categoryName ?? 'Produkt'}
+        </Text>
+
+        <View style={styles.productOfDayBottom}>
+          <Text style={styles.productOfDayPrice}>
+            {formatMoney(productOfDay.price)}
+          </Text>
+
+          <Text style={styles.productOfDayStock}>
+            {productOfDay.quantity ?? 0} {productOfDay.unitName ?? 'szt'}
+          </Text>
+        </View>
+
+        <Text style={styles.productOfDayButton}>Zobacz produkt</Text>
       </TouchableOpacity>
     );
   };
@@ -243,7 +291,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.brandTextBox}>
             <Text style={styles.appName}>3D Print Shop</Text>
             <Text style={styles.appSubtitle}>
-              {user ? user.name : 'Sklep mobilny'}
+              {user ? user.name : 'Sklep'}
             </Text>
           </View>
         </TouchableOpacity>
@@ -257,14 +305,12 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
       </View>
 
       <View style={styles.searchCard}>
-        <Text style={styles.searchTitle}>Czego szukasz?</Text>
-
         <View style={styles.searchRow}>
           <TextInput
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Wpisz nazwę produktu..."
+            placeholder="Szukaj produktu"
             placeholderTextColor="#64748b"
             returnKeyType="search"
             onSubmitEditing={handleSearch}
@@ -279,36 +325,14 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
         </View>
       </View>
 
-      <View style={styles.heroBox}>
-        <Text style={styles.heroTitle}>Zakupy prosto z telefonu</Text>
-
-        <Text style={styles.heroText}>{getWelcomeText()}</Text>
-
-        <View style={styles.mainActions}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => navigation.navigate('Items')}
-            activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>Produkty</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => navigation.navigate('Cart')}
-            activeOpacity={0.85}>
-            <Text style={styles.secondaryButtonText}>Koszyk</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-
       <View style={styles.quickGrid}>
         <TouchableOpacity
           style={styles.quickCard}
           onPress={() => navigation.navigate('Items')}
           activeOpacity={0.85}>
           <Text style={styles.quickIcon}>🛍️</Text>
-          <Text style={styles.quickTitle}>Sklep</Text>
-          <Text style={styles.quickText}>{availableProductsCount} dostępnych</Text>
+          <Text style={styles.quickTitle}>Produkty</Text>
+          <Text style={styles.quickText}>{availableProductsCount}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -328,7 +352,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.quickIcon}>📦</Text>
           <Text style={styles.quickTitle}>Status</Text>
-          <Text style={styles.quickText}>Sprawdź zamówienie</Text>
+          <Text style={styles.quickText}>Zamówienie</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -337,11 +361,9 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           activeOpacity={0.85}>
           <Text style={styles.quickIcon}>👤</Text>
           <Text style={styles.quickTitle}>
-            {isCustomer ? 'Moje konto' : isAdmin || isWorker ? 'Panel' : 'Konto'}
+            {isCustomer ? 'Konto' : isAdmin || isWorker ? 'Panel' : 'Konto'}
           </Text>
-          <Text style={styles.quickText}>
-            {user ? 'Otwórz' : 'Zaloguj się'}
-          </Text>
+          <Text style={styles.quickText}>{user ? 'Otwórz' : 'Zaloguj'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -350,13 +372,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           style={styles.customerOrderButton}
           onPress={() => navigation.navigate('CustomerOrders')}
           activeOpacity={0.85}>
-          <View>
-            <Text style={styles.customerOrderTitle}>Moje zamówienia</Text>
-            <Text style={styles.customerOrderText}>
-              Zobacz historię i aktualny status realizacji.
-            </Text>
-          </View>
-
+          <Text style={styles.customerOrderTitle}>Moje zamówienia</Text>
           <Text style={styles.customerOrderArrow}>{'>'}</Text>
         </TouchableOpacity>
       ) : null}
@@ -366,13 +382,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
           style={styles.workerPanelButton}
           onPress={() => navigation.navigate('AdminPanel')}
           activeOpacity={0.85}>
-          <View>
-            <Text style={styles.workerPanelTitle}>Panel obsługi</Text>
-            <Text style={styles.workerPanelText}>
-              Zamówienia, produkty, klienci i dashboard.
-            </Text>
-          </View>
-
+          <Text style={styles.workerPanelTitle}>Panel obsługi</Text>
           <Text style={styles.workerPanelArrow}>{'>'}</Text>
         </TouchableOpacity>
       ) : null}
@@ -380,7 +390,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
       {loading ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="small" color="#f97316" />
-          <Text style={styles.loadingText}>Ładowanie oferty...</Text>
+          <Text style={styles.loadingText}>Ładowanie...</Text>
         </View>
       ) : null}
 
@@ -400,6 +410,8 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
       {!loading && !error ? (
         <>
+          {renderProductOfDay()}
+
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Kategorie</Text>
 
@@ -420,7 +432,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
 
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              {searchText.trim().length > 0 ? 'Znalezione produkty' : 'Popularne produkty'}
+              {searchText.trim().length > 0 ? 'Wyniki' : 'Produkty'}
             </Text>
 
             <TouchableOpacity onPress={handleSearch} activeOpacity={0.85}>
@@ -432,7 +444,7 @@ function HomeScreen({navigation}: Props): React.JSX.Element {
             {popularProducts.length > 0 ? (
               popularProducts.map(renderProduct)
             ) : (
-              <Text style={styles.emptyText}>Brak produktów do wyświetlenia</Text>
+              <Text style={styles.emptyText}>Brak produktów</Text>
             )}
           </View>
         </>
@@ -519,13 +531,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
-  searchTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 10,
-  },
-
   searchRow: {
     flexDirection: 'row',
     gap: 10,
@@ -557,63 +562,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  heroBox: {
-    backgroundColor: '#111827',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  heroTitle: {
-    color: '#f8fafc',
-    fontSize: 25,
-    fontWeight: '900',
-    lineHeight: 31,
-  },
-
-  heroText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-
-  mainActions: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 16,
-  },
-
-  primaryButton: {
-    flex: 1,
-    backgroundColor: '#f97316',
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-
-  primaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: '#16a34a',
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-
-  secondaryButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
   quickGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -628,7 +576,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
-    minHeight: 118,
+    minHeight: 112,
   },
 
   quickIcon: {
@@ -666,13 +614,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  customerOrderText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
   },
 
   customerOrderArrow: {
@@ -697,13 +638,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 16,
     fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  workerPanelText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
   },
 
   workerPanelArrow: {
@@ -764,6 +698,81 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '900',
+  },
+
+  productOfDayCard: {
+    backgroundColor: '#111827',
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#f97316',
+    marginBottom: 18,
+  },
+
+  productOfDayHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+
+  productOfDayLabel: {
+    color: '#f97316',
+    fontSize: 13,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+
+  productOfDayIcon: {
+    fontSize: 34,
+  },
+
+  productOfDayName: {
+    color: '#f8fafc',
+    fontSize: 22,
+    lineHeight: 27,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  productOfDayCategory: {
+    color: '#94a3b8',
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+
+  productOfDayBottom: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+
+  productOfDayPrice: {
+    color: '#f97316',
+    fontSize: 22,
+    fontWeight: '900',
+  },
+
+  productOfDayStock: {
+    color: '#bbf7d0',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  productOfDayButton: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    textAlign: 'center',
+    paddingVertical: 11,
+    borderRadius: 12,
+    fontSize: 14,
+    fontWeight: '900',
+    overflow: 'hidden',
   },
 
   sectionHeader: {

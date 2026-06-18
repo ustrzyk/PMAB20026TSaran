@@ -58,6 +58,10 @@ export type RootStackParamList = {
     deliveryDate?: string;
   };
 
+  OrderPrint: {
+    idOrder: number;
+  };
+
   Categories: undefined;
   CreateCategory: undefined;
   EditCategory: {

@@ -35,6 +35,7 @@ import LoginScreen from '../screens/LoginScreen.tsx';
 import OrderFormScreen from '../screens/OrderFormScreen.tsx';
 import OrderItemFormScreen from '../screens/OrderItemFormScreen.tsx';
 import OrderItemsScreen from '../screens/OrderItemsScreen.tsx';
+import OrderPrintScreen from '../screens/OrderPrintScreen.tsx';
 import OrdersScreen from '../screens/OrdersScreen.tsx';
 import OrderSuccessScreen from '../screens/OrderSuccessScreen.tsx';
 import RegisterScreen from '../screens/RegisterScreen.tsx';
@@ -184,6 +185,12 @@ function RootNavigator(): React.JSX.Element {
           name="OrderSuccess"
           component={OrderSuccessScreen}
           options={{title: 'Potwierdzenie zamówienia'}}
+        />
+
+        <Stack.Screen
+          name="OrderPrint"
+          component={OrderPrintScreen}
+          options={{title: 'Wydruk zamówienia'}}
         />
 
         <Stack.Screen

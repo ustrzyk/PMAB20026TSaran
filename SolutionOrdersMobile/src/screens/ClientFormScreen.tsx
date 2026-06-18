@@ -1,9 +1,8 @@
-import React, {useState} from 'react';
+import React, {useMemo, useState} from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -14,6 +13,7 @@ import type {NativeStackScreenProps} from '@react-navigation/native-stack';
 
 import apiService from '../api/apiService.ts';
 import AppDialog, {AppDialogType} from '../components/AppDialog.tsx';
+import {sharedStyles as styles} from '../components/styles/sharedStyles.ts';
 
 import type {RootStackParamList} from '../navigation/types.ts';
 
@@ -58,6 +58,36 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
     loading: false,
   });
 
+  const safeName = name.trim();
+  const safeEmail = email.trim();
+  const safePassword = password.trim();
+  const safeAddress = adress.trim();
+  const safePhone = phoneNumber.trim();
+
+  const nameReady = useMemo(() => {
+    return safeName.length >= 2 && safeName.length <= 80;
+  }, [safeName]);
+
+  const emailReady = useMemo(() => {
+    return safeEmail.length === 0 || isValidEmail(safeEmail);
+  }, [safeEmail]);
+
+  const passwordReady = useMemo(() => {
+    if (safePassword.length === 0) {
+      return true;
+    }
+
+    return safePassword.length >= 4;
+  }, [safePassword]);
+
+  const contactReady = useMemo(() => {
+    return safeAddress.length > 0 || safePhone.length > 0 || safeEmail.length > 0;
+  }, [safeAddress, safeEmail, safePhone]);
+
+  const formReady = useMemo(() => {
+    return nameReady && emailReady && passwordReady;
+  }, [emailReady, nameReady, passwordReady]);
+
   const showDialog = (
     type: AppDialogType,
     title: string,
@@ -89,34 +119,35 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
   };
 
   const validateForm = (): string | null => {
-    const safeName = name.trim();
-    const safeEmail = email.trim();
-    const safePassword = password.trim();
     const hasEmail = safeEmail.length > 0;
     const hasPassword = safePassword.length > 0;
 
     if (safeName.length === 0) {
-      return 'Podaj nazwę klienta';
+      return 'Podaj nazwę klienta.';
+    }
+
+    if (safeName.length < 2) {
+      return 'Nazwa klienta powinna mieć minimum 2 znaki.';
     }
 
     if (safeName.length > 80) {
-      return 'Nazwa klienta może mieć maksymalnie 80 znaków';
+      return 'Nazwa klienta może mieć maksymalnie 80 znaków.';
     }
 
     if (hasEmail && !isValidEmail(safeEmail)) {
-      return 'Podaj poprawny adres e-mail klienta';
+      return 'Podaj poprawny adres e-mail.';
     }
 
     if (!isEditMode && hasEmail && !hasPassword) {
-      return 'Podaj hasło, jeśli tworzysz klienta z kontem logowania';
+      return 'Podaj hasło albo zostaw e-mail pusty.';
     }
 
     if (hasPassword && safePassword.length < 4) {
-      return 'Hasło powinno mieć minimum 4 znaki';
+      return 'Hasło powinno mieć minimum 4 znaki.';
     }
 
-    if (phoneNumber.trim().length > 30) {
-      return 'Numer telefonu może mieć maksymalnie 30 znaków';
+    if (safePhone.length > 30) {
+      return 'Numer telefonu może mieć maksymalnie 30 znaków.';
     }
 
     return null;
@@ -126,24 +157,23 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
     const validationError = validateForm();
 
     if (validationError) {
-      showDialog('error', 'Błąd formularza', validationError);
+      showDialog('error', 'Sprawdź formularz', validationError);
       return;
     }
 
     setDialog({
       visible: true,
       type: 'confirm',
-      title: isEditMode ? 'Potwierdzenie edycji' : 'Potwierdzenie dodania',
+      title: isEditMode ? 'Zapisać zmiany?' : 'Dodać klienta?',
       message: isEditMode
-        ? `Czy zapisać zmiany klienta "${name.trim()}"?`
-        : `Czy dodać nowego klienta "${name.trim()}"?`,
+        ? `Zapisać klienta "${safeName}"?`
+        : `Dodać klienta "${safeName}"?`,
       loading: false,
     });
   };
 
   const submitForm = async (): Promise<void> => {
-    const safeEmail = email.trim().toLowerCase();
-    const safePassword = password.trim();
+    const normalizedEmail = safeEmail.toLowerCase();
 
     try {
       setSubmitting(true);
@@ -153,44 +183,29 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
         loading: true,
       }));
 
+      const command = {
+        name: safeName,
+        adress: safeAddress.length > 0 ? safeAddress : null,
+        phoneNumber: safePhone.length > 0 ? safePhone : null,
+        email: normalizedEmail.length > 0 ? normalizedEmail : null,
+        password: safePassword.length > 0 ? safePassword : null,
+        isActive,
+      };
+
       if (isEditMode && editedClient) {
         await apiService.updateClient(editedClient.idClient, {
           idClient: editedClient.idClient,
-          name: name.trim(),
-          adress: adress.trim().length > 0 ? adress.trim() : null,
-          phoneNumber:
-            phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
-          email: safeEmail.length > 0 ? safeEmail : null,
-          password: safePassword.length > 0 ? safePassword : null,
-          isActive,
+          ...command,
         });
 
-        showDialog(
-          'success',
-          'Klient zaktualizowany',
-          'Dane klienta zostały zapisane.',
-          true,
-        );
+        showDialog('success', 'Zapisano', 'Dane klienta zostały zapisane.', true);
       } else {
-        await apiService.createClient({
-          name: name.trim(),
-          adress: adress.trim().length > 0 ? adress.trim() : null,
-          phoneNumber:
-            phoneNumber.trim().length > 0 ? phoneNumber.trim() : null,
-          email: safeEmail.length > 0 ? safeEmail : null,
-          password: safePassword.length > 0 ? safePassword : null,
-          isActive,
-        });
+        await apiService.createClient(command);
 
-        showDialog(
-          'success',
-          'Klient dodany',
-          'Nowy klient został zapisany w systemie.',
-          true,
-        );
+        showDialog('success', 'Dodano', 'Klient został dodany.', true);
       }
     } catch (err) {
-      showDialog('error', 'Błąd zapisu', (err as Error).message);
+      showDialog('error', 'Nie udało się zapisać', (err as Error).message);
     } finally {
       setSubmitting(false);
     }
@@ -236,14 +251,91 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
 
           <Text style={styles.subtitle}>
-            Dane klienta będą używane przy logowaniu i obsłudze zamówień.
+            Uzupełnij dane klienta i zapisz zmiany.
           </Text>
+        </View>
+
+        <View style={formReady ? styles.readyBox : styles.warningBox}>
+          <Text style={formReady ? styles.readyTitle : styles.warningTitle}>
+            {formReady ? 'Gotowe do zapisu' : 'Uzupełnij dane'}
+          </Text>
+
+          <Text style={formReady ? styles.readyText : styles.warningText}>
+            {formReady
+              ? 'Możesz zapisać dane klienta.'
+              : 'Wpisz nazwę klienta i sprawdź e-mail oraz hasło.'}
+          </Text>
+        </View>
+
+        <View style={styles.previewCard}>
+          <Text style={styles.sectionTitle}>Podgląd</Text>
+
+          <View style={styles.previewHeader}>
+            <View style={styles.previewIconBox}>
+              <Text style={styles.previewIcon}>👤</Text>
+            </View>
+
+            <View style={styles.previewTextBox}>
+              <Text style={styles.previewName}>
+                {safeName.length > 0 ? safeName : 'Nazwa klienta'}
+              </Text>
+
+              <Text style={isActive ? styles.currentBadge : styles.archiveBadge}>
+                {isActive ? 'Bieżący' : 'Archiwum'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>E-mail</Text>
+            <Text style={styles.previewValue}>
+              {safeEmail.length > 0 ? safeEmail : 'Brak e-maila'}
+            </Text>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Telefon</Text>
+            <Text style={styles.previewValue}>
+              {safePhone.length > 0 ? safePhone : 'Brak telefonu'}
+            </Text>
+          </View>
+
+          <View style={styles.previewInfoBox}>
+            <Text style={styles.previewLabel}>Adres</Text>
+            <Text style={styles.previewValue}>
+              {safeAddress.length > 0 ? safeAddress : 'Brak adresu'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.statusGrid}>
+          <View style={nameReady ? styles.readyStatusCard : styles.warningStatusCard}>
+            <Text style={styles.statusIcon}>{nameReady ? '✓' : '!'}</Text>
+            <Text style={styles.statusTitle}>Nazwa</Text>
+            <Text style={styles.statusText}>
+              {nameReady ? 'Uzupełniona' : 'Wymagana'}
+            </Text>
+          </View>
+
+          <View style={contactReady ? styles.readyStatusCard : styles.infoStatusCard}>
+            <Text style={styles.statusIcon}>{contactReady ? '✓' : 'i'}</Text>
+            <Text style={styles.statusTitle}>Kontakt</Text>
+            <Text style={styles.statusText}>
+              {contactReady ? 'Uzupełniony' : 'Opcjonalny'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>Dane klienta</Text>
 
-          <Text style={styles.label}>Nazwa klienta</Text>
+          <View style={styles.labelRow}>
+            <Text style={styles.label}>Nazwa</Text>
+            <Text style={nameReady ? styles.counterOk : styles.counterWarning}>
+              {safeName.length}/80
+            </Text>
+          </View>
+
           <TextInput
             style={styles.input}
             value={name}
@@ -251,11 +343,13 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
             placeholder="Np. Jan Kowalski"
             placeholderTextColor="#64748b"
             editable={!submitting}
+            returnKeyType="next"
           />
 
-          <Text style={styles.label}>E-mail klienta</Text>
+          <Text style={styles.label}>E-mail</Text>
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, !emailReady && styles.inputWarning]}
             value={email}
             onChangeText={setEmail}
             placeholder="Np. jan@3dshop.pl"
@@ -263,30 +357,41 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
             autoCapitalize="none"
             keyboardType="email-address"
             editable={!submitting}
+            returnKeyType="next"
           />
 
           <Text style={styles.label}>
-            {isEditMode ? 'Nowe hasło klienta' : 'Hasło klienta'}
+            {isEditMode ? 'Nowe hasło' : 'Hasło'}
           </Text>
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, !passwordReady && styles.inputWarning]}
             value={password}
             onChangeText={setPassword}
             placeholder={
               isEditMode
-                ? 'Opcjonalnie - wpisz nowe hasło'
-                : 'Wymagane tylko przy koncie logowania'
+                ? 'Opcjonalnie'
+                : 'Wymagane, jeśli podajesz e-mail'
             }
             placeholderTextColor="#64748b"
             secureTextEntry
             editable={!submitting}
+            returnKeyType="next"
           />
+
+          <View style={styles.hintBox}>
+            <Text style={styles.hintTitle}>Hasło</Text>
+            <Text style={styles.hintText}>
+              W edycji zostaw puste, jeśli hasło ma pozostać bez zmian.
+            </Text>
+          </View>
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Dane kontaktowe</Text>
+          <Text style={styles.sectionTitle}>Kontakt</Text>
 
           <Text style={styles.label}>Adres</Text>
+
           <TextInput
             style={[styles.input, styles.textArea]}
             value={adress}
@@ -298,19 +403,22 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
           />
 
           <Text style={styles.label}>Telefon</Text>
+
           <TextInput
-            style={styles.input}
+            style={[styles.input, safePhone.length > 30 && styles.inputWarning]}
             value={phoneNumber}
             onChangeText={setPhoneNumber}
             placeholder="Np. 500-100-200"
             placeholderTextColor="#64748b"
             keyboardType="phone-pad"
             editable={!submitting}
+            returnKeyType="done"
+            onSubmitEditing={handleSavePress}
           />
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Status klienta</Text>
+          <Text style={styles.sectionTitle}>Widoczność</Text>
 
           <View style={styles.statusButtons}>
             <TouchableOpacity
@@ -319,41 +427,44 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
                 isActive && styles.statusButtonActive,
               ]}
               onPress={() => setIsActive(true)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
                   styles.statusButtonText,
                   isActive && styles.statusButtonTextSelected,
                 ]}>
-                Aktywny
+                Bieżący
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
                 styles.statusButton,
-                !isActive && styles.statusButtonInactive,
+                !isActive && styles.statusButtonArchive,
               ]}
               onPress={() => setIsActive(false)}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               disabled={submitting}>
               <Text
                 style={[
                   styles.statusButtonText,
                   !isActive && styles.statusButtonTextSelected,
                 ]}>
-                Nieaktywny
+                Archiwum
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <TouchableOpacity
-          style={[styles.saveButton, submitting && styles.disabledButton]}
+          style={[
+            styles.saveButton,
+            (!formReady || submitting) && styles.disabledButton,
+          ]}
           onPress={handleSavePress}
-          activeOpacity={0.8}
-          disabled={submitting}>
+          activeOpacity={0.85}
+          disabled={!formReady || submitting}>
           <Text style={styles.saveButtonText}>
             {submitting
               ? 'Zapisywanie...'
@@ -366,7 +477,7 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
         <TouchableOpacity
           style={styles.cancelButton}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
+          activeOpacity={0.85}
           disabled={submitting}>
           <Text style={styles.cancelButtonText}>Anuluj</Text>
         </TouchableOpacity>
@@ -374,155 +485,5 @@ function ClientFormScreen({navigation, route}: Props): React.JSX.Element {
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-  },
-
-  content: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-
-  heroBox: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  appName: {
-    color: '#f97316',
-    fontSize: 13,
-    fontWeight: '900',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginBottom: 8,
-  },
-
-  title: {
-    color: '#f8fafc',
-    fontSize: 26,
-    fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-  },
-
-  card: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 14,
-  },
-
-  sectionTitle: {
-    color: '#f8fafc',
-    fontSize: 17,
-    fontWeight: '900',
-    marginBottom: 12,
-  },
-
-  label: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '800',
-    marginBottom: 6,
-  },
-
-  input: {
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    color: '#f8fafc',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
-    marginBottom: 14,
-  },
-
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-
-  statusButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
-  statusButton: {
-    flex: 1,
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 12,
-    paddingVertical: 11,
-    alignItems: 'center',
-  },
-
-  statusButtonActive: {
-    backgroundColor: '#16a34a',
-    borderColor: '#16a34a',
-  },
-
-  statusButtonInactive: {
-    backgroundColor: '#7f1d1d',
-    borderColor: '#7f1d1d',
-  },
-
-  statusButtonText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  statusButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  saveButton: {
-    backgroundColor: '#16a34a',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-
-  disabledButton: {
-    opacity: 0.65,
-  },
-
-  saveButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '900',
-  },
-
-  cancelButton: {
-    backgroundColor: '#334155',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-
-  cancelButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-});
 
 export default ClientFormScreen;
