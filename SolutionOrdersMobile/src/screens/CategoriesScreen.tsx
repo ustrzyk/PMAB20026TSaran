@@ -140,8 +140,8 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     setDialog({
       visible: true,
       type: 'confirm',
-      title: 'Przenieść do archiwum?',
-      message: `Kategoria "${category.name ?? 'bez nazwy'}" zostanie ukryta z bieżącej listy.`,
+      title: 'Archiwum',
+      message: `Przenieść kategorię "${category.name ?? 'bez nazwy'}" do archiwum?`,
       loading: false,
     });
   };
@@ -177,7 +177,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'success',
-        title: 'Przeniesiono',
+        title: 'Zapisano',
         message: 'Kategoria trafiła do archiwum.',
         loading: false,
       });
@@ -185,7 +185,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
       setDialog({
         visible: true,
         type: 'error',
-        title: 'Nie udało się wykonać operacji',
+        title: 'Błąd',
         message: (err as Error).message,
         loading: false,
       });
@@ -239,13 +239,13 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={`category-sort-${value}`}
-        style={[styles.sortButton, selected && styles.sortButtonSelected]}
+        style={[styles.filterButton, selected && styles.sortButtonSelected]}
         onPress={() => setSortMode(value)}
         activeOpacity={0.85}>
         <Text
           style={[
-            styles.sortButtonText,
-            selected && styles.sortButtonTextSelected,
+            styles.filterButtonText,
+            selected && styles.filterButtonTextSelected,
           ]}>
           {label}
         </Text>
@@ -259,9 +259,6 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.heroBox}>
           <Text style={styles.appName}>3D Print Shop</Text>
           <Text style={styles.heroTitle}>Kategorie</Text>
-          <Text style={styles.heroSubtitle}>
-            Zarządzaj grupami produktów w sklepie.
-          </Text>
         </View>
 
         <View style={styles.summaryBox}>
@@ -306,7 +303,7 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
             style={styles.searchInput}
             value={searchText}
             onChangeText={setSearchText}
-            placeholder="Szukaj kategorii..."
+            placeholder="Szukaj kategorii"
             placeholderTextColor="#64748b"
           />
         </View>
@@ -336,13 +333,6 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
             Wyświetlane: {filteredCategories.length} / {categories.length}
           </Text>
 
-          <Text style={styles.filterSummaryText}>
-            Szukaj:{' '}
-            {searchText.trim().length > 0
-              ? searchText.trim()
-              : 'brak wyszukiwania'}
-          </Text>
-
           <TouchableOpacity onPress={clearFilters} activeOpacity={0.85}>
             <Text style={styles.clearFiltersText}>Wyczyść filtry</Text>
           </TouchableOpacity>
@@ -364,6 +354,10 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.categoryCard}>
         <View style={styles.cardTopRow}>
+          <View style={styles.categoryIconBox}>
+            <Text style={styles.categoryIcon}>🏷️</Text>
+          </View>
+
           <View style={styles.cardTitleBox}>
             <Text style={styles.categoryName}>{item.name ?? 'Brak nazwy'}</Text>
           </View>
@@ -373,11 +367,9 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
           </Text>
         </View>
 
-        {item.description ? (
-          <Text style={styles.categoryDescription}>{item.description}</Text>
-        ) : (
-          <Text style={styles.categoryDescriptionMuted}>Brak opisu</Text>
-        )}
+        <Text style={styles.categoryDescription}>
+          {item.description ?? 'Brak opisu'}
+        </Text>
 
         <View style={styles.actions}>
           <TouchableOpacity
@@ -462,12 +454,6 @@ function CategoriesScreen({navigation}: Props): React.JSX.Element {
           <View style={styles.emptyBox}>
             <Text style={styles.emptyIcon}>🏷️</Text>
             <Text style={styles.emptyTitle}>Brak kategorii</Text>
-
-            <Text style={styles.emptyText}>
-              {categories.length === 0
-                ? 'Dodaj pierwszą kategorię produktów.'
-                : 'Brak wyników dla aktualnych filtrów.'}
-            </Text>
 
             <TouchableOpacity
               style={styles.emptyButton}
@@ -599,14 +585,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  heroSubtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
   summaryBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -727,6 +705,11 @@ const styles = StyleSheet.create({
     borderColor: '#f97316',
   },
 
+  sortButtonSelected: {
+    backgroundColor: '#2563eb',
+    borderColor: '#2563eb',
+  },
+
   filterButtonText: {
     color: '#cbd5e1',
     fontSize: 12,
@@ -734,30 +717,6 @@ const styles = StyleSheet.create({
   },
 
   filterButtonTextSelected: {
-    color: '#ffffff',
-  },
-
-  sortButton: {
-    backgroundColor: '#111827',
-    borderWidth: 1,
-    borderColor: '#334155',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-  },
-
-  sortButtonSelected: {
-    backgroundColor: '#2563eb',
-    borderColor: '#2563eb',
-  },
-
-  sortButtonText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '800',
-  },
-
-  sortButtonTextSelected: {
     color: '#ffffff',
   },
 
@@ -808,10 +767,24 @@ const styles = StyleSheet.create({
 
   cardTopRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 10,
     alignItems: 'flex-start',
     marginBottom: 10,
+  },
+
+  categoryIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#0f172a',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  categoryIcon: {
+    fontSize: 24,
   },
 
   cardTitleBox: {
@@ -850,13 +823,6 @@ const styles = StyleSheet.create({
     color: '#cbd5e1',
     fontSize: 13,
     lineHeight: 19,
-    fontWeight: '700',
-    marginBottom: 12,
-  },
-
-  categoryDescriptionMuted: {
-    color: '#64748b',
-    fontSize: 13,
     fontWeight: '700',
     marginBottom: 12,
   },
@@ -911,14 +877,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 20,
     fontWeight: '900',
-    marginBottom: 6,
-  },
-
-  emptyText: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    textAlign: 'center',
     marginBottom: 16,
   },
 
