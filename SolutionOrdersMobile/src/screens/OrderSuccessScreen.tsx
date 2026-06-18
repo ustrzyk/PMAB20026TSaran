@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -68,6 +69,42 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
     });
   };
 
+  const buildOrderPrintText = (): string => {
+    return [
+      '3D PRINT SHOP',
+      'PODSUMOWANIE ZAMÓWIENIA',
+      '',
+      `Numer zamówienia: #${idOrder}`,
+      `Status: ${initialStatus}`,
+      `Komunikat: ${message ?? 'Zamówienie zostało złożone'}`,
+      '',
+      'Wartość:',
+      `Produkty: ${formatMoney(totalValue)}`,
+      `Dostawa: ${formatMoney(safeDeliveryPrice)}`,
+      `Razem do zapłaty: ${formatMoney(safeFinalValue)}`,
+      '',
+      'Dostawa i płatność:',
+      `Metoda dostawy: ${deliveryMethod ?? 'Brak informacji'}`,
+      `Metoda płatności: ${paymentMethod ?? 'Brak informacji'}`,
+      `Przewidywana data dostawy: ${formatDate(deliveryDate)}`,
+      '',
+      'Etapy realizacji:',
+      '1. Nowe - zamówienie przyjęte do systemu',
+      '2. W realizacji - pracownik przygotowuje produkty',
+      '3. Gotowe / Wysłane - zamówienie gotowe lub przekazane do dostawy',
+      '4. Zakończone - zamówienie zakończone',
+      '',
+      'Dziękujemy za zakupy w 3D Print Shop.',
+    ].join('\n');
+  };
+
+  const shareOrderSummary = async (): Promise<void> => {
+    await Share.share({
+      title: `Zamówienie #${idOrder}`,
+      message: buildOrderPrintText(),
+    });
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.successBox}>
@@ -76,7 +113,7 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.title}>Zamówienie złożone</Text>
 
         <Text style={styles.subtitle}>
-          Zamówienie zostało przyjęte do systemu. Aktualny status to „Nowe”.
+          Zamówienie zostało przyjęte do systemu.
         </Text>
       </View>
 
@@ -84,8 +121,7 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         <Text style={styles.statusLabel}>Aktualny status</Text>
         <Text style={styles.statusValue}>{initialStatus}</Text>
         <Text style={styles.statusDescription}>
-          Pracownik sklepu może później zmienić status na: W realizacji, Gotowe,
-          Wysłane, Zakończone albo Anulowane.
+          Zamówienie czeka na obsługę przez pracownika sklepu.
         </Text>
       </View>
 
@@ -98,7 +134,7 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
         </View>
 
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Komunikat systemu</Text>
+          <Text style={styles.infoLabel}>Komunikat</Text>
           <Text style={styles.infoValue}>
             {message ?? 'Zamówienie zostało złożone'}
           </Text>
@@ -116,7 +152,7 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
         </View>
 
-        <View style={styles.infoRow}>
+        <View style={styles.infoRowLast}>
           <Text style={styles.infoLabel}>Razem do zapłaty</Text>
           <Text style={styles.finalValue}>{formatMoney(safeFinalValue)}</Text>
         </View>
@@ -139,10 +175,26 @@ function OrderSuccessScreen({navigation, route}: Props): React.JSX.Element {
           </Text>
         </View>
 
-        <View style={styles.infoRow}>
+        <View style={styles.infoRowLast}>
           <Text style={styles.infoLabel}>Przewidywana data dostawy</Text>
           <Text style={styles.infoValue}>{formatDate(deliveryDate)}</Text>
         </View>
+      </View>
+
+      <View style={styles.printCard}>
+        <Text style={styles.sectionTitle}>Wydruk / potwierdzenie</Text>
+
+        <Text style={styles.printText}>
+          Możesz udostępnić podsumowanie zamówienia jako tekst. To prosty krok
+          przygotowujący aplikację pod późniejszy eksport do PDF.
+        </Text>
+
+        <TouchableOpacity
+          style={styles.printButton}
+          onPress={shareOrderSummary}
+          activeOpacity={0.85}>
+          <Text style={styles.printButtonText}>Udostępnij podsumowanie</Text>
+        </TouchableOpacity>
       </View>
 
       <View style={styles.stepsCard}>
@@ -277,6 +329,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
     marginTop: 8,
+    fontWeight: '700',
   },
 
   statusCard: {
@@ -320,6 +373,15 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  printCard: {
+    backgroundColor: '#111827',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#38bdf8',
+    marginBottom: 14,
+  },
+
   stepsCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
@@ -339,6 +401,10 @@ const styles = StyleSheet.create({
   infoRow: {
     borderBottomWidth: 1,
     borderBottomColor: '#1e293b',
+    paddingVertical: 10,
+  },
+
+  infoRowLast: {
     paddingVertical: 10,
   },
 
@@ -377,6 +443,27 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  printText: {
+    color: '#cbd5e1',
+    fontSize: 13,
+    lineHeight: 19,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+
+  printButton: {
+    backgroundColor: '#38bdf8',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+
+  printButtonText: {
+    color: '#0f172a',
+    fontSize: 14,
+    fontWeight: '900',
   },
 
   stepRow: {
@@ -436,7 +523,7 @@ const styles = StyleSheet.create({
   },
 
   primaryButton: {
-    backgroundColor: '#16a34a',
+    backgroundColor: '#f97316',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -450,7 +537,7 @@ const styles = StyleSheet.create({
   },
 
   customerButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#16a34a',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
@@ -464,7 +551,7 @@ const styles = StyleSheet.create({
   },
 
   adminButton: {
-    backgroundColor: '#a855f7',
+    backgroundColor: '#2563eb',
     paddingVertical: 13,
     borderRadius: 12,
     alignItems: 'center',
@@ -479,15 +566,15 @@ const styles = StyleSheet.create({
 
   secondaryButton: {
     backgroundColor: '#334155',
-    paddingVertical: 13,
+    paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
 
   secondaryButtonText: {
     color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '900',
+    fontSize: 16,
+    fontWeight: '800',
   },
 });
 
