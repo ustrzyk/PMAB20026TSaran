@@ -113,7 +113,6 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
   const renderStatusCard = (
     title: string,
     value: number,
-    description: string,
   ): React.JSX.Element => {
     return (
       <TouchableOpacity
@@ -122,7 +121,6 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         activeOpacity={0.85}>
         <Text style={styles.statusCardTitle}>{title}</Text>
         <Text style={styles.statusCardValue}>{value}</Text>
-        <Text style={styles.statusCardText}>{description}</Text>
       </TouchableOpacity>
     );
   };
@@ -136,23 +134,19 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         : 0;
 
     return (
-      <View key={category.idCategory} style={styles.categorySaleCard}>
-        <View style={styles.categorySaleHeader}>
-          <Text style={styles.categorySaleTitle}>
+      <View key={category.idCategory} style={styles.listCard}>
+        <View style={styles.listHeader}>
+          <Text style={styles.listTitle}>
             {category.categoryName ?? `Kategoria ${category.idCategory}`}
           </Text>
 
-          <Text style={styles.categorySaleValue}>
-            {formatMoney(category.totalValue)}
-          </Text>
+          <Text style={styles.moneyText}>{formatMoney(category.totalValue)}</Text>
         </View>
 
-        <Text style={styles.categorySaleText}>
-          Sprzedana ilość: {category.totalQuantity}
-        </Text>
+        <Text style={styles.smallText}>Ilość: {category.totalQuantity}</Text>
 
-        <View style={styles.categoryBarBackground}>
-          <View style={[styles.categoryBarFill, {width: `${percentage}%`}]} />
+        <View style={styles.barBackground}>
+          <View style={[styles.barFill, {width: `${percentage}%`}]} />
         </View>
       </View>
     );
@@ -170,39 +164,31 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={product.idItem}
-        style={styles.topProductCard}
+        style={styles.listCard}
         onPress={() => navigation.navigate('AdminItems')}
-        activeOpacity={0.8}>
-        <View style={styles.topProductHeader}>
-          <View style={styles.rankBadge}>
-            <Text style={styles.rankBadgeText}>{index + 1}</Text>
-          </View>
+        activeOpacity={0.85}>
+        <View style={styles.productHeader}>
+          <Text style={styles.rankBadge}>{index + 1}</Text>
 
-          <View style={styles.topProductTitleBox}>
-            <Text style={styles.topProductTitle}>
+          <View style={styles.productTitleBox}>
+            <Text style={styles.listTitle}>
               {product.name ?? `Produkt ${product.idItem}`}
             </Text>
 
-            <Text style={styles.topProductCode}>
-              Kod: {product.code ?? 'brak kodu'}
-            </Text>
+            <Text style={styles.smallText}>Kod: {product.code ?? 'brak'}</Text>
           </View>
         </View>
 
-        <Text style={styles.topProductText}>
+        <Text style={styles.smallText}>
           Kategoria: {product.categoryName ?? 'Brak kategorii'}
         </Text>
 
-        <Text style={styles.topProductText}>
-          Sprzedana ilość: {product.totalQuantity}
-        </Text>
+        <Text style={styles.smallText}>Ilość: {product.totalQuantity}</Text>
 
-        <Text style={styles.topProductValue}>
-          Wartość sprzedaży: {formatMoney(product.totalValue)}
-        </Text>
+        <Text style={styles.moneyText}>{formatMoney(product.totalValue)}</Text>
 
-        <View style={styles.topProductBarBackground}>
-          <View style={[styles.topProductBarFill, {width: `${percentage}%`}]} />
+        <View style={styles.barBackground}>
+          <View style={[styles.barFill, {width: `${percentage}%`}]} />
         </View>
       </TouchableOpacity>
     );
@@ -214,38 +200,68 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     const status = getLatestOrderStatus(order);
 
     return (
-      <TouchableOpacity
-        key={order.idOrder}
-        style={styles.orderCard}
-        onPress={() =>
-          navigation.navigate('TrackOrder', {
-            idOrder: order.idOrder,
-          })
-        }
-        activeOpacity={0.8}>
-        <View style={styles.orderHeader}>
+      <View key={order.idOrder} style={styles.orderCard}>
+        <View style={styles.orderTopRow}>
           <View style={styles.orderTitleBox}>
-            <Text style={styles.orderTitle}>Zamówienie nr {order.idOrder}</Text>
-            <Text style={styles.orderStatusBadge}>{status}</Text>
+            <Text style={styles.orderTitle}>Zamówienie #{order.idOrder}</Text>
+            <Text style={styles.orderDate}>{formatDate(order.dataOrder)}</Text>
           </View>
 
-          <Text style={styles.orderValue}>{formatMoney(order.totalValue)}</Text>
+          <Text style={styles.statusBadge}>{status}</Text>
         </View>
 
-        <Text style={styles.orderText}>
-          Klient: {order.clientName ?? 'Brak klienta'}
-        </Text>
+        <View style={styles.orderInfoGrid}>
+          <View style={styles.orderInfoBox}>
+            <Text style={styles.orderInfoLabel}>Klient</Text>
+            <Text style={styles.orderInfoValue} numberOfLines={1}>
+              {order.clientName ?? 'Brak'}
+            </Text>
+          </View>
 
-        <Text style={styles.orderText}>
-          Pracownik: {order.workerName ?? 'Brak pracownika'}
-        </Text>
+          <View style={styles.orderInfoBox}>
+            <Text style={styles.orderInfoLabel}>Wartość</Text>
+            <Text style={styles.orderMoney}>{formatMoney(order.totalValue)}</Text>
+          </View>
+        </View>
 
-        <Text style={styles.orderText}>Data: {formatDate(order.dataOrder)}</Text>
+        <View style={styles.orderInfoGrid}>
+          <View style={styles.orderInfoBox}>
+            <Text style={styles.orderInfoLabel}>Pracownik</Text>
+            <Text style={styles.orderInfoValue} numberOfLines={1}>
+              {order.workerName ?? 'Brak'}
+            </Text>
+          </View>
 
-        <Text style={styles.orderText}>Status: {status}</Text>
+          <View style={styles.orderInfoBox}>
+            <Text style={styles.orderInfoLabel}>Pozycje</Text>
+            <Text style={styles.orderInfoValue}>{order.orderItemsCount}</Text>
+          </View>
+        </View>
 
-        <Text style={styles.orderText}>Pozycje: {order.orderItemsCount}</Text>
-      </TouchableOpacity>
+        <View style={styles.orderActions}>
+          <TouchableOpacity
+            style={styles.orderButton}
+            onPress={() =>
+              navigation.navigate('TrackOrder', {
+                idOrder: order.idOrder,
+              })
+            }
+            activeOpacity={0.85}>
+            <Text style={styles.orderButtonText}>Status</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.printButton}
+            onPress={() =>
+              navigation.navigate('OrderPrint', {
+                idOrder: order.idOrder,
+              })
+            }
+            activeOpacity={0.85}>
+            <Text style={styles.printButtonText}>Wydruk</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     );
   };
 
@@ -255,38 +271,30 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     return (
       <TouchableOpacity
         key={product.idItem}
-        style={styles.lowStockCard}
+        style={styles.listCard}
         onPress={() => navigation.navigate('AdminItems')}
-        activeOpacity={0.8}>
-        <View style={styles.lowStockHeader}>
-          <View style={styles.lowStockTitleBox}>
-            <Text style={styles.lowStockTitle}>
+        activeOpacity={0.85}>
+        <View style={styles.listHeader}>
+          <View style={styles.productTitleBox}>
+            <Text style={styles.listTitle}>
               {product.name ?? `Produkt ${product.idItem}`}
             </Text>
 
-            <Text style={styles.lowStockCode}>
-              Kod: {product.code ?? 'brak kodu'}
-            </Text>
+            <Text style={styles.smallText}>Kod: {product.code ?? 'brak'}</Text>
           </View>
 
-          <View style={styles.lowStockBadge}>
-            <Text style={styles.lowStockBadgeText}>
-              {formatQuantity(product.quantity, product.unitName)}
-            </Text>
-          </View>
+          <Text style={styles.stockBadge}>
+            {formatQuantity(product.quantity, product.unitName)}
+          </Text>
         </View>
 
-        <Text style={styles.lowStockText}>
+        <Text style={styles.smallText}>
           Kategoria: {product.categoryName ?? 'Brak kategorii'}
         </Text>
 
-        <Text style={styles.lowStockText}>
-          Cena: {formatMoney(product.price)}
-        </Text>
+        <Text style={styles.smallText}>Cena: {formatMoney(product.price)}</Text>
 
-        <Text style={styles.lowStockValue}>
-          Wartość na stanie: {formatMoney(product.stockValue)}
-        </Text>
+        <Text style={styles.moneyText}>{formatMoney(product.stockValue)}</Text>
       </TouchableOpacity>
     );
   };
@@ -295,7 +303,7 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color="#f97316" />
-        <Text style={styles.loadingText}>Ładowanie dashboardu...</Text>
+        <Text style={styles.loadingText}>Ładowanie...</Text>
       </View>
     );
   }
@@ -303,14 +311,19 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
   if (error || !dashboard) {
     return (
       <View style={styles.centerContainer}>
-        <Text style={styles.errorTitle}>
-          Nie udało się pobrać danych Dashboard
-        </Text>
+        <Text style={styles.errorTitle}>Nie udało się pobrać danych</Text>
 
         <Text style={styles.errorText}>{error ?? 'Brak danych z API'}</Text>
 
         <TouchableOpacity style={styles.retryButton} onPress={loadDashboard}>
-          <Text style={styles.retryButtonText}>Spróbuj ponownie</Text>
+          <Text style={styles.retryButtonText}>Odśwież</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.85}>
+          <Text style={styles.backButtonText}>Panel obsługi</Text>
         </TouchableOpacity>
       </View>
     );
@@ -326,66 +339,33 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
       <View style={styles.heroBox}>
         <Text style={styles.appName}>3D Print Shop</Text>
         <Text style={styles.title}>Dashboard</Text>
-
-        <Text style={styles.subtitle}>
-          Podsumowanie sprzedaży, zamówień, magazynu, statusów i produktów.
-        </Text>
       </View>
 
       <View style={styles.summaryRow}>
         <View style={styles.mainSummaryBox}>
-          <Text style={styles.summaryLabel}>Wartość zamówień</Text>
+          <Text style={styles.summaryLabel}>Zamówienia</Text>
           <Text style={styles.summaryValue}>
             {formatMoney(dashboard.ordersTotalValue)}
           </Text>
         </View>
 
         <View style={styles.mainSummaryBox}>
-          <Text style={styles.summaryLabel}>Wartość magazynu</Text>
+          <Text style={styles.summaryLabel}>Magazyn</Text>
           <Text style={styles.summaryValue}>
             {formatMoney(dashboard.productsStockValue)}
           </Text>
         </View>
       </View>
 
-      <Text style={styles.sectionTitle}>Statusy zamówień</Text>
+      <Text style={styles.sectionTitle}>Statusy</Text>
 
       <View style={styles.statusGrid}>
-        {renderStatusCard(
-          'Nowe',
-          dashboard.newOrdersCount,
-          'Zamówienia przyjęte do systemu.',
-        )}
-
-        {renderStatusCard(
-          'W realizacji',
-          dashboard.inProgressOrdersCount,
-          'Zamówienia aktualnie obsługiwane.',
-        )}
-
-        {renderStatusCard(
-          'Gotowe',
-          dashboard.readyOrdersCount,
-          'Zamówienia przygotowane.',
-        )}
-
-        {renderStatusCard(
-          'Wysłane',
-          dashboard.shippedOrdersCount,
-          'Zamówienia przekazane do dostawy.',
-        )}
-
-        {renderStatusCard(
-          'Zakończone',
-          dashboard.completedOrdersCount,
-          'Zamówienia zakończone poprawnie.',
-        )}
-
-        {renderStatusCard(
-          'Anulowane',
-          dashboard.cancelledOrdersCount,
-          'Zamówienia anulowane.',
-        )}
+        {renderStatusCard('Nowe', dashboard.newOrdersCount)}
+        {renderStatusCard('W realizacji', dashboard.inProgressOrdersCount)}
+        {renderStatusCard('Gotowe', dashboard.readyOrdersCount)}
+        {renderStatusCard('Wysłane', dashboard.shippedOrdersCount)}
+        {renderStatusCard('Zakończone', dashboard.completedOrdersCount)}
+        {renderStatusCard('Anulowane', dashboard.cancelledOrdersCount)}
       </View>
 
       <Text style={styles.sectionTitle}>Liczniki</Text>
@@ -400,59 +380,59 @@ function DashboardScreen({navigation}: Props): React.JSX.Element {
         {renderMetricCard('Pozycje', dashboard.orderItemsCount)}
       </View>
 
-      <Text style={styles.sectionTitle}>TOP produkty</Text>
-
-      {dashboard.topProducts.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Brak danych</Text>
-        </View>
-      ) : (
-        dashboard.topProducts.map(renderTopProduct)
-      )}
-
-      <Text style={styles.sectionTitle}>Sprzedaż według kategorii</Text>
-
-      {dashboard.categorySales.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Brak danych</Text>
-        </View>
-      ) : (
-        dashboard.categorySales.map(renderCategorySale)
-      )}
-
-      <Text style={styles.sectionTitle}>Niski stan magazynowy</Text>
-
-      {dashboard.lowStockProducts.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Brak produktów z niskim stanem</Text>
-        </View>
-      ) : (
-        dashboard.lowStockProducts.map(renderLowStockProduct)
-      )}
-
-      <Text style={styles.sectionTitle}>Najnowsze zamówienia</Text>
+      <Text style={styles.sectionTitle}>Ostatnie zamówienia</Text>
 
       {dashboard.latestOrders.length === 0 ? (
         <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>Brak zamówień</Text>
+          <Text style={styles.emptyText}>Brak zamówień.</Text>
         </View>
       ) : (
         dashboard.latestOrders.map(renderLatestOrder)
       )}
 
-      <View style={styles.actions}>
+      <Text style={styles.sectionTitle}>TOP produkty</Text>
+
+      {dashboard.topProducts.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Brak danych.</Text>
+        </View>
+      ) : (
+        dashboard.topProducts.map(renderTopProduct)
+      )}
+
+      <Text style={styles.sectionTitle}>Kategorie</Text>
+
+      {dashboard.categorySales.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Brak danych.</Text>
+        </View>
+      ) : (
+        dashboard.categorySales.map(renderCategorySale)
+      )}
+
+      <Text style={styles.sectionTitle}>Niski stan</Text>
+
+      {dashboard.lowStockProducts.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>Brak produktów.</Text>
+        </View>
+      ) : (
+        dashboard.lowStockProducts.map(renderLowStockProduct)
+      )}
+
+      <View style={styles.footerButtons}>
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => navigation.navigate('Orders')}
-          activeOpacity={0.8}>
-          <Text style={styles.primaryButtonText}>Wszystkie zamówienia</Text>
+          activeOpacity={0.85}>
+          <Text style={styles.primaryButtonText}>Zamówienia</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.secondaryButton}
-          onPress={() => navigation.navigate('AdminItems')}
-          activeOpacity={0.8}>
-          <Text style={styles.secondaryButtonText}>Produkty admin</Text>
+          onPress={() => navigation.navigate('AdminPanel')}
+          activeOpacity={0.85}>
+          <Text style={styles.secondaryButtonText}>Panel obsługi</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -473,20 +453,21 @@ const styles = StyleSheet.create({
   centerContainer: {
     flex: 1,
     backgroundColor: '#0f172a',
-    justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    justifyContent: 'center',
+    padding: 20,
   },
 
   loadingText: {
     color: '#cbd5e1',
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: '800',
     marginTop: 12,
   },
 
   errorTitle: {
     color: '#f8fafc',
-    fontSize: 20,
+    fontSize: 21,
     fontWeight: '900',
     textAlign: 'center',
     marginBottom: 8,
@@ -495,26 +476,14 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#fca5a5',
     fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginBottom: 16,
-  },
-
-  retryButton: {
-    backgroundColor: '#f97316',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 10,
-  },
-
-  retryButtonText: {
-    color: '#ffffff',
-    fontSize: 14,
-    fontWeight: '800',
+    marginBottom: 18,
   },
 
   heroBox: {
     backgroundColor: '#111827',
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
     borderWidth: 1,
     borderColor: '#334155',
@@ -527,32 +496,25 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     textTransform: 'uppercase',
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   title: {
     color: '#f8fafc',
-    fontSize: 28,
+    fontSize: 27,
     fontWeight: '900',
-  },
-
-  subtitle: {
-    color: '#cbd5e1',
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
   },
 
   summaryRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 18,
   },
 
   mainSummaryBox: {
     flex: 1,
     backgroundColor: '#111827',
-    borderRadius: 16,
+    borderRadius: 18,
     padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
@@ -561,13 +523,13 @@ const styles = StyleSheet.create({
   summaryLabel: {
     color: '#94a3b8',
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '900',
     marginBottom: 5,
   },
 
   summaryValue: {
-    color: '#f97316',
-    fontSize: 19,
+    color: '#16a34a',
+    fontSize: 21,
     fontWeight: '900',
   },
 
@@ -575,7 +537,6 @@ const styles = StyleSheet.create({
     color: '#f8fafc',
     fontSize: 18,
     fontWeight: '900',
-    marginTop: 12,
     marginBottom: 12,
   },
 
@@ -583,7 +544,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 4,
+    marginBottom: 18,
   },
 
   statusCard: {
@@ -592,60 +553,52 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: '#f97316',
+    borderColor: '#334155',
   },
 
   statusCardTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
+    color: '#94a3b8',
+    fontSize: 12,
     fontWeight: '900',
-    marginBottom: 4,
+    marginBottom: 5,
   },
 
   statusCardValue: {
     color: '#f97316',
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: '900',
-    marginBottom: 4,
-  },
-
-  statusCardText: {
-    color: '#94a3b8',
-    fontSize: 12,
-    lineHeight: 17,
-    fontWeight: '700',
   },
 
   metricsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 4,
+    marginBottom: 18,
   },
 
   metricCard: {
-    width: '48%',
+    width: '31.5%',
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#334155',
   },
 
   metricTitle: {
     color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '900',
     marginBottom: 4,
   },
 
   metricValue: {
     color: '#f8fafc',
-    fontSize: 24,
+    fontSize: 21,
     fontWeight: '900',
   },
 
-  topProductCard: {
+  listCard: {
     backgroundColor: '#111827',
     borderRadius: 16,
     padding: 14,
@@ -654,181 +607,71 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  topProductHeader: {
+  listHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 10,
+    alignItems: 'flex-start',
     marginBottom: 8,
+  },
+
+  listTitle: {
+    flex: 1,
+    color: '#f8fafc',
+    fontSize: 15,
+    fontWeight: '900',
+  },
+
+  productHeader: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+    marginBottom: 8,
+  },
+
+  productTitleBox: {
+    flex: 1,
   },
 
   rankBadge: {
-    width: 32,
-    height: 32,
+    width: 30,
+    height: 30,
     borderRadius: 999,
     backgroundColor: '#f97316',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  rankBadgeText: {
     color: '#ffffff',
-    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 30,
+    fontSize: 14,
     fontWeight: '900',
+    overflow: 'hidden',
   },
 
-  topProductTitleBox: {
-    flex: 1,
-  },
-
-  topProductTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-  },
-
-  topProductCode: {
+  smallText: {
     color: '#94a3b8',
     fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  topProductText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
+    fontWeight: '800',
     marginBottom: 4,
   },
 
-  topProductValue: {
-    color: '#f97316',
-    fontSize: 14,
-    fontWeight: '900',
-    marginTop: 4,
-    marginBottom: 8,
-  },
-
-  topProductBarBackground: {
-    height: 8,
-    backgroundColor: '#0f172a',
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-
-  topProductBarFill: {
-    height: 8,
-    backgroundColor: '#f97316',
-    borderRadius: 999,
-  },
-
-  categorySaleCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#334155',
-    marginBottom: 12,
-  },
-
-  categorySaleHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 6,
-  },
-
-  categorySaleTitle: {
-    color: '#f8fafc',
-    fontSize: 15,
-    fontWeight: '900',
-    flex: 1,
-  },
-
-  categorySaleValue: {
-    color: '#f97316',
-    fontSize: 14,
-    fontWeight: '900',
-  },
-
-  categorySaleText: {
-    color: '#cbd5e1',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-
-  categoryBarBackground: {
-    height: 8,
-    backgroundColor: '#0f172a',
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-
-  categoryBarFill: {
-    height: 8,
-    backgroundColor: '#f97316',
-    borderRadius: 999,
-  },
-
-  lowStockCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#f97316',
-    marginBottom: 12,
-  },
-
-  lowStockHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 10,
-    marginBottom: 8,
-  },
-
-  lowStockTitleBox: {
-    flex: 1,
-  },
-
-  lowStockTitle: {
-    color: '#f8fafc',
+  moneyText: {
+    color: '#16a34a',
     fontSize: 16,
     fontWeight: '900',
-  },
-
-  lowStockCode: {
-    color: '#94a3b8',
-    fontSize: 12,
-    fontWeight: '700',
-    marginTop: 3,
-  },
-
-  lowStockBadge: {
-    backgroundColor: '#f97316',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    alignSelf: 'flex-start',
-  },
-
-  lowStockBadgeText: {
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '900',
-  },
-
-  lowStockText: {
-    color: '#cbd5e1',
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 4,
-  },
-
-  lowStockValue: {
-    color: '#f97316',
-    fontSize: 14,
-    fontWeight: '900',
     marginTop: 4,
+  },
+
+  barBackground: {
+    height: 7,
+    backgroundColor: '#1e293b',
+    borderRadius: 999,
+    marginTop: 10,
+    overflow: 'hidden',
+  },
+
+  barFill: {
+    height: 7,
+    backgroundColor: '#f97316',
+    borderRadius: 999,
   },
 
   orderCard: {
@@ -840,17 +683,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  orderHeader: {
+  orderTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
     gap: 10,
+    marginBottom: 10,
   },
 
   orderTitleBox: {
     flex: 1,
-    marginRight: 8,
   },
 
   orderTitle: {
@@ -859,36 +700,106 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
 
-  orderStatusBadge: {
+  orderDate: {
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 4,
+  },
+
+  statusBadge: {
     backgroundColor: '#f97316',
     color: '#ffffff',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
     fontSize: 11,
     fontWeight: '900',
     overflow: 'hidden',
-    marginTop: 5,
   },
 
-  orderValue: {
-    color: '#f97316',
+  orderInfoGrid: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 10,
+  },
+
+  orderInfoBox: {
+    flex: 1,
+    backgroundColor: '#0f172a',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#1e293b',
+  },
+
+  orderInfoLabel: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '900',
+    marginBottom: 4,
+  },
+
+  orderInfoValue: {
+    color: '#f8fafc',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  orderMoney: {
+    color: '#16a34a',
     fontSize: 14,
     fontWeight: '900',
   },
 
-  orderText: {
-    color: '#cbd5e1',
+  orderActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+
+  orderButton: {
+    flex: 1,
+    backgroundColor: '#38bdf8',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  orderButtonText: {
+    color: '#0f172a',
     fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 4,
+    fontWeight: '900',
+  },
+
+  printButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    borderRadius: 12,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  printButtonText: {
+    color: '#ffffff',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+
+  stockBadge: {
+    backgroundColor: '#f97316',
+    color: '#ffffff',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    fontSize: 11,
+    fontWeight: '900',
+    overflow: 'hidden',
   },
 
   emptyBox: {
     backgroundColor: '#111827',
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#334155',
     marginBottom: 12,
@@ -896,21 +807,19 @@ const styles = StyleSheet.create({
 
   emptyText: {
     color: '#94a3b8',
-    textAlign: 'center',
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: '800',
   },
 
-  actions: {
-    flexDirection: 'row',
-    gap: 10,
+  footerButtons: {
     marginTop: 8,
+    gap: 10,
   },
 
   primaryButton: {
-    flex: 1,
     backgroundColor: '#f97316',
-    paddingVertical: 13,
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
@@ -921,14 +830,42 @@ const styles = StyleSheet.create({
   },
 
   secondaryButton: {
-    flex: 1,
-    backgroundColor: '#2563eb',
-    paddingVertical: 13,
+    backgroundColor: '#334155',
     borderRadius: 12,
+    paddingVertical: 13,
     alignItems: 'center',
   },
 
   secondaryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  retryButton: {
+    backgroundColor: '#f97316',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginBottom: 10,
+  },
+
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '900',
+  },
+
+  backButton: {
+    backgroundColor: '#334155',
+    borderRadius: 12,
+    paddingVertical: 13,
+    alignItems: 'center',
+    alignSelf: 'stretch',
+  },
+
+  backButtonText: {
     color: '#ffffff',
     fontSize: 14,
     fontWeight: '900',
