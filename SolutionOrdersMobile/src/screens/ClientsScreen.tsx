@@ -2,6 +2,7 @@ import React, {useCallback, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
   RefreshControl,
   StyleSheet,
   Text,
@@ -43,6 +44,16 @@ function hasContactData(client: ClientDto): boolean {
     (client.phoneNumber ?? '').trim().length > 0 ||
     (client.email ?? '').trim().length > 0
   );
+}
+
+function getPhoneUrl(phoneNumber: string): string {
+  const cleanedPhoneNumber = phoneNumber.replace(/[^\d+]/g, '');
+
+  return `tel:${cleanedPhoneNumber}`;
+}
+
+function getEmailUrl(email: string): string {
+  return `mailto:${email.trim()}`;
 }
 
 function ClientsScreen({navigation}: Props): React.JSX.Element {
@@ -135,6 +146,20 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
 
     return sorted;
   }, [accountFilter, clients, searchText, sortMode, viewFilter]);
+
+  const showDialog = (
+    type: AppDialogType,
+    title: string,
+    message: string,
+  ): void => {
+    setDialog({
+      visible: true,
+      type,
+      title,
+      message,
+      loading: false,
+    });
+  };
 
   const closeDialog = (): void => {
     setDialog(previous => ({
@@ -229,6 +254,36 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
         message: (err as Error).message,
         loading: false,
       });
+    }
+  };
+
+  const handlePhonePress = async (phoneNumber?: string | null): Promise<void> => {
+    const safePhoneNumber = phoneNumber?.trim() ?? '';
+
+    if (safePhoneNumber.length === 0) {
+      showDialog('error', 'Telefon', 'Brak numeru telefonu.');
+      return;
+    }
+
+    try {
+      await Linking.openURL(getPhoneUrl(safePhoneNumber));
+    } catch {
+      showDialog('error', 'Telefon', 'Nie udało się otworzyć telefonu.');
+    }
+  };
+
+  const handleEmailPress = async (email?: string | null): Promise<void> => {
+    const safeEmail = email?.trim() ?? '';
+
+    if (safeEmail.length === 0) {
+      showDialog('error', 'E-mail', 'Brak adresu e-mail.');
+      return;
+    }
+
+    try {
+      await Linking.openURL(getEmailUrl(safeEmail));
+    } catch {
+      showDialog('error', 'E-mail', 'Nie udało się otworzyć poczty.');
     }
   };
 
@@ -439,6 +494,8 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
   const renderItem = ({item}: {item: ClientDto}): React.JSX.Element => {
     const isCurrent = item.isActive !== false;
     const hasAccount = hasClientAccount(item);
+    const hasPhone = (item.phoneNumber ?? '').trim().length > 0;
+    const hasEmail = (item.email ?? '').trim().length > 0;
 
     return (
       <View style={styles.clientCard}>
@@ -471,6 +528,34 @@ function ClientsScreen({navigation}: Props): React.JSX.Element {
         <View style={styles.infoBox}>
           <Text style={styles.infoLabel}>Adres</Text>
           <Text style={styles.infoValue}>{item.adress ?? 'Brak adresu'}</Text>
+        </View>
+
+        <View style={styles.contactActions}>
+          <TouchableOpacity
+            style={[
+              styles.callButton,
+              !hasPhone && styles.disabledContactButton,
+            ]}
+            onPress={() => {
+              void handlePhonePress(item.phoneNumber);
+            }}
+            activeOpacity={0.85}
+            disabled={!hasPhone}>
+            <Text style={styles.contactButtonText}>Telefon</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.emailButton,
+              !hasEmail && styles.disabledContactButton,
+            ]}
+            onPress={() => {
+              void handleEmailPress(item.email);
+            }}
+            activeOpacity={0.85}
+            disabled={!hasEmail}>
+            <Text style={styles.contactButtonText}>E-mail</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.actions}>
@@ -998,6 +1083,38 @@ const styles = StyleSheet.create({
   infoValue: {
     color: '#f8fafc',
     fontSize: 13,
+    fontWeight: '900',
+  },
+
+  contactActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 9,
+  },
+
+  callButton: {
+    flex: 1,
+    backgroundColor: '#16a34a',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  emailButton: {
+    flex: 1,
+    backgroundColor: '#0ea5e9',
+    borderRadius: 10,
+    paddingVertical: 11,
+    alignItems: 'center',
+  },
+
+  disabledContactButton: {
+    opacity: 0.5,
+  },
+
+  contactButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
     fontWeight: '900',
   },
 
